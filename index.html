@@ -1,1 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lane Clash — Main Menu & Encyclopedia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0e1220; --panel:#161b2e; --ink:#e9f1ff; --muted:#a9b7ff;
+      --line:#24315c; --accent:#70d6ff; --accent2:#6bff95;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+    header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+    .title{ font-weight:750; letter-spacing:.2px; }
+
+    main{ max-width:1000px; margin:24px auto; padding:0 12px; }
+
+    /* Buttons */
+    .btn{
+      appearance:none; border:1px solid var(--line); background:linear-gradient(180deg,#203061,#18244b);
+      color:var(--ink); padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer;
+      transition:transform .08s ease, filter .12s ease;
+    }
+    .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+
+    /* Panels */
+    .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+
+    /* Main menu */
+    .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; }
+    .muted{ color:var(--muted); }
+
+    /* Encyclopedia */
+    .hidden{ display:none; }
+    .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .entries{ display:grid; gap:16px; }
+
+    .entry{
+      display:grid; grid-template-columns: min(360px, 45%) 1fr; gap:18px; align-items:center;
+      background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px;
+    }
+    .cardFrame{
+      display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px;
+    }
+    .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
+
+    .details h2{ margin:0 0 8px; font-size:22px; }
+    .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#0b1433; border:1px solid #20306a; font-size:12px; }
+    .grid{ display:grid; grid-template-columns: 120px 1fr; gap:8px 12px; margin:8px 0 10px; }
+    .label{ color:#9fb4ff; }
+    .desc{ color:#cfe1ff; }
+
+    /* Footer */
+    footer{ text-align:center; color:#8ea1c9; padding:16px 0; font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">Lane Clash — Prototype</div>
+  </header>
+
+  <main>
+    <!-- MAIN MENU -->
+    <section id="menu" class="panel center" aria-labelledby="menuTitle">
+      <h1 id="menuTitle" style="position:absolute;left:-9999px;">Main Menu</h1>
+      <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
+      <div class="muted">Browse unit cards and their stats.</div>
+    </section>
+
+    <!-- ENCYCLOPEDIA -->
+    <section id="ency" class="panel hidden" aria-labelledby="encyTitle">
+      <div class="toolbar">
+        <h2 id="encyTitle" style="margin:0;">Encyclopedia</h2>
+        <button id="backBtn" class="btn">Back</button>
+      </div>
+
+      <div class="entries">
+        <!-- KNIGHT -->
+        <article class="entry">
+          <div class="cardFrame">
+            <!-- Provide this file: assets/knight-card.png (transparent PNG) -->
+            <img src="assets/knight-card.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+          </div>
+          <div class="details">
+            <h2>Knight <span class="pill">Common</span></h2>
+            <div class="grid">
+              <div class="label">Elixir Cost</div><div>2</div>
+              <div class="label">HP</div><div>100</div>
+              <div class="label">DMG</div><div>20 / sec</div>
+              <div class="label">Speed</div><div>1</div>
+              <div class="label">Unit Count</div><div>1</div>
+            </div>
+            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.</p>
+          </div>
+        </article>
+
+        <!-- ARCHERS (text layout for now; we’ll swap to an image later) -->
+        <article class="entry">
+          <div class="cardFrame" style="border:1px dashed #27305a;">
+            <span class="muted">Archers card art coming soon</span>
+          </div>
+          <div class="details">
+            <h2>Archers <span class="pill">Common</span></h2>
+            <div class="grid">
+              <div class="label">Elixir Cost</div><div>2</div>
+              <div class="label">HP</div><div>60</div>
+              <div class="label">DMG</div><div>15 / 0.5s</div>
+              <div class="label">Speed</div><div>1.5</div>
+              <div class="label">Unit Count</div><div>2</div>
+            </div>
+            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Tip: add your Knight PNG at <code>assets/knight-card.png</code>. We’ll wire Archers art next.
+  </footer>
+
+  <script>
+    const menu = document.getElementById('menu');
+    const ency = document.getElementById('ency');
+    const openEncy = document.getElementById('openEncy');
+    const backBtn = document.getElementById('backBtn');
+
+    openEncy.addEventListener('click', () => {
+      menu.classList.add('hidden');
+      ency.classList.remove('hidden');
+      openEncy.setAttribute('aria-expanded','true');
+      window.scrollTo(0,0);
+    });
+
+    backBtn.addEventListener('click', () => {
+      ency.classList.add('hidden');
+      menu.classList.remove('hidden');
+      openEncy.setAttribute('aria-expanded','false');
+      window.scrollTo(0,0);
+    });
+  </script>
+</body>
+</html>
 
