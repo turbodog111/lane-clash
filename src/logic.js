@@ -8,7 +8,9 @@ export function createGameState(canvas) {
     lanesX: [W * 0.33, W * 0.67],
     bridgeW: 120, bridgeH: 118,
     ELIXIR_MAX: 10,
-    ELIXIR_PER_SEC: 0.5,   // 1 per 2s
+    ELIXIR_PER_SEC: 0.5, // 1 per 2s
+    riverMargin: 2,      // safety pixels to keep off the texture seam
+    bridgeCorridorFactor: 0.45 // % of bridge width allowed for units
   };
 
   const state = {
@@ -21,21 +23,35 @@ export function createGameState(canvas) {
     elixir: { blue: 5, red: 5 },
     winner: null,
 
-    // Cards (Archers range 120)
+    // Cards (Archers range = 120)
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:15, atk:0.5, range:120, speed:90, radius:10, type:'ranged' },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
     ],
+
+    // Player hand (2 from 3, rotating)
     deckOrder: shuffle([0,1,2]),
     hand: [], selectedHandSlot: null,
 
+    // UI hooks
     onElixirChange: () => {},
     rebuildCardBar: () => {},
 
-    ai: { enabled:true, timer:2.5, minInterval:2.4, maxInterval:4.2, aggression:1.0 },
+    // --- Red AI with 2-card cycle like the player ---
+    ai: {
+      enabled: true,
+      timer: 2.5,
+      minInterval: 2.4,
+      maxInterval: 4.2,
+      aggression: 1.0,
+      deckOrder: shuffle([0,1,2]),
+      hand: [],
+    },
   };
+
   state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
+  state.ai.hand = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
   // Towers
   const k = (side,x,y)=>({type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false});
@@ -54,7 +70,7 @@ export function createGameState(canvas) {
 
 /* ----------------- Update Loop ----------------- */
 export function update(state, dt) {
-  if (state.winner) { updateFX(state, dt); return; } // freeze logic after victory, keep FX fading
+  if (state.winner) { updateFX(state, dt); return; } // freeze gameplay after victory
 
   const { ELIXIR_MAX, ELIXIR_PER_SEC } = state.config;
   state.elixir.blue = Math.min(ELIXIR_MAX, state.elixir.blue + ELIXIR_PER_SEC * dt);
@@ -70,13 +86,13 @@ export function update(state, dt) {
   updateProjectiles(state, dt);
   updateFX(state, dt);
 
-  // --- Victory check ---
+  // Victory check
   const kBlue = kingOf(state,'blue'), kRed = kingOf(state,'red');
   if (kBlue && kBlue.hp <= 0 && !state.winner) state.winner = 'red';
   if (kRed  && kRed.hp  <= 0 && !state.winner) state.winner = 'blue';
 }
 
-/* ----------------- Input/Deploy (Blue) ----------------- */
+/* ----------------- Player Deploy ----------------- */
 export function tryDeployAt(state, mx, my) {
   const { riverY, riverH, lanesX, H } = state.config;
   const halfMin = riverY + riverH/2 + 20, halfMax = H - 40;
@@ -106,29 +122,44 @@ export function rotateAfterPlay(state, playedIdx, slot) {
   state.rebuildCardBar();
 }
 
-/* ----------------- AI (Red) ----------------- */
+/* ----------------- AI (Red) with 2-card rotation ----------------- */
 function aiUpdate(state, dt){
-  const ai = state.ai;
-  if (!ai.enabled) return;
+  const ai = state.ai; if (!ai.enabled) return;
   ai.timer -= dt * ai.aggression;
   if (ai.timer > 0) return;
 
-  const affordable = state.cards.map((c,i)=>({c,i})).filter(({c})=>c.cost<=state.elixir.red);
-  if (!affordable.length){ ai.timer = 0.8; return; }
+  // pick from AI hand only
+  const affordable = ai.hand
+    .map((idx, slot) => ({ idx, slot, card: state.cards[idx] }))
+    .filter(({card}) => card.cost <= state.elixir.red);
 
+  if (affordable.length === 0) {
+    ai.timer = 0.8; // wait until enough elixir
+    return;
+  }
+
+  // very light heuristic: bias toward higher cost if player has lots on board
   const blueUnits = state.units.filter(u => u.side==='blue').length;
-  affordable.sort((a,b)=>(b.c.cost+Math.random()*0.3)-(a.c.cost+Math.random()*0.3+blueUnits*0.01));
-  const pick = affordable[0];
+  affordable.sort((a,b)=>(b.card.cost+Math.random()*0.25)-(a.card.cost+Math.random()*0.25+blueUnits*0.01));
+  const choice = affordable[0];
 
   const { lanesX, riverY, riverH } = state.config;
-  const laneX = Math.random()<0.5?lanesX[0]:lanesX[1];
+  const laneX = Math.random() < 0.5 ? lanesX[0] : lanesX[1];
   const topMin = 40, topMax = riverY - riverH/2 - 20;
   const y = randRange(topMin+20, topMax-10);
 
-  state.elixir.red -= pick.c.cost;
-  spawnUnits(state, 'red', pick.c, laneX, y);
+  state.elixir.red -= choice.card.cost;
+  spawnUnits(state, 'red', choice.card, laneX, y);
+  aiRotateAfterPlay(state, choice.idx, choice.slot);
 
   ai.timer = randRange(ai.minInterval, ai.maxInterval);
+}
+
+function aiRotateAfterPlay(state, playedIdx, slot){
+  const ai = state.ai;
+  ai.deckOrder = ai.deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
+  const next = ai.deckOrder.find(i => !ai.hand.includes(i));
+  if (next !== undefined) ai.hand[slot] = next;
 }
 
 /* ----------------- Mechanics ----------------- */
@@ -179,7 +210,7 @@ function towerAI(state, t, dt) {
   }
 }
 
-/* ----------------- PATHING (bridge-respecting + defend-king) ----------------- */
+/* -------- PATHING (bridge-respecting + defend-king + RIVER NO-GO) -------- */
 function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
@@ -187,22 +218,24 @@ function unitUpdate(state, u, dt) {
   const laneCrossbow = aliveCrossbowOn(state, foe, u.laneX);
   let struct = laneCrossbow || kingOf(state, foe);
 
-  const { riverY, riverH } = state.config;
-  const crossed = (u.side==='blue') ? (u.y < riverY - riverH/2)
-                                     : (u.y > riverY + riverH/2);
+  const { riverY, riverH, riverMargin } = state.config;
+  const riverTop = riverY - riverH/2 + riverMargin;
+  const riverBot = riverY + riverH/2 - riverMargin;
 
-  // Allow defenders to move laterally on their side when their king is threatened.
+  const crossed = (u.side==='blue') ? (u.y < riverTop) : (u.y > riverBot);
+  const inRiver = (u.y > riverTop && u.y < riverBot);
   const defending = isKingThreatened(state, u.side);
-  const lockLane = !crossed && !defending; // locked until crossing, unless defending king
 
-  // Desired lane anchor:
+  // lock lateral movement while: before crossing OR inside river
+  const lockLane = (!crossed) || inRiver;
+
+  // desired lane anchor: toward enemy king after crossing; while defending (own side) drift toward own king
   let desiredLaneX = u.laneX;
-  if ((struct?.type === 'king' && crossed) || defending) {
-    desiredLaneX = kingOf(state, foe).x; // drift toward enemy king when across OR toward own king while defending
-  }
+  if (struct?.type === 'king' && crossed) desiredLaneX = kingOf(state, foe).x;
+  if (defending && !inRiver) desiredLaneX = kingOf(state, u.side).x; // allow defending lateral, but never in river
   u.laneX += (desiredLaneX - u.laneX) * Math.min(1, dt * 2.5);
 
-  // Acquire targets (units first). This already allows fighting attackers near king.
+  // acquire targets (units first, then structures if in range)
   let close = enemyUnits(state, u.side)
     .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
   if (!close.length && struct){
@@ -226,28 +259,51 @@ function unitUpdate(state, u, dt) {
       const step = u.speed * dt;
       const s = (dNow - step < need) ? Math.max(0, dNow - need) : step;
 
-      // While lockLane, forbid lateral motion (keeps units on bridge/own lane)
       let stepX = nx * s, stepY = ny * s;
-      if (lockLane) stepX = 0;
+      if (lockLane) stepX = 0; // never strafe before crossing or while in river
 
       u.x += stepX; u.y += stepY;
     }
   } else {
-    // No target: proceed along lane (blue up, red down)
+    // idle advance along lane (blue up, red down)
     u.y += (u.side==='blue' ? -1 : 1) * u.speed * dt;
   }
 
-  // Keep glued to lane; stronger pull while lockLane
+  // keep glued to lane (stronger pull while lockLane)
   const lanePull = lockLane ? 20 : 6;
   u.x += (u.laneX - u.x) * Math.min(1, dt * lanePull);
 
-  // Attack timings
+  // --- Hard river NO-GO: if inside river, clamp to nearest bridge corridor and forbid being off-corridor ---
+  applyRiverNoGo(state, u);
+
+  // attack timings
   u.cd -= dt;
   if (best && u.cd<=0){ dealDamage(state, best, u.dmg); u.cd = u.atk; }
   else if (!best && struct && u.cd<=0){
     const d = dist(u, struct), need = (u.type==='melee') ? (struct.r + u.radius + 2) : u.range;
     if (d <= need){ dealDamage(state, struct, u.dmg); u.cd = u.atk; }
   }
+}
+
+function applyRiverNoGo(state, u){
+  const { lanesX, bridgeW, bridgeCorridorFactor, riverY, riverH, riverMargin } = state.config;
+  const riverTop = riverY - riverH/2 + riverMargin;
+  const riverBot = riverY + riverH/2 - riverMargin;
+
+  if (u.y <= riverTop || u.y >= riverBot) return; // not in river band
+
+  // Inside river: clamp X to nearest bridge corridor, and do not allow being "in the water"
+  const laneC = Math.abs(u.x - lanesX[0]) < Math.abs(u.x - lanesX[1]) ? lanesX[0] : lanesX[1];
+  const half = bridgeW * bridgeCorridorFactor;
+  const minX = laneC - half, maxX = laneC + half;
+
+  if (u.x < minX) u.x = minX;
+  if (u.x > maxX) u.x = maxX;
+
+  // Nudge across if somehow stalled: tiny forward step
+  const nudge = 6;
+  if (u.side === 'blue') u.y = Math.max(u.y - 0.0001, u.y - nudge * 0.0);
+  else u.y = Math.min(u.y + 0.0001, u.y + nudge * 0.0);
 }
 
 function updateProjectiles(state, dt){
@@ -291,9 +347,8 @@ function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const
 function randRange(a,b){ return a + Math.random()*(b-a); }
 function isKingThreatened(state, side){
   const k = kingOf(state, side); if (!k) return false;
-  if (k.hp < k.maxHp) return true; // already hit -> wake/defend
-  const enemiesNear = enemyUnits(state, side).some(u => dist(u,k) < 220);
-  return enemiesNear;
+  if (k.hp < k.maxHp) return true; // already hit
+  return enemyUnits(state, side).some(u => dist(u,k) < 220);
 }
 
 export const labelFor = k => k==='knight'?'K':k==='archers'?'Ar':'MM';
