@@ -17,9 +17,9 @@
       <div class="menu-buttons">
         <button id="playBtn" class="btn" type="button">Play</button>
         <button id="openEncy" class="btn" type="button">Encyclopedia</button>
-        <button id="openLog" class="btn" type="button">Update Log (v0.1.1)</button>
+        <!-- bumped to v0.1.2 -->
+        <button id="openLog" class="btn" type="button">Update Log (v0.1.2)</button>
       </div>
-
       <p class="muted">Blue (you) at the bottom. Red (AI) at the top.</p>
     </section>
 
@@ -27,11 +27,9 @@
     <section id="play" class="panel hidden" aria-labelledby="playTitle">
       <div class="toolbar">
         <h2 id="playTitle" class="toolbar-title">Play — Blue (You) vs Red (AI)</h2>
-        <button id="backFromPlay" class="btn">Back</button>
+        <button id="backFromPlay" class="btn" type="button">Back</button>
       </div>
-
       <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
-
       <div class="cardhud" aria-label="Card and Elixir HUD">
         <div class="elixirRow">
           <span class="label-ink">Elixir</span>
@@ -47,15 +45,12 @@
     <section id="ency" class="panel hidden" aria-labelledby="encyTitle">
       <div class="toolbar">
         <h2 id="encyTitle" class="toolbar-title">Encyclopedia</h2>
-        <button id="backBtn" class="btn">Back</button>
+        <button id="backBtn" class="btn" type="button">Back</button>
       </div>
-
       <div class="entries">
         <!-- KNIGHT -->
         <article class="entry" aria-labelledby="knightTitle">
-          <div class="cardFrame">
-            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)">
-          </div>
+          <div class="cardFrame"><img src="assets/Knight.png" alt="Knight card (Common, Cost 2)"></div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
             <div class="grid">
@@ -71,9 +66,7 @@
 
         <!-- ARCHERS (nerfed) -->
         <article class="entry" aria-labelledby="archersTitle">
-          <div class="cardFrame">
-            <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)">
-          </div>
+          <div class="cardFrame"><img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"></div>
           <div class="details">
             <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
             <div class="grid">
@@ -90,9 +83,7 @@
 
         <!-- MINI-MEGA -->
         <article class="entry" aria-labelledby="miniMegaTitle">
-          <div class="cardFrame">
-            <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)">
-          </div>
+          <div class="cardFrame"><img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"></div>
           <div class="details">
             <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
             <div class="grid">
@@ -111,28 +102,42 @@
     <!-- UPDATE LOG -->
     <section id="log" class="panel hidden" aria-labelledby="logTitle">
       <div class="toolbar">
-        <h2 id="logTitle" class="toolbar-title">Update Log — v0.1.1</h2>
-        <button id="backFromLog" class="btn">Back</button>
+        <h2 id="logTitle" class="toolbar-title">Update Log — v0.1.2</h2>
+        <button id="backFromLog" class="btn" type="button">Back</button>
       </div>
 
+      <!-- v0.1.2 -->
       <article class="changelog">
-        <h3>Balance</h3>
+        <h3>v0.1.2</h3>
+        <h4>Bug Fixes / Pathing</h4>
+        <ul>
+          <li>Added <strong>bridge waypoints</strong> and a <em>toBridge → attack</em> phase so units cross the river reliably instead of oscillating.</li>
+          <li>Repathing is throttled and goals are stabilized; defending is ignored once a unit is on the enemy side.</li>
+        </ul>
+        <h4>Misc</h4>
+        <ul>
+          <li>Update Log button and header now show v0.1.2.</li>
+        </ul>
+      </article>
+
+      <!-- v0.1.1 -->
+      <article class="changelog">
+        <h3>v0.1.1</h3>
+        <h4>Balance</h4>
         <ul>
           <li><strong>Archers:</strong> damage & cadence changed from <code>15 / 0.5s</code> → <code>10 / 0.75s</code>. Range remains <code>120</code>.</li>
         </ul>
-
-        <h3>Bug Fixes</h3>
+        <h4>Bug Fixes</h4>
         <ul>
           <li>Units no longer drift toward center when the king isn’t activated; lane-local defense only after activation.</li>
-          <li>River is a strict no-go (clamped to bridge corridors); no clipping while defending near king towers.</li>
+          <li>River is a strict no-go; no clipping near king towers.</li>
           <li>AI obeys bridge rules and uses a 2-card rotation like the player.</li>
         </ul>
-
-        <h3>Misc</h3>
+        <h4>Misc</h4>
         <ul>
-          <li>Added placement tiles (green = valid, red = invalid) visible when a card is selected.</li>
-          <li>Elixir bar is now segmented into 10 ticks for clearer refills.</li>
-          <li>Added this Update Log screen to the main menu.</li>
+          <li>Placement tiles (green/red) when a card is selected.</li>
+          <li>Elixir bar segmented into 10 ticks.</li>
+          <li>Added this Update Log screen.</li>
         </ul>
       </article>
     </section>
