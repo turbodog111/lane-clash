@@ -8,7 +8,11 @@
 }
 *{ box-sizing:border-box; }
 html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px; background:#11162b; border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:5;
+}
 .title{ font-weight:750; letter-spacing:.2px; }
 main{ max-width:1024px; margin:24px auto; padding:0 12px; }
 .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
@@ -43,7 +47,17 @@ canvas{ width:100%; height:720px; display:block; border-radius:12px; background:
 /* Card HUD */
 .cardhud{ margin-top:12px; background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:10px; }
 .elixirRow{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
-.elixirBar{ position:relative; height:14px; flex:1; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden; }
+.elixirBar{
+  position:relative; height:14px; flex:1; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden;
+  /* 10 segments tick marks */
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent,
+    transparent calc(10% - 1px),
+    rgba(207,225,255,0.22) calc(10% - 1px),
+    rgba(207,225,255,0.22) 10%
+  );
+}
 .elixirFill{ position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff); transform:scaleX(0); }
 .elixirText{ font-variant-numeric: tabular-nums; min-width:2ch; text-align:right; color:#cfe1ff; }
 
@@ -62,16 +76,15 @@ canvas{ width:100%; height:720px; display:block; border-radius:12px; background:
 .cost{ font-size:12px; color:#b9c8ff; }
 .disabled{ opacity:.45; filter:grayscale(35%); cursor:not-allowed; }
 
-/* Encyclopedia entries — add readable background for text */
+/* Encyclopedia */
 .entries{ display:grid; gap:16px; }
 .entry{
   display:grid; grid-template-columns:min(360px,42%) 1fr; gap:18px; align-items:center;
   background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px;
 }
 @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
-.cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; border-radius:12px; min-height:220px; background:transparent; }
+.cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; border-radius:12px; min-height:220px; }
 .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
-
 .details{ background:#0b1433; border:1px solid #20306a; border-radius:12px; padding:12px; }
 .details h2{ margin:0 0 8px; font-size:22px; display:flex; align-items:center; gap:8px; }
 .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#091036; border:1px solid #20306a; font-size:12px; color:#cfe1ff; }
@@ -79,16 +92,7 @@ canvas{ width:100%; height:720px; display:block; border-radius:12px; background:
 .label{ color:#9fb4ff; }
 .desc{ color:#cfe1ff; }
 
-/* Header now shows version pill on the right */
-header{
-  display:flex; justify-content:space-between; align-items:center;
-  padding:12px; background:#11162b; border-bottom:1px solid var(--line);
-  position:sticky; top:0; z-index:5;
-}
-.version{
-  font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  color:#cfe1ff; background:#0b1433; border:1px solid #20306a;
-  padding:4px 8px; border-radius:10px; letter-spacing:.2px;
-}
-
-
+/* Changelog */
+.changelog h3{ margin:8px 0; }
+.changelog ul{ margin:6px 0 14px 18px; }
+.changelog code{ background:#0b1433; border:1px solid #20306a; padding:0 6px; border-radius:6px; }
