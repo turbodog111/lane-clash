@@ -2,7 +2,6 @@
 export function initDiag({ version = 'dev' } = {}) {
   const qs = new URLSearchParams(location.search);
   const auto = qs.get('debug') === '1';
-
   const el = document.createElement('div');
   el.id = 'lc-diag';
   el.style.cssText = `
@@ -22,30 +21,19 @@ export function initDiag({ version = 'dev' } = {}) {
   const body = el.querySelector('#lc-diag-body');
 
   const lines = [];
-  function render() {
-    body.innerHTML = lines.map(x => `<div>${x}</div>`).join('');
-  }
-  function add(prefix, msg, color='#cfe1ff') {
-    lines.push(`<span style="color:${color}">${prefix}</span> ${escapeHtml(String(msg))}`);
-    if (lines.length > 120) lines.shift();
-    render();
-  }
-  function step(msg){ add('·', msg, '#9ad1ff'); }
-  function ok(msg){ add('✔', msg, '#6bff95'); }
-  function warn(msg){ add('▲', msg, '#ffd166'); }
-  function error(msg){ add('✖', msg, '#ff6b6b'); el.style.display='block'; }
+  function render(){ body.innerHTML = lines.map(x => `<div>${x}</div>`).join(''); }
+  function add(prefix, msg, color='#cfe1ff'){ lines.push(`<span style="color:${color}">${prefix}</span> ${escapeHtml(String(msg))}`); if(lines.length>120) lines.shift(); render(); }
+  function step(m){ add('·', m, '#9ad1ff'); }
+  function ok(m){ add('✔', m, '#6bff95'); }
+  function warn(m){ add('▲', m, '#ffd166'); }
+  function error(m){ add('✖', m, '#ff6b6b'); el.style.display='block'; }
 
-  // global error capture
   window.addEventListener('error', (e)=> error(e.message || 'Script error'));
   window.addEventListener('unhandledrejection', (e)=> error((e.reason && e.reason.message) || 'Unhandled promise rejection'));
-
-  // toggle with "D"
   window.addEventListener('keydown', (e)=>{ if (e.key.toLowerCase()==='d') el.style.display = (el.style.display==='none'?'block':'none'); });
 
-  // expose tiny console API
   const api = { step, ok, warn, error, show(){el.style.display='block';}, hide(){el.style.display='none';} };
   window.__LC_DIAG = api;
   return api;
 }
-
 function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
