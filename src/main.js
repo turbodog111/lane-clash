@@ -13,7 +13,7 @@ try {
   ]);
 
   const ui   = initUI();
-  const game = await initGame(diag); // {start, stop, getState}
+  const game = await initGame(diag);
 
   const $ = (id)=>document.getElementById(id);
   const bind = (id, fn) => { const b=$(id); if(!b){ diag.warn(`missing #${id}`); return; } b.onclick = (e)=>{ e.preventDefault(); fn(); }; };
@@ -33,7 +33,4 @@ try {
   diag.ok('modules loaded');
   diag.ok('buttons wired');
   goMenu();
-} catch (e) {
-  console.error(e);
-  diag.error(e?.message || 'boot failed');
-}
+} catch (e) { console.error(e); diag.error(e?.message || 'boot failed'); }
