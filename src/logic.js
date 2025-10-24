@@ -7,6 +7,8 @@ export function createGameState(canvas){
     riverY: H/2, riverH: 100,
     bridgeW: 120, bridgeH: 118,
     tile: 40,
+    AGGRO_RADIUS: 140,
+    LANE_TOLERANCE: 80,
     ELIXIR_MAX: 10, ELIXIR_PER_SEC: 0.5,  // 1 per 2s
     kingThreatRadius: 240,
   };
@@ -174,36 +176,69 @@ function towerAI(state, t, dt){
 function unitUpdate(state,u,dt){
   if (u.hp<=0) return;
 
-  const { riverY,riverH }=state.config;
-  const riverTop=riverY-riverH/2, riverBot=riverY+riverH/2;
+  const { riverY, riverH, AGGRO_RADIUS } = state.config;
+  const riverTop = riverY - riverH/2, riverBot = riverY + riverH/2;
   const crossed = (u.side==='blue') ? (u.y<riverTop) : (u.y>riverBot);
   if (u.phase==='toBridge' && crossed){ u.phase='attack'; u.repathCD=0; }
 
-  const foe = enemySide(u.side);
-  const laneXbow = aliveXbow(state,foe,u.homeLaneX);
-  const struct = laneXbow || kingOf(state,foe);
-
-  let desired = u.goal;
-  if (u.phase==='toBridge'){ desired = bridgeExitPoint(state,u.side,u.homeLaneIndex); }
-  else { desired = struct ? {x:struct.x,y:struct.y} : desired; }
-
-  u.repathCD-=dt;
-  if (!u.path || u.wp>=u.path.length || u.repathCD<=0 || changedGoal(u.goal,desired)){
-    u.goal=desired; u.path=findPathWorld(state,{x:u.x,y:u.y},desired); u.wp=0; u.repathCD=0.6;
+  // --- choose target: enemy unit in aggro radius (same lane) OR lane structure
+  let targetUnit = null;
+  {
+    const foes = enemyUnits(state, u.side)
+      .filter(e => e.hp>0 && dist(u,e) <= AGGRO_RADIUS && inSameLane(state, u, e.x));
+    // prefer the closest
+    let best=null, bd=1e9; for (const e of foes){ const d=dist(u,e); if (d<bd){bd=d; best=e;} }
+    targetUnit = best;
   }
 
-  const step=u.speed*dt;
+  const struct = laneStructureTarget(state, u);
+  let desired = null;
+  if (u.phase==='toBridge'){
+    desired = bridgeExitPoint(state, u.side, u.homeLaneIndex);
+  } else {
+    desired = targetUnit ? { x:targetUnit.x, y:targetUnit.y } :
+              (struct ? { x:struct.x, y:struct.y } : { x:u.x, y:u.y });
+  }
+
+  // --- pathing (A*) with light throttling
+  u.repathCD -= dt;
+  if (!u.path || u.wp>=u.path.length || u.repathCD<=0 || changedGoal(u.goal, desired)){
+    u.goal = desired;
+    u.path = findPathWorld(state, {x:u.x,y:u.y}, desired);
+    u.wp = 0;
+    u.repathCD = 0.35;  // slightly snappier repaths feel better with aggro
+  }
+
+  // --- move along path
+  const step = u.speed*dt;
   if (u.path && u.wp<u.path.length){
-    const pt=u.path[u.wp]; const dx=pt.x-u.x, dy=pt.y-u.y; const d=Math.hypot(dx,dy);
-    if (d<=Math.max(1,step*1.25)){ u.x=pt.x; u.y=pt.y; u.wp++; } else { u.x+=dx/d*step; u.y+=dy/d*step; }
+    const pt = u.path[u.wp];
+    const dx = pt.x-u.x, dy = pt.y-u.y; const d = Math.hypot(dx,dy);
+    if (d <= Math.max(1, step*1.25)){ u.x=pt.x; u.y=pt.y; u.wp++; }
+    else { u.x += dx/d*step; u.y += dy/d*step; }
   }
 
-  // Attack
-  let near = enemyUnits(state,u.side).filter(e=>dist(u,e)<= (u.type==='melee' ? (u.radius+(e.radius||e.r)+2) : u.range));
-  let best=null,bd=1e9; for (const e of near){ const dd=dist(u,e); if (dd<bd){bd=dd; best=e;} }
-  if (!best && struct){ const need = (u.type==='melee' ? ((struct.r||20)+u.radius+2) : u.range); if (dist(u,struct)<=need) best=struct; }
-  u.cd-=dt; if (best && u.cd<=0){ dealDamage(state,best,u.dmg); u.cd=u.atk; }
+  // --- attack logic
+  let victim = targetUnit;
+  if (!victim && struct){
+    const need = (u.type==='melee' ? ((struct.r||20)+u.radius+2) : u.range);
+    if (dist(u,struct) <= need) victim = struct;
+  }
+  if (!victim){
+    // if no victim yet, also allow incidental melee vs enemy units when bumping into them
+    const meleeRange = (u.radius + 12 + 2);
+    const near = enemyUnits(state,u.side).filter(e=>dist(u,e)<= (u.type==='melee' ? meleeRange : u.range));
+    let best=null, bd=1e9; for (const e of near){ const dd=dist(u,e); if (dd<bd){bd=dd; best=e;} }
+    if (best) victim = best;
+  }
+
+  u.cd -= dt;
+  if (victim && u.cd<=0){
+    dealDamage(state, victim, u.dmg);
+    u.cd = u.atk;
+  }
 }
+
 
 // ----- Projectiles, Damage, FX -----
 function spawnBolt(state,from,target,dmg,spd){
@@ -355,6 +390,18 @@ function randomRedSpawnCell(state){
     if (n) cands.push(n);
   }
   return cands.length ? cands[(Math.random()*cands.length)|0] : null;
+}
+// Is unit/point considered in the same lane as 'u'?
+function inSameLane(state, u, x) {
+  const laneX = state.config.lanesX[u.homeLaneIndex];
+  return Math.abs(x - laneX) <= state.config.LANE_TOLERANCE;
+}
+
+function laneStructureTarget(state, u){
+  // prefer enemy crossbow in this lane, else enemy king
+  const foe = enemySide(u.side);
+  const laneXbow = aliveXbow(state, foe, state.config.lanesX[u.homeLaneIndex]);
+  return laneXbow || kingOf(state, foe);
 }
 
 
