@@ -35,7 +35,7 @@ export function setupRenderer(canvas){
       ctx.fillText(`${Math.max(0,Math.floor(t.hp))}`, t.x, t.y-t.r-20);
     }
 
-    // Placement overlay (green tiles)
+    // Placement overlay
     if (state.showPlacementOverlay){
       const t = state.config.tile, { rows, cols } = state.nav;
       ctx.fillStyle='rgba(81,214,141,.16)';
