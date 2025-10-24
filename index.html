@@ -216,24 +216,24 @@
     openEncy.addEventListener('click', () => show(ency));
     backBtn.addEventListener('click', () => show(menu));
 
-    // ===== PLAY: Battlefield + Towers + Projectiles + Units + Cards =====
+    // ===== PLAY: Battlefield + Towers + Projectiles + Units + Cards + FX =====
     const W = 960, H = 720;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
 
-    // Battlefield layout
-    const riverY = H/2, riverH = 100; // river top/bot: 310..410
+    // Battlefield
+    const riverY = H/2, riverH = 100;
     const lanesX = [ W*0.33, W*0.67 ];
     const bridgeW = 120, bridgeH = riverH + 18;
 
-    // Elixir (player only visible)
+    // Elixir (player)
     const ELIXIR_MAX = 10;
     const ELIXIR_PER_SEC = 0.5; // 1 per 2s
     const elixir = { blue: 5, red: 5 };
     const elixirFill = document.getElementById('elixirFill');
     const elixirText = document.getElementById('elixirText');
 
-    // Card deck (2-card hand rotation from 3)
+    // Cards (2-card hand from 3)
     const allCards = [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',
         count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:12, type:'melee' },
@@ -246,7 +246,7 @@
     let hand = [ deckOrder[0], deckOrder[1] ];
     let selectedHandSlot = null;
 
-    // DOM: render cards
+    // DOM: card bar
     const cardsRoot = document.getElementById('cards');
     function renderCardBar(){
       cardsRoot.innerHTML = '';
@@ -257,17 +257,13 @@
         btn.type='button';
         btn.title = `${c.name} — Cost ${c.cost}`;
         btn.dataset.slot = String(slot);
-
         btn.addEventListener('click', ()=>{
-          // Allow selection even if can't afford; placement check happens on canvas click
           selectedHandSlot = (selectedHandSlot===slot? null : slot);
           refreshCardAffordability();
         });
 
-        const thumb = document.createElement('div');
-        thumb.className = 'thumb';
-        const img = document.createElement('img');
-        img.src = c.img; img.alt = `${c.name} card`;
+        const thumb = document.createElement('div'); thumb.className='thumb';
+        const img = document.createElement('img'); img.src=c.img; img.alt=`${c.name} card`;
         img.onerror = () => { thumb.textContent = c.name[0]; };
         thumb.appendChild(img);
 
@@ -281,9 +277,7 @@
       });
       refreshCardAffordability();
     }
-
     function refreshCardAffordability(){
-      // Toggle disabled/selected styling live based on CURRENT elixir & selection
       [...cardsRoot.children].forEach((node, slot)=>{
         const idx = hand[slot], c = allCards[idx];
         node.classList.toggle('disabled', elixir.blue < c.cost);
@@ -292,8 +286,6 @@
       elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
       elixirText.textContent = Math.floor(elixir.blue);
     }
-
-    // Rotation: after playing one card, refill with next from deck
     function rotateAfterPlay(playedIdx, slot){
       deckOrder = deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
       const next = deckOrder.find(i => !hand.includes(i));
@@ -305,11 +297,9 @@
     function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:1200, rof:1.6, range:260, cd:0}; }
     function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16, hp:600,  rof:1.1, range:300, cd:0}; }
     const towers = [
-      // BLUE (bottom)
       tKing('blue', W/2, H-100),
       tXbow('blue', lanesX[0], H-180),
       tXbow('blue', lanesX[1], H-180),
-      // RED (top)
       tKing('red',  W/2, 100),
       tXbow('red',  lanesX[0], 180),
       tXbow('red',  lanesX[1], 180),
@@ -343,6 +333,63 @@
     function spawnBolt(from, target, dmg=30, spd=360){
       const ang = Math.atan2(target.y - from.y, target.x - from.x);
       projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
+    }
+
+    // FX: particles + floating damage
+    const particles = []; // {x,y,vx,vy,life,ttl,size,color}
+    const floatDMG = [];  // {x,y,vy,life,ttl,text,color}
+    function addHitFX(x,y,dmg,color='#ffd166'){
+      // particles
+      const n = 10;
+      for(let i=0;i<n;i++){
+        const a = Math.random()*Math.PI*2;
+        const s = 60 + Math.random()*160;
+        particles.push({
+          x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s,
+          life:0, ttl:0.35+Math.random()*0.25,
+          size: 2 + Math.random()*2,
+          color
+        });
+      }
+      // damage number
+      floatDMG.push({ x, y: y-8, vy: -40, life:0, ttl:0.8, text: String(Math.round(dmg)), color });
+    }
+    function updateFX(dt){
+      // particles
+      for (const p of particles){
+        p.life += dt;
+        p.x += p.vx*dt; p.y += p.vy*dt;
+        p.vx *= 0.94; p.vy *= 0.94; // drag
+      }
+      for (let i=particles.length-1;i>=0;i--) if (particles[i].life>particles[i].ttl) particles.splice(i,1);
+
+      // damage numbers
+      for (const f of floatDMG){
+        f.life += dt;
+        f.y += f.vy*dt;
+        f.vy *= 0.98;
+      }
+      for (let i=floatDMG.length-1;i>=0;i--) if (floatDMG[i].life>floatDMG[i].ttl) floatDMG.splice(i,1);
+    }
+    function drawFX(){
+      // particles
+      for (const p of particles){
+        const a = 1 - (p.life/p.ttl);
+        ctx.globalAlpha = Math.max(0, Math.min(1, a));
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      // damage numbers
+      for (const f of floatDMG){
+        const a = 1 - (f.life/f.ttl);
+        ctx.globalAlpha = Math.max(0, Math.min(1, a));
+        ctx.font = 'bold 14px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, f.x, f.y);
+        ctx.globalAlpha = 1;
+      }
     }
 
     // Helpers
@@ -456,13 +503,12 @@
       if (img && img.complete){
         const w=36, h=46;
         ctx.save();
-        ctx.beginPath(); // rounded rect clip
+        ctx.beginPath();
         const px=u.x + u.radius + 8, py=u.y - u.radius - h + 6, r=8;
         roundedRect(px, py, w, h, r);
         ctx.clip();
         ctx.drawImage(img, px, py, w, h);
         ctx.restore();
-        // small frame
         ctx.strokeStyle='#20306a'; ctx.lineWidth=1;
         roundedRect(u.x + u.radius + 8, u.y - u.radius - h + 6, w, h, 8); ctx.stroke();
       }
@@ -530,20 +576,18 @@
       }
 
       // movement toward target (or straight up if none)
-      let nx=0, ny=-1; // default straight up
+      let nx=0, ny=-1;
       if (best){
         const dx = best.x - u.x, dy = best.y - u.y, len = Math.hypot(dx,dy) || 1;
         nx = dx/len; ny = dy/len;
       }
 
-      // desired attack distance (stop distance)
+      // desired attack distance
       const tgtR = best ? ('r' in best ? best.r : best.radius) : 0;
       const attackRange = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
 
-      // If too far, move closer but don't cross the attack boundary
       if (!best || bestD > attackRange){
         const step = u.speed * dt;
-        // if moving would overshoot the boundary, clamp
         if (best && bestD - step < attackRange){
           const clampStep = Math.max(0, bestD - attackRange);
           u.x += nx * clampStep; u.y += ny * clampStep;
@@ -558,11 +602,13 @@
       u.cd -= dt;
       if (best && bestD <= attackRange && u.cd<=0){
         best.hp -= u.dmg;
+        addHitFX(best.x, best.y - (('r' in best)? best.r : best.radius) - 6, u.dmg, '#ffd166');
         u.cd = u.atk;
       }
     }
 
     // Projectiles update/draw (towers)
+    const projectilesToDelete = [];
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -574,7 +620,9 @@
         p.y += p.vy * p.spd * dt;
         const rT = ('r' in tgt) ? tgt.r : tgt.radius;
         if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (rT+6)){
-          tgt.hp -= p.dmg; p.dead = true;
+          tgt.hp -= p.dmg;
+          addHitFX(p.x, p.y - rT*0.4, p.dmg, '#ffd166');
+          p.dead = true;
         }
       }
       for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
@@ -591,6 +639,7 @@
       for (const t of towers) drawTower(t);
       for (const u of units)  drawUnit(u);
       drawProjectiles();
+      drawFX(); // particles & damage numbers on top
     }
 
     // Main loop
@@ -611,8 +660,9 @@
       // cleanup
       for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
 
-      // projectiles
+      // projectiles + FX
       updateProjectiles(dt);
+      updateFX(dt);
 
       // draw
       drawAll();
@@ -620,7 +670,7 @@
     }
     requestAnimationFrame(gameLoop);
 
-    // ===== Deployment: card click then canvas click on player's half =====
+    // ===== Deployment =====
     canv.addEventListener('click', (ev)=>{
       if (selectedHandSlot===null) return;
       const rect = canv.getBoundingClientRect();
@@ -638,7 +688,7 @@
 
       const idx = hand[selectedHandSlot];
       const card = allCards[idx];
-      if (elixir.blue < card.cost) return; // CURRENT elixir check (fixes prior bug)
+      if (elixir.blue < card.cost) return;
 
       // Spend elixir, spawn, rotate hand
       elixir.blue -= card.cost;
@@ -648,8 +698,9 @@
       refreshCardAffordability();
     });
 
-    // Initial render of hand
+    // ===== Init =====
     renderCardBar();
+
   </script>
 </body>
 </html>
