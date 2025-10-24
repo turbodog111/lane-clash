@@ -69,8 +69,9 @@ export function initGame() {
   let last = performance.now(), raf = 0;
   function loop(now){
     const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
-    update(state, dt);
+    if (!state.winner) update(state, dt);
     renderer.drawAll(state);
+    if (state.winner){ cancelAnimationFrame(raf); raf = 0; return; }
     raf = requestAnimationFrame(loop);
   }
 
