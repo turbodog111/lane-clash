@@ -2,7 +2,7 @@ import { labelFor } from './logic.js';
 
 export function setupRenderer(ctx, state) {
   const CSS = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff';
-  const { W, H, riverY, riverH, lanesX, bridgeW, bridgeH } = state.config;
+  const { W, H, riverY, riverH, lanesX, bridgeW, bridgeH, tile } = state.config;
 
   function roundedRect(x,y,w,h,r){
     ctx.beginPath();
@@ -35,33 +35,33 @@ export function setupRenderer(ctx, state) {
       for (let i=-3;i<=3;i++){ const bx = x + (i*bridgeW/7); ctx.beginPath(); ctx.moveTo(bx, riverY-bridgeH/2+6); ctx.lineTo(bx, riverY+bridgeH/2-6); ctx.stroke(); }
     }
 
-    // Lanes
+    // Lane guides
     for (const x of lanesX){
       ctx.strokeStyle = CSS('--lane'); ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
       ctx.strokeStyle = CSS('--laneCtr'); ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke(); ctx.setLineDash([]);
     }
   }
 
-  // Placement tiles: only when a card is selected
+  // Placement tiles reflect real walkability + blue half only
   function drawPlacementTiles(){
-    if (!state.showPlacementOverlay) return;
+    if (!state.showPlacementOverlay || !state.nav) return;
 
-    const tile = 40;
-    const yMin = riverY + riverH/2 + 20;
-    const yMax = H - 40;
+    const cols = state.nav.cols, rows = state.nav.rows;
+    const yMin = Math.floor((riverY + riverH/2 + 20) / tile);
+    const yMax = Math.floor((H - 40) / tile);
 
     ctx.save();
-    for (let y = yMin; y < yMax; y += tile){
-      for (let x = tile/2; x < W; x += tile){
-        const w = tile-4, h = tile-4;
-        const cx = x, cy = y + tile/2;
-        const valid = cy >= yMin && cy <= yMax;
+    for (let cy = yMin; cy <= yMax; cy++){
+      for (let cx = 0; cx < cols; cx++){
+        const ok = state.canPlaceCell(cx, cy);
+        const x = cx * tile + 2, y = cy * tile + 2;
+        const w = tile - 4, h = tile - 4;
         ctx.globalAlpha = 0.18;
-        ctx.fillStyle = valid ? '#6bff95' : '#ff6b6b';
-        ctx.fillRect(x - w/2, y + 2, w, h);
+        ctx.fillStyle = ok ? '#6bff95' : '#ff6b6b';
+        ctx.fillRect(x, y, w, h);
         ctx.globalAlpha = 0.26;
-        ctx.strokeStyle = valid ? '#1f6d3a' : '#6d2b2b';
-        ctx.strokeRect(x - w/2, y + 2, w, h);
+        ctx.strokeStyle = ok ? '#1f6d3a' : '#6d2b2b';
+        ctx.strokeRect(x, y, w, h);
       }
     }
     ctx.restore();
@@ -82,6 +82,7 @@ export function setupRenderer(ctx, state) {
       ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
     }
 
+    // HP bar + number
     const pct = Math.max(0, Math.min(1, t.hp/t.maxHp));
     const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -97,16 +98,21 @@ export function setupRenderer(ctx, state) {
     const ring = (u.side === 'blue') ? CSS('--blue') : CSS('--red');
     ctx.shadowColor = (u.side === 'blue') ? 'rgba(88,166,255,0.35)' : 'rgba(255,107,107,0.35)';
     ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+
+    // halo
     ctx.fillStyle = (u.side === 'blue') ? 'rgba(88,166,255,0.22)' : 'rgba(255,107,107,0.22)';
     ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 4, 0, Math.PI*2); ctx.fill();
 
+    // dot + ring
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.fillStyle = '#eaf4ff'; ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = ring; ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 1.2, 0, Math.PI*2); ctx.stroke();
 
+    // label
     ctx.font = 'bold 11px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#0b1433';
     ctx.fillText(labelFor(u.kind), u.x, u.y);
 
+    // hp bar
     const w=38, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
     const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -155,7 +161,7 @@ export function setupRenderer(ctx, state) {
 
   function drawAll(state){
     drawBattlefield();
-    drawPlacementTiles();     // overlay under actors
+    drawPlacementTiles();
     for (const t of state.towers) drawTower(t);
     for (const u of state.units)  drawUnit(u);
     drawProjectiles(state.projectiles);
