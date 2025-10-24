@@ -19,8 +19,9 @@ export function createGameState(canvas) {
     particles: [],
     floatDMG: [],
     elixir: { blue: 5, red: 5 },
+    winner: null,
 
-    // NOTE: Archers range reduced to 120.
+    // Cards (Archers range 120)
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:15, atk:0.5, range:120, speed:90, radius:10, type:'ranged' },
@@ -32,14 +33,7 @@ export function createGameState(canvas) {
     onElixirChange: () => {},
     rebuildCardBar: () => {},
 
-    // --- Simple Red AI ---
-    ai: {
-      enabled: true,
-      timer: 2.5,             // time to next decision
-      minInterval: 2.4,
-      maxInterval: 4.2,
-      aggression: 1.0,        // 1.0 = normal, >1 = more frequent
-    },
+    ai: { enabled:true, timer:2.5, minInterval:2.4, maxInterval:4.2, aggression:1.0 },
   };
   state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
 
@@ -60,25 +54,26 @@ export function createGameState(canvas) {
 
 /* ----------------- Update Loop ----------------- */
 export function update(state, dt) {
+  if (state.winner) { updateFX(state, dt); return; } // freeze logic after victory, keep FX fading
+
   const { ELIXIR_MAX, ELIXIR_PER_SEC } = state.config;
-  // regen both sides (AI needs elixir too)
   state.elixir.blue = Math.min(ELIXIR_MAX, state.elixir.blue + ELIXIR_PER_SEC * dt);
   state.elixir.red  = Math.min(ELIXIR_MAX, state.elixir.red  + ELIXIR_PER_SEC * dt);
   state.onElixirChange();
 
-  // Red AI
   aiUpdate(state, dt);
 
-  // Towers
   for (const t of state.towers) towerAI(state, t, dt);
-
-  // Units
   for (const u of state.units) unitUpdate(state, u, dt);
   for (let i = state.units.length - 1; i >= 0; i--) if (state.units[i].hp <= 0) state.units.splice(i, 1);
 
-  // Projectiles + FX
   updateProjectiles(state, dt);
   updateFX(state, dt);
+
+  // --- Victory check ---
+  const kBlue = kingOf(state,'blue'), kRed = kingOf(state,'red');
+  if (kBlue && kBlue.hp <= 0 && !state.winner) state.winner = 'red';
+  if (kRed  && kRed.hp  <= 0 && !state.winner) state.winner = 'blue';
 }
 
 /* ----------------- Input/Deploy (Blue) ----------------- */
@@ -118,32 +113,21 @@ function aiUpdate(state, dt){
   ai.timer -= dt * ai.aggression;
   if (ai.timer > 0) return;
 
-  // Choose a card the AI can afford
-  const affordable = state.cards
-    .map((c, i) => ({c, i}))
-    .filter(({c}) => c.cost <= state.elixir.red);
+  const affordable = state.cards.map((c,i)=>({c,i})).filter(({c})=>c.cost<=state.elixir.red);
+  if (!affordable.length){ ai.timer = 0.8; return; }
 
-  if (affordable.length === 0){
-    // Not enough elixir; wait a bit and try again soon
-    ai.timer = 0.8;
-    return;
-  }
-
-  // Very light heuristic: heavier cards a bit more likely if player is pushing
   const blueUnits = state.units.filter(u => u.side==='blue').length;
-  affordable.sort((a,b) => (b.c.cost + Math.random()*0.3) - (a.c.cost + Math.random()*0.3 + blueUnits*0.01));
+  affordable.sort((a,b)=>(b.c.cost+Math.random()*0.3)-(a.c.cost+Math.random()*0.3+blueUnits*0.01));
   const pick = affordable[0];
 
   const { lanesX, riverY, riverH } = state.config;
-  const laneX = Math.random() < 0.5 ? lanesX[0] : lanesX[1];
-  // Red half spawn band (top)
+  const laneX = Math.random()<0.5?lanesX[0]:lanesX[1];
   const topMin = 40, topMax = riverY - riverH/2 - 20;
   const y = randRange(topMin+20, topMax-10);
 
   state.elixir.red -= pick.c.cost;
   spawnUnits(state, 'red', pick.c, laneX, y);
 
-  // Schedule next decision
   ai.timer = randRange(ai.minInterval, ai.maxInterval);
 }
 
@@ -152,7 +136,7 @@ function spawnUnits(state, side, card, laneX, y) {
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
     state.units.push({
-      side, x: laneX + off, y, laneX, // lane anchor; may drift AFTER crossing
+      side, x: laneX + off, y, laneX,
       hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
       range: card.range, speed: card.speed, radius: card.radius,
       kind: card.id, type: card.type
@@ -195,7 +179,7 @@ function towerAI(state, t, dt) {
   }
 }
 
-/* ----------------- PATHING (bridge-respecting) ----------------- */
+/* ----------------- PATHING (bridge-respecting + defend-king) ----------------- */
 function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
@@ -206,18 +190,19 @@ function unitUpdate(state, u, dt) {
   const { riverY, riverH } = state.config;
   const crossed = (u.side==='blue') ? (u.y < riverY - riverH/2)
                                      : (u.y > riverY + riverH/2);
-  const lockLane = !crossed; // while on own side OR inside river band
+
+  // Allow defenders to move laterally on their side when their king is threatened.
+  const defending = isKingThreatened(state, u.side);
+  const lockLane = !crossed && !defending; // locked until crossing, unless defending king
 
   // Desired lane anchor:
   let desiredLaneX = u.laneX;
-  if (struct?.type === 'king' && crossed) {
-    // Pull toward king ONLY after crossing.
-    desiredLaneX = struct.x;
+  if ((struct?.type === 'king' && crossed) || defending) {
+    desiredLaneX = kingOf(state, foe).x; // drift toward enemy king when across OR toward own king while defending
   }
-  // Smoothly move lane anchor
   u.laneX += (desiredLaneX - u.laneX) * Math.min(1, dt * 2.5);
 
-  // Acquire targets near us (units first, then structures if in range)
+  // Acquire targets (units first). This already allows fighting attackers near king.
   let close = enemyUnits(state, u.side)
     .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
   if (!close.length && struct){
@@ -241,20 +226,18 @@ function unitUpdate(state, u, dt) {
       const step = u.speed * dt;
       const s = (dNow - step < need) ? Math.max(0, dNow - need) : step;
 
-      // while lockLane, forbid lateral motion (keep to bridge)
-      let stepX = nx * s;
-      let stepY = ny * s;
+      // While lockLane, forbid lateral motion (keeps units on bridge/own lane)
+      let stepX = nx * s, stepY = ny * s;
       if (lockLane) stepX = 0;
 
-      u.x += stepX;
-      u.y += stepY;
+      u.x += stepX; u.y += stepY;
     }
   } else {
     // No target: proceed along lane (blue up, red down)
     u.y += (u.side==='blue' ? -1 : 1) * u.speed * dt;
   }
 
-  // Keep glued to lane; stronger pull while lockLane (before/inside river)
+  // Keep glued to lane; stronger pull while lockLane
   const lanePull = lockLane ? 20 : 6;
   u.x += (u.laneX - u.x) * Math.min(1, dt * lanePull);
 
@@ -306,5 +289,11 @@ function xbowBandFor(state, t){
 function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 function randRange(a,b){ return a + Math.random()*(b-a); }
+function isKingThreatened(state, side){
+  const k = kingOf(state, side); if (!k) return false;
+  if (k.hp < k.maxHp) return true; // already hit -> wake/defend
+  const enemiesNear = enemyUnits(state, side).some(u => dist(u,k) < 220);
+  return enemiesNear;
+}
 
 export const labelFor = k => k==='knight'?'K':k==='archers'?'Ar':'MM';
