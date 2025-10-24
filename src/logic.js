@@ -13,18 +13,16 @@ export function createGameState(canvas){
     ELIXIR_PER_SEC: 0.5, // 1 per 2s
 
     // path/aggro tuning
-    AGGRO_RADIUS: 140,         // enter aggro
-    AGGRO_EXIT_RADIUS: 180,    // leave aggro (hysteresis)
-    TARGET_LOCK_TIME: 1.0,     // seconds to keep a target
-    GOAL_EPS: 8,               // waypoint reach tolerance (px)
-    BRIDGE_BUFFER_Y: 8,        // buffer past river before switching phase
-    REPATH_TIME: 0.35,         // min seconds between repaths
-    REPATH_MOVE_DST: 10,       // repath if moved this far since last path
+    AGGRO_RADIUS: 60,          // "small" — half archer range
     LANE_TOLERANCE: 80,        // same-lane check half-width
     CORRIDOR_W: 90,            // lane corridor half-width (cheaper A*)
+    GOAL_EPS: 8,               // waypoint reach tolerance (px)
+    REPATH_TIME: 0.35,         // min seconds between repaths
+    REPATH_MOVE_DST: 10,       // repath if moved this far since last path
     SEP_DIST: 18,              // friendly separation radius
-    SEP_PUSH: 12,              // strength of separation push
-    kingThreatRadius: 240,     // (available for future king-defense logic)
+    SEP_PUSH: 12,              // separation push strength
+    BRIDGE_BUFFER_Y: 8,        // buffer past river before switching to attack
+    kingThreatRadius: 240,     // reserved for future king-defense logic
   };
 
   const state = {
@@ -50,20 +48,20 @@ export function createGameState(canvas){
     onElixirChange:()=>{}, rebuildCardBar:()=>{},
   };
 
-  // starting hands (2-card rotation)
+  // hands (2-card rotation)
   state.hand     = [ state.deckOrder[0], state.deckOrder[1] ];
   state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
-  // towers
+  // towers (pushed further from river on 900px height)
   const K = (side,x,y)=>({type:'king', side,x,y,r:26,hp:2000,maxHp:2000,rof:1.0,range:260,cd:0,awake:false});
   const X = (side,x,y)=>({type:'xbow', side,x,y,r:16,hp:1000,maxHp:1000,rof:1.0,range:300,cd:0});
   state.towers.push(
-    K('blue', W/2, H-100),
-    X('blue', config.lanesX[0], H-190),
-    X('blue', config.lanesX[1], H-190),
-    K('red',  W/2, 100),
-    X('red',  config.lanesX[0], 190),
-    X('red',  config.lanesX[1], 190),
+    K('blue', W/2, H-120),
+    X('blue', config.lanesX[0], H-250),
+    X('blue', config.lanesX[1], H-250),
+    K('red',  W/2, 120),
+    X('red',  config.lanesX[0], 250),
+    X('red',  config.lanesX[1], 250),
   );
 
   buildNav(state);
@@ -162,9 +160,7 @@ function spawnUnits(state, side, card, cx, cy, x, y){
       hp:card.hp,maxHp:card.hp,dmg:card.dmg,atk:card.atk,cd:0,range:card.range,
       speed:card.speed,radius:card.radius, kind:card.id,type:card.type,
       phase:'toBridge', path:[], wp:0, repathCD:0, goal:null,
-      // stabilization fields
-      lockId:null, lockTimer:0,
-      lastPathX:x+off, lastPathY:y,
+      lastPathX:x+off, lastPathY:y, // for move-based repath trigger
     };
     // first goal: bridge entry on own side
     const pt = bridgeEntryPoint(state,u.side,u.homeLaneIndex);
@@ -195,58 +191,47 @@ function unitUpdate(state,u,dt){
   if (u.hp<=0) return;
   const cfg = state.config;
 
-  // ---- phase transitions across river (robust)
+  // ---- phase transitions across river
   const { riverY, riverH, BRIDGE_BUFFER_Y } = cfg;
   const riverTop = riverY - riverH/2, riverBot = riverY + riverH/2;
 
-  // enter cross-bridge once you cross the river line
   if (u.phase==='toBridge' && ((u.side==='blue' && u.y < riverTop) || (u.side==='red' && u.y > riverBot))) {
     u.phase='crossBridge';
     u.goal = bridgeExitPoint(state,u.side,u.homeLaneIndex);
     u.repathCD = 0;
   }
-  // enter attack once you've moved past a small buffer
   if (u.phase==='crossBridge' && ((u.side==='blue' && u.y < riverTop - BRIDGE_BUFFER_Y) ||
                                   (u.side==='red'  && u.y > riverBot + BRIDGE_BUFFER_Y))) {
     u.phase='attack';
     u.repathCD = 0;
   }
 
-  // ---- choose target: hysteresis + short lock
-  const ENTER = cfg.AGGRO_RADIUS, EXIT = cfg.AGGRO_EXIT_RADIUS;
-  const sameSide = (e)=> ((u.side==='blue' && e.y>riverY) || (u.side==='red' && e.y<riverY));
+  // ---- structure target by lane-specific priority
+  const foe = enemySide(u.side);
+  const laneXbow = aliveXbow(state,foe, cfg.lanesX[u.homeLaneIndex]); // lane-specific
+  const structTarget = laneXbow || kingOf(state,foe);
 
-  // Keep lock if still valid
+  // ---- opportunistic aggro (same lane) ONLY for attacking if already in range
   let targetUnit = null;
-  u.lockTimer = Math.max(0, u.lockTimer - dt);
-  if (u.lockId != null){
-    const tgt = state.units.find(x=>x===u.lockId) || state.towers.find(x=>x===u.lockId);
-    if (tgt && tgt.hp>0 && dist(u,tgt) <= EXIT && inSameLane(state,u,tgt.x) && sameSide(tgt)){
-      targetUnit = tgt;
-    } else {
-      u.lockId = null;
-    }
-  }
-  // Acquire new target if no lock (closest within ENTER, same side & lane)
-  if (!targetUnit && u.lockTimer<=0){
+  {
+    const sameSide = (e)=> ((u.side==='blue' && e.y>riverY) || (u.side==='red' && e.y<riverY));
     let best=null, bd=1e9;
     for (const e of enemyUnits(state,u.side)){
       if (e.hp<=0) continue;
       if (!sameSide(e)) continue;
       if (!inSameLane(state,u,e.x)) continue;
-      const d=dist(u,e); if (d<bd){bd=d; best=e;}
+      const d=dist(u,e);
+      if (d<bd && d<=cfg.AGGRO_RADIUS){ bd=d; best=e; }
     }
-    if (best && bd<=ENTER){ targetUnit = best; u.lockId = best; u.lockTimer = cfg.TARGET_LOCK_TIME; }
+    // Note: we do not path toward targetUnit; we only use it for attacks if within weapon range.
+    targetUnit = best;
   }
 
-  const struct = laneStructureTarget(state,u);
-
-  // ---- desired goal based on phase/target
+  // ---- desired goal based on phase (always structure-oriented)
   let desired = null;
   if      (u.phase==='toBridge')    desired = bridgeEntryPoint(state,u.side,u.homeLaneIndex);
   else if (u.phase==='crossBridge') desired = bridgeExitPoint(state,u.side,u.homeLaneIndex);
-  else                               desired = targetUnit ? {x:targetUnit.x,y:targetUnit.y}
-                                                           : (struct ? {x:struct.x,y:struct.y} : {x:u.x,y:u.y});
+  else                               desired = structTarget ? {x:structTarget.x,y:structTarget.y} : {x:u.x,y:u.y};
 
   // ---- repath throttled (time + movement + goal change)
   u.repathCD -= dt;
@@ -280,18 +265,29 @@ function unitUpdate(state,u,dt){
   }
   u.x += vx; u.y += vy;
 
-  // ---- attack
-  let victim = targetUnit;
-  if (!victim && struct){
-    const need = (u.type==='melee' ? ((struct.r||20)+u.radius+2) : u.range);
-    if (dist(u,struct)<=need) victim = struct;
+  // ---- attack resolution (units first if close & in range; else structure if in range)
+  let victim = null;
+
+  // Enemy unit within AGGRO_RADIUS AND within weapon range? attack it
+  if (targetUnit){
+    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
+    if (dist(u,targetUnit) <= need) victim = targetUnit;
   }
+
+  // Otherwise, attack structure if in range
+  if (!victim && structTarget){
+    const need = (u.type==='melee' ? ((structTarget.r||20)+u.radius+2) : u.range);
+    if (dist(u,structTarget) <= need) victim = structTarget;
+  }
+
+  // Fallback melee bumping
   if (!victim){
     const meleeRange = (u.radius + 12 + 2);
     const near = enemyUnits(state,u.side).filter(e=>dist(u,e)<= (u.type==='melee' ? meleeRange : u.range));
     let best=null, bd=1e9; for (const e of near){ const dd=dist(u,e); if (dd<bd){bd=dd; best=e;} }
     if (best) victim = best;
   }
+
   u.cd -= dt;
   if (victim && u.cd<=0){ dealDamage(state, victim, u.dmg); u.cd=u.atk; }
 }
@@ -439,7 +435,6 @@ function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const
 function randRange(a,b){ return a + Math.random()*(b-a); }
 function changedGoal(a,b,eps=6){ if(!a||!b) return true; return Math.abs(a.x-b.x)>eps || Math.abs(a.y-b.y)>eps; }
 function inSameLane(state, u, x){ const laneX = state.config.lanesX[u.homeLaneIndex]; return Math.abs(x - laneX) <= state.config.LANE_TOLERANCE; }
-function laneStructureTarget(state, u){ const foe=enemySide(u.side); const lx=state.config.lanesX[u.homeLaneIndex]; return aliveXbow(state,foe,lx) || kingOf(state,foe); }
 function randomRedSpawnCell(state){
   const { riverY, riverH } = state.config;
   const { cols, rows, walk } = state.nav;
@@ -451,10 +446,6 @@ function randomRedSpawnCell(state){
     if (walk[cy][cx] !== 1) continue;
     return {cx,cy};
   }
-  const cands=[];
-  for (const laneX of state.config.lanesX){ const n=nearestWalkable(state,laneX,redMaxY); if(n) cands.push(n); }
+  const cands=[]; for (const laneX of state.config.lanesX){ const n=nearestWalkable(state,laneX,redMaxY); if(n) cands.push(n); }
   return cands.length ? cands[(Math.random()*cands.length)|0] : null;
 }
-
-// short label helper (renderer has its own fallback)
-export const labelFor = (k)=> (k==='knight'?'K':k==='archers'?'Ar':'MM');
