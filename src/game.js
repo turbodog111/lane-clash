@@ -1,103 +1,79 @@
 // src/game.js
-const VER = window.__LC_VER || 'dev';
+export async function initGame(diag){
+  const VER = window.__LC_VER || 'dev';
 
-// load both with the same version to avoid cache mismatch
-const [{ createGameState, update, tryDeployAt, rotateAfterPlay, labelFor },
-       { setupRenderer }] = await Promise.all([
-  import(`./logic.js?v=${VER}`),
-  import(`./render.js?v=${VER}`)
-]);
+  // Versioned, single-shot dynamic imports
+  const logic  = await import(`./logic.js?v=${VER}`);
+  const render = await import(`./render.js?v=${VER}`);
 
-export async function initGame(diag) {
-  // ... your existing initGame, but now using the imports above ...
-  // make sure you return { start, stop, getState } as before
-}
+  // Pull what we need into local names (no top-level duplicates)
+  const { createGameState, update, tryDeployAt, rotateAfterPlay, labelFor } = logic;
+  const { setupRenderer } = render;
 
-
-import { createGameState, update, tryDeployAt } from './logic.js';
-import { setupRenderer } from './render.js';
-
-export function initGame() {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const cardsRoot = document.getElementById('cards');
+  const canvas     = document.getElementById('game');
+  const cardsWrap  = document.getElementById('cards');
   const elixirFill = document.getElementById('elixirFill');
   const elixirText = document.getElementById('elixirText');
 
   const state = createGameState(canvas);
-  const renderer = setupRenderer(ctx, state);
 
-  // ---------- Card HUD ----------
-  function refreshElixirUI() {
-    const max = state.config.ELIXIR_MAX;
-    elixirFill.style.transform = `scaleX(${state.elixir.blue / max})`;
-    elixirText.textContent = String(Math.floor(state.elixir.blue));
-    [...cardsRoot.children].forEach((node, i) => {
-      const c = state.cards[state.hand[i]];
-      node.classList.toggle('disabled', state.elixir.blue < c.cost);
-      node.classList.toggle('selected', state.selectedHandSlot === i);
-    });
-  }
-  function rebuildCardBar() {
-    cardsRoot.innerHTML = '';
-    state.hand.forEach((idx, slot) => {
-      const c = state.cards[idx];
+  // ========= UI callbacks from state =========
+  state.onElixirChange = () => {
+    const pct = Math.min(1, state.elixir.blue/state.config.ELIXIR_MAX);
+    elixirFill.style.width = `${pct*100}%`;
+    elixirText.textContent = Math.floor(state.elixir.blue).toString();
+  };
+
+  state.rebuildCardBar = () => {
+    cardsWrap.innerHTML = '';
+    state.hand.forEach((cardIdx, slot) => {
+      const c = state.cards[cardIdx];
       const btn = document.createElement('button');
-      btn.className = 'cardBtn' + (state.selectedHandSlot===slot?' selected':'');
-      btn.type='button';
-      btn.title = `${c.name} — Cost ${c.cost}`;
-      btn.addEventListener('click', () => {
-        // toggle selection + show placement tiles while selected
-        state.selectedHandSlot = (state.selectedHandSlot===slot? null : slot);
-        state.showPlacementOverlay = (state.selectedHandSlot !== null);
-        refreshElixirUI();
-      });
-
-      const thumb = document.createElement('div'); thumb.className='thumb';
-      const img = document.createElement('img'); img.src=c.img; img.alt=`${c.name} card`;
-      img.onerror = () => { thumb.textContent = c.name[0]; };
-      thumb.appendChild(img);
-
-      const meta = document.createElement('div'); meta.className='meta';
-      const name = document.createElement('div'); name.className='name'; name.textContent=c.name;
-      const cost = document.createElement('div'); cost.className='cost'; cost.textContent=`Cost: ${c.cost}`;
-      meta.appendChild(name); meta.appendChild(cost);
-
-      btn.appendChild(thumb); btn.appendChild(meta);
-      cardsRoot.appendChild(btn);
+      btn.className = 'cardBtn';
+      btn.innerHTML = `
+        <img src="${c.img}" alt="${c.name} card">
+        <div class="meta"><strong>${c.name}</strong><span>Cost: ${c.cost}</span></div>
+      `;
+      btn.onclick = () => {
+        state.selectedHandSlot = slot;
+        for (const el of cardsWrap.querySelectorAll('.cardBtn')) el.classList.remove('selected');
+        btn.classList.add('selected');
+        state.showPlacementOverlay = true;
+      };
+      cardsWrap.appendChild(btn);
     });
-    refreshElixirUI();
-  }
-  state.onElixirChange = refreshElixirUI;
-  state.rebuildCardBar = rebuildCardBar;
-  rebuildCardBar();
+  };
 
-  // ---------- Input (deploy) ----------
-  function canvasPoint(ev){
-    const r = canvas.getBoundingClientRect();
-    return { x: (ev.clientX - r.left) * (canvas.width / r.width),
-             y: (ev.clientY - r.top)  * (canvas.height / r.height) };
-  }
-  canvas.addEventListener('click', (ev) => {
-    const { x, y } = canvasPoint(ev);
-    if (tryDeployAt(state, x, y)) {
-      state.showPlacementOverlay = false; // hide after successful deploy
-      refreshElixirUI();
-    }
+  state.rebuildCardBar();
+  state.onElixirChange();
+
+  // ========= Renderer =========
+  const { drawAll, setHelpers } = setupRenderer(canvas);
+  // provide helpers so render.js never imports logic.js
+  setHelpers({ labelFor, getState: ()=>state });
+
+  // ========= Input: placement =========
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top)  * (canvas.height/ rect.height);
+    tryDeployAt(state, x, y);
   });
 
-  // ---------- Main Loop ----------
-  let last = performance.now(), raf = 0;
-  function loop(now){
-    const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
-    if (!state.winner) update(state, dt);
-    renderer.drawAll(state);
-    if (state.winner){ cancelAnimationFrame(raf); raf = 0; return; }
-    raf = requestAnimationFrame(loop);
+  // ========= Game Loop =========
+  let raf = 0, last = 0, running = false;
+  function frame(ts){
+    if (!running) return;
+    const dt = Math.min(0.05, (ts - last) / 1000) || 0.016;
+    last = ts;
+    update(state, dt);
+    drawAll(state);
+    raf = requestAnimationFrame(frame);
   }
 
-  return {
-    start(){ if (!raf) raf = requestAnimationFrame(loop); },
-    stop(){ if (raf){ cancelAnimationFrame(raf); raf = 0; } }
-  };
+  function start(){ if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); }
+  function stop(){ running = false; if (raf) cancelAnimationFrame(raf); }
+
+  // expose for diagnostics
+  return { start, stop, getState: () => state };
 }
