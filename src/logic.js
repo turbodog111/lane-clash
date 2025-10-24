@@ -1,30 +1,20 @@
-import { addHitFX, updateFX } from './fx.js';
-
-export function createGameState(canvas) {
+// ----- Game State & Config -----
+export function createGameState(canvas){
   const W = canvas.width, H = canvas.height;
   const config = {
-    W, H,
-    // widen lanes/bridges
-    lanesX: [W * 0.25, W * 0.75],
-    riverY: H / 2,
-    riverH: 100,
-    bridgeW: 120,
-    bridgeH: 118,
-
-    ELIXIR_MAX: 10,
-    ELIXIR_PER_SEC: 0.5, // 1 per 2s
-
+    W,H,
+    lanesX: [W*0.25, W*0.75],   // farther apart
+    riverY: H/2, riverH: 100,
+    bridgeW: 120, bridgeH: 118,
     tile: 40,
-    bridgeCorridorFactor: 0.45,
+    ELIXIR_MAX: 10, ELIXIR_PER_SEC: 0.5,  // 1 per 2s
     kingThreatRadius: 240,
   };
 
   const state = {
     canvas, config,
-    towers: [],
-    units: [],
+    towers: [], units: [],
     projectiles: [],
-    particles: [],
     floatDMG: [],
     elixir: { blue: 5, red: 5 },
     winner: null,
@@ -34,51 +24,39 @@ export function createGameState(canvas) {
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged' },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
     ],
-
     deckOrder: shuffle([0,1,2]),
     hand: [],
     selectedHandSlot: null,
 
-    onElixirChange: () => {},
-    rebuildCardBar: () => {},
-    showPlacementOverlay: false,
+    ai: { enabled:true, timer:2.0, minInterval:2.2, maxInterval:4.0, deckOrder: shuffle([0,1,2]), hand: [] },
 
-    ai: {
-      enabled: true,
-      timer: 2.5,
-      minInterval: 2.4,
-      maxInterval: 4.2,
-      aggression: 1.0,
-      deckOrder: shuffle([0,1,2]),
-      hand: [],
-    },
-
-    nav: null,
-    canPlaceCell: () => false,
+    nav:null, showPlacementOverlay:false,
+    onElixirChange:()=>{}, rebuildCardBar:()=>{},
   };
 
-  state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
-  state.ai.hand = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
+  // Start hands (2-card rotation)
+  state.hand     = [ state.deckOrder[0], state.deckOrder[1] ];
+  state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
-  // Towers (use widened lanes)
-  const k = (side,x,y)=>({type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false});
-  const x = (side,x,y)=>({type:'xbow', side, x, y, r:16,  hp:1000, maxHp:1000, rof:1.0, range:300, cd:0});
+  // Towers
+  const K = (side,x,y)=>({type:'king', side,x,y,r:26,hp:2000,maxHp:2000,rof:1.0,range:260,cd:0,awake:false});
+  const X = (side,x,y)=>({type:'xbow', side,x,y,r:16,hp:1000,maxHp:1000,rof:1.0,range:300,cd:0});
   state.towers.push(
-    k('blue', W/2, H-100),
-    x('blue', config.lanesX[0], H-190),
-    x('blue', config.lanesX[1], H-190),
-    k('red',  W/2, 100),
-    x('red',  config.lanesX[0], 190),
-    x('red',  config.lanesX[1], 190),
+    K('blue', W/2, H-100),
+    X('blue', config.lanesX[0], H-190),
+    X('blue', config.lanesX[1], H-190),
+    K('red',  W/2, 100),
+    X('red',  config.lanesX[0], 190),
+    X('red',  config.lanesX[1], 190),
   );
 
   buildNav(state);
 
-  // placement: blue half & walkable
-  state.canPlaceCell = (cx, cy) => {
-    if (!inBounds(state, cx, cy)) return false;
+  // Placement rules (blue half & walkable)
+  state.canPlaceCell = (cx,cy)=>{
+    if (!inBounds(state,cx,cy)) return false;
+    const { y } = cellCenter(state,cx,cy);
     const { riverY, riverH } = state.config;
-    const { y } = cellCenter(state, cx, cy);
     const blueMin = riverY + riverH/2 + 20;
     const blueMax = state.config.H - 40;
     if (y < blueMin || y > blueMax) return false;
@@ -88,440 +66,274 @@ export function createGameState(canvas) {
   return state;
 }
 
-/* ----------------- Update ----------------- */
-export function update(state, dt) {
+// ----- Update Loop -----
+export function update(state, dt){
   if (state.winner) { updateFX(state, dt); return; }
 
+  // Elixir
   const { ELIXIR_MAX, ELIXIR_PER_SEC } = state.config;
-  state.elixir.blue = Math.min(ELIXIR_MAX, state.elixir.blue + ELIXIR_PER_SEC * dt);
-  state.elixir.red  = Math.min(ELIXIR_MAX, state.elixir.red  + ELIXIR_PER_SEC * dt);
+  state.elixir.blue = Math.min(ELIXIR_MAX, state.elixir.blue + ELIXIR_PER_SEC*dt);
+  state.elixir.red  = Math.min(ELIXIR_MAX, state.elixir.red  + ELIXIR_PER_SEC*dt);
   state.onElixirChange();
 
   aiUpdate(state, dt);
 
   for (const t of state.towers) towerAI(state, t, dt);
   for (const u of state.units) unitUpdate(state, u, dt);
-  for (let i = state.units.length - 1; i >= 0; i--) if (state.units[i].hp <= 0) state.units.splice(i, 1);
+  for (let i=state.units.length-1;i>=0;i--) if (state.units[i].hp<=0) state.units.splice(i,1);
 
   updateProjectiles(state, dt);
   updateFX(state, dt);
 
-  const kBlue = kingOf(state,'blue'), kRed = kingOf(state,'red');
-  if (kBlue && kBlue.hp <= 0 && !state.winner) state.winner = 'red';
-  if (kRed  && kRed.hp  <= 0 && !state.winner) state.winner = 'blue';
+  const kB = kingOf(state,'blue'), kR = kingOf(state,'red');
+  if (kB && kB.hp<=0 && !state.winner) state.winner='red';
+  if (kR && kR.hp<=0 && !state.winner) state.winner='blue';
 }
 
-/* ----------------- Player Deploy ----------------- */
-export function tryDeployAt(state, mx, my) {
-  const cell = cellFromWorld(state, mx, my);
-  if (!cell) return false;
-  const { cx, cy } = cell;
-  if (!state.canPlaceCell(cx, cy)) return false;
+// ----- Deploy & rotation -----
+export function tryDeployAt(state, mx, my){
+  const c = cellFromWorld(state, mx, my); if (!c) return false;
+  if (!state.canPlaceCell(c.cx, c.cy)) return false;
 
-  const slot = state.selectedHandSlot;
-  if (slot === null) return false;
-  const idx = state.hand[slot];
-  const card = state.cards[idx];
+  const slot = state.selectedHandSlot; if (slot===null) return false;
+  const idx  = state.hand[slot]; const card = state.cards[idx];
   if (!card || state.elixir.blue < card.cost) return false;
 
-  const { x, y } = cellCenter(state, cx, cy);
+  const { x, y } = cellCenter(state, c.cx, c.cy);
   state.elixir.blue -= card.cost;
-  spawnUnits(state, 'blue', card, cx, cy, x, y);
+  spawnUnits(state, 'blue', card, c.cx, c.cy, x, y);
   rotateAfterPlay(state, idx, slot);
-  state.selectedHandSlot = null;
-  state.showPlacementOverlay = false;
+  state.selectedHandSlot = null; state.showPlacementOverlay = false;
   state.onElixirChange();
   return true;
 }
-
-export function rotateAfterPlay(state, playedIdx, slot) {
-  state.deckOrder = state.deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
+export function rotateAfterPlay(state, playedIdx, slot){
+  state.deckOrder = state.deckOrder.filter(i=>i!==playedIdx).concat([playedIdx]);
   const next = state.deckOrder.find(i => !state.hand.includes(i));
-  if (next !== undefined) state.hand[slot] = next;
+  if (next!==undefined) state.hand[slot]=next;
   state.rebuildCardBar();
 }
 
-/* ----------------- AI ----------------- */
+// ----- AI -----
 function aiUpdate(state, dt){
   const ai = state.ai; if (!ai.enabled) return;
-  ai.timer -= dt * ai.aggression;
-  if (ai.timer > 0) return;
+  ai.timer -= dt; if (ai.timer>0) return;
 
-  const affordable = ai.hand
-    .map((idx, slot) => ({ idx, slot, card: state.cards[idx] }))
-    .filter(({card}) => card.cost <= state.elixir.red);
+  const choices = ai.hand
+    .map((idx,slot)=>({idx,slot,card:state.cards[idx]}))
+    .filter(x=>x.card.cost<=state.elixir.red);
+  if (!choices.length){ ai.timer=1.0; return; }
 
-  if (affordable.length === 0) { ai.timer = 0.8; return; }
+  const pick = choices.sort((a,b)=>(b.card.cost+Math.random())-(a.card.cost+Math.random()))[0];
+  const cell = randomRedSpawnCell(state);
+  if (!cell){ ai.timer=1.0; return; }
 
-  affordable.sort((a,b)=>(b.card.cost+Math.random()*0.25)-(a.card.cost+Math.random()*0.25));
-  const choice = affordable[0];
-
-  const spot = randomRedSpawnCell(state);
-  if (!spot){ ai.timer = 1.0; return; }
-
-  state.elixir.red -= choice.card.cost;
-  const { cx, cy } = spot;
-  const { x, y } = cellCenter(state, cx, cy);
-  spawnUnits(state, 'red', choice.card, cx, cy, x, y);
-  aiRotateAfterPlay(state, choice.idx, choice.slot);
+  const { cx,cy }=cell; const {x,y}=cellCenter(state,cx,cy);
+  state.elixir.red -= pick.card.cost;
+  spawnUnits(state,'red',pick.card,cx,cy,x,y);
+  ai.deckOrder = ai.deckOrder.filter(i=>i!==pick.idx).concat([pick.idx]);
+  const next = ai.deckOrder.find(i => !ai.hand.includes(i)); if (next!==undefined) ai.hand[pick.slot]=next;
 
   ai.timer = randRange(ai.minInterval, ai.maxInterval);
 }
-function aiRotateAfterPlay(state, playedIdx, slot){
-  const ai = state.ai;
-  ai.deckOrder = ai.deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
-  const next = ai.deckOrder.find(i => !ai.hand.includes(i));
-  if (next !== undefined) ai.hand[slot] = next;
-}
 
-/* ----------------- Mechanics ----------------- */
-function spawnUnits(state, side, card, cx, cy, x, y) {
-  const laneIndex = getLaneIndex(state, x);
+// ----- Mechanics -----
+function spawnUnits(state, side, card, cx, cy, x, y){
+  const laneIndex = laneForX(state,x);
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
-    const unit = {
-      side, x: x + off, y,
-      cx, cy,
-      homeLaneX: state.config.lanesX[laneIndex], homeLaneIndex: laneIndex,
-      hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
-      range: card.range, speed: card.speed, radius: card.radius,
-      kind: card.id, type: card.type,
-
-      phase: 'toBridge',            // 'toBridge' → 'attack'
-      goalKind: null, goalRef: null,
-      path: [], wp: 0, repathCD: 0.0
+    const u={
+      side,x:x+off,y, cx,cy, homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
+      hp:card.hp,maxHp:card.hp,dmg:card.dmg,atk:card.atk,cd:0,range:card.range,speed:card.speed,radius:card.radius,
+      kind:card.id,type:card.type, phase:'toBridge', path:[], wp:0, repathCD:0, goal:null
     };
-    // go to the enemy-side bridge exit first (critical fix)
-    const pt = bridgeExitPoint(state, unit.side, unit.homeLaneIndex);
-    unit.goalKind = 'bridge'; unit.goalRef = {x:pt.x,y:pt.y};
-    unit.path = findPathWorld(state, {x:unit.x,y:unit.y}, pt);
-    unit.wp = 0; unit.repathCD = 0.6;
-
-    state.units.push(unit);
+    const pt = bridgeExitPoint(state,u.side,u.homeLaneIndex);
+    u.goal=pt; u.path=findPathWorld(state,{x:u.x,y:u.y},pt); u.wp=0; u.repathCD=0.6;
+    state.units.push(u);
   }
 }
+function towerAI(state, t, dt){
+  if (t.hp<=0) return;
+  if (t.type==='king' && !t.awake) return;
+  t.cd-=dt; if (t.cd>0) return;
 
-function spawnBolt(state, from, target, dmg=30, spd=360) {
-  const ang = Math.atan2(target.y - from.y, target.x - from.x);
-  state.projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
-}
-
-function towerAI(state, t, dt) {
-  if (t.hp <= 0) return;
-  if (t.type === 'king' && !t.awake) return;
-  t.cd -= dt; if (t.cd > 0) return;
-
-  let candidates = enemyUnits(state, t.side);
-  if (t.type === 'xbow'){
-    const band = xbowBandFor(state, t);
-    candidates = candidates.filter(e => e.y >= band.yMin && e.y <= band.yMax);
-  }
-  candidates = candidates.filter(e => dist(t,e) < t.range);
+  let candidates = enemyUnits(state,t.side);
+  if (t.type==='xbow'){ const band=xbowBand(state,t); candidates=candidates.filter(e=>e.y>=band.yMin && e.y<=band.yMax); }
+  candidates=candidates.filter(e=>dist(t,e)<t.range);
 
   if (!candidates.length){
-    let ets = enemyTowers(state, t.side);
-    if (t.type === 'xbow'){
-      const band = xbowBandFor(state, t);
-      ets = ets.filter(e => e.y >= band.yMin && e.y <= band.yMax);
-    }
-    ets = ets.filter(e => dist(t,e) < t.range);
-    candidates = ets;
+    let ets = enemyTowers(state,t.side);
+    if (t.type==='xbow'){ const band=xbowBand(state,t); ets=ets.filter(e=>e.y>=band.yMin && e.y<=band.yMax); }
+    ets=ets.filter(e=>dist(t,e)<t.range);
+    candidates=ets;
   }
 
-  let best=null, bestD=1e9;
-  for (const e of candidates){ const d = dist(t,e); if (d < bestD){ best=e; bestD=d; } }
-  if (best){
-    const dmg = (t.type==='king'?50:30);
-    spawnBolt(state, t, best, dmg, (t.type==='king'?340:380));
-    t.cd = t.rof;
+  let best=null, bd=1e9; for (const e of candidates){ const d=dist(t,e); if (d<bd){bd=d; best=e;} }
+  if (best){ const dmg=(t.type==='king'?50:30); spawnBolt(state,t,best,dmg,(t.type==='king'?340:380)); t.cd=t.rof; }
+}
+function unitUpdate(state,u,dt){
+  if (u.hp<=0) return;
+
+  const { riverY,riverH }=state.config;
+  const riverTop=riverY-riverH/2, riverBot=riverY+riverH/2;
+  const crossed = (u.side==='blue') ? (u.y<riverTop) : (u.y>riverBot);
+  if (u.phase==='toBridge' && crossed){ u.phase='attack'; u.repathCD=0; }
+
+  const foe = enemySide(u.side);
+  const laneXbow = aliveXbow(state,foe,u.homeLaneX);
+  const struct = laneXbow || kingOf(state,foe);
+
+  let desired = u.goal;
+  if (u.phase==='toBridge'){ desired = bridgeExitPoint(state,u.side,u.homeLaneIndex); }
+  else { desired = struct ? {x:struct.x,y:struct.y} : desired; }
+
+  u.repathCD-=dt;
+  if (!u.path || u.wp>=u.path.length || u.repathCD<=0 || changedGoal(u.goal,desired)){
+    u.goal=desired; u.path=findPathWorld(state,{x:u.x,y:u.y},desired); u.wp=0; u.repathCD=0.6;
   }
+
+  const step=u.speed*dt;
+  if (u.path && u.wp<u.path.length){
+    const pt=u.path[u.wp]; const dx=pt.x-u.x, dy=pt.y-u.y; const d=Math.hypot(dx,dy);
+    if (d<=Math.max(1,step*1.25)){ u.x=pt.x; u.y=pt.y; u.wp++; } else { u.x+=dx/d*step; u.y+=dy/d*step; }
+  }
+
+  // Attack
+  let near = enemyUnits(state,u.side).filter(e=>dist(u,e)<= (u.type==='melee' ? (u.radius+(e.radius||e.r)+2) : u.range));
+  let best=null,bd=1e9; for (const e of near){ const dd=dist(u,e); if (dd<bd){bd=dd; best=e;} }
+  if (!best && struct){ const need = (u.type==='melee' ? ((struct.r||20)+u.radius+2) : u.range); if (dist(u,struct)<=need) best=struct; }
+  u.cd-=dt; if (best && u.cd<=0){ dealDamage(state,best,u.dmg); u.cd=u.atk; }
 }
 
-/* -------- Bridge-phased movement -------- */
-function unitUpdate(state, u, dt) {
-  if (u.hp <= 0) return;
-
-  const { riverY, riverH } = state.config;
-  const riverTop = riverY - riverH/2;
-  const riverBot = riverY + riverH/2;
-  const onOwnSide = (u.side==='blue') ? (u.y >= riverBot) : (u.y <= riverTop);
-  const crossed   = (u.side==='blue') ? (u.y < riverTop)  : (u.y > riverBot);
-
-  if (u.phase === 'toBridge' && crossed){ // once across, start attacking structures
-    u.phase = 'attack';
-    u.repathCD = 0;
+// ----- Projectiles, Damage, FX -----
+function spawnBolt(state,from,target,dmg,spd){
+  const ang=Math.atan2(target.y-from.y,target.x-from.x);
+  state.projectiles.push({x:from.x,y:from.y,vx:Math.cos(ang),vy:Math.sin(ang),spd,dmg,target});
+}
+function updateProjectiles(state,dt){
+  const P=state.projectiles;
+  for (const p of P){
+    const t=p.target; if(!t||t.hp<=0){ p.dead=true; continue; }
+    const dx=t.x-p.x, dy=t.y-p.y, L=Math.hypot(dx,dy)||1; p.vx=dx/L; p.vy=dy/L;
+    p.x+=p.vx*p.spd*dt; p.y+=p.vy*p.spd*dt;
+    const tr=(t.r||t.radius||12)+6;
+    if (Math.hypot(t.x-p.x,t.y-p.y)<=tr){ dealDamage(state,t,p.dmg); p.dead=true; }
   }
-
-  const foe = enemySideOf(u.side);
-  const laneCrossbow = aliveCrossbowOn(state, foe, u.homeLaneX);
-  const struct = laneCrossbow || kingOf(state, foe);
-
-  const threat = getThreatenedLanes(state, u.side);
-  const defendThisLane = onOwnSide && threat.awake && threat.lanes.has(u.homeLaneIndex);
-
-  let desiredKind = u.goalKind, desiredRef = u.goalRef;
-  if (u.phase === 'toBridge') {
-    const pt = bridgeExitPoint(state, u.side, u.homeLaneIndex);
-    desiredKind = 'bridge'; desiredRef = { x: pt.x, y: pt.y };
-
-    if (defendThisLane){
-      const k = kingOf(state, u.side), R = state.config.kingThreatRadius;
-      const enemy = enemyUnits(state, u.side).filter(x => dist(x,k) < R)
-        .sort((a,b)=>dist(u,a)-dist(u,b))[0];
-      if (enemy){ desiredKind='unit'; desiredRef=enemy; }
-    }
-  } else {
-    desiredKind = 'struct'; desiredRef = struct;
-  }
-
-  // throttled repath
-  u.repathCD -= dt;
-  const changed = (desiredKind !== u.goalKind) || (desiredRef !== u.goalRef);
-  if (changed || u.repathCD <= 0 || u.path.length === 0 || u.wp >= u.path.length){
-    u.goalKind = desiredKind; u.goalRef = desiredRef;
-    const tgt = targetPointFor(state, desiredRef);
-    u.path = findPathWorld(state, {x:u.x,y:u.y}, tgt);
-    u.wp = 0; u.repathCD = 0.6;
-  }
-
-  // follow path
-  const step = u.speed * dt;
-  if (u.path.length && u.wp < u.path.length){
-    const pt = u.path[u.wp];
-    const dx = pt.x - u.x, dy = pt.y - u.y;
-    const d = Math.hypot(dx,dy);
-    if (d <= Math.max(1, step*1.25)) { u.x = pt.x; u.y = pt.y; u.wp++; }
-    else { u.x += (dx/d) * step; u.y += (dy/d) * step; }
-  }
-
-  // attack
-  let near = enemyUnits(state, u.side)
-    .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
-  let best=null, bestD=1e9;
-  for (const e of near){ const dd=dist(u,e); if (dd<bestD){ best=e; bestD=dd; } }
-  if (!best && desiredRef){
-    const need = (u.type==='melee' ? (('r' in desiredRef)? desiredRef.r : desiredRef.radius) + u.radius + 2 : u.range);
-    if (dist(u,desiredRef) <= need) best = desiredRef;
-  }
-  u.cd -= dt;
-  if (best && u.cd <= 0){ dealDamage(state, best, u.dmg); u.cd = u.atk; }
+  for (let i=P.length-1;i>=0;i--) if (P[i].dead) P.splice(i,1);
+}
+function dealDamage(state,target,amount){
+  if (!target||target.hp<=0) return;
+  target.hp-=amount;
+  state.floatDMG.push({x:target.x, y:target.y-20, a:1, vY:-18, txt:`${amount|0}`});
+  if (target.type==='king' && !target.awake) target.awake=true;
+}
+function updateFX(state,dt){
+  for (const f of state.floatDMG){ f.y += f.vY*dt; f.a -= 1.2*dt; }
+  state.floatDMG = state.floatDMG.filter(f=>f.a>0);
 }
 
-/* ----------------- A* + nav ----------------- */
+// ----- Navigation (A*) -----
 function buildNav(state){
-  const { W, H, tile, riverY, riverH, lanesX, bridgeW, bridgeCorridorFactor } = state.config;
-  const cols = Math.floor(W / tile);
-  const rows = Math.floor(H / tile);
-  const walk = Array.from({length: rows}, () => Array(cols).fill(1));
+  const {W,H,tile,riverY,riverH,lanesX,bridgeW,bridgeH}=state.config;
+  const cols=Math.floor(W/tile), rows=Math.floor(H/tile);
+  const walk=Array.from({length:rows},()=>Array(cols).fill(1));
 
-  // river blocked except two bridge corridors centered on lanes
-  const topY = riverY - riverH/2, botY = riverY + riverH/2;
-  const rowTop = Math.max(0, Math.floor(topY / tile));
-  const rowBot = Math.min(rows-1, Math.floor(botY / tile));
-  for (let cy = rowTop; cy <= rowBot; cy++){
-    for (let cx = 0; cx < cols; cx++){
-      const { x } = cellCenter(state, cx, cy);
-      const laneC = Math.abs(x - lanesX[0]) < Math.abs(x - lanesX[1]) ? lanesX[0] : lanesX[1];
-      const half = bridgeW * bridgeCorridorFactor;
-      const minX = laneC - half, maxX = laneC + half;
-      walk[cy][cx] = (x >= minX && x <= maxX) ? 1 : 0;
-    }
-  }
-
-  // towers as obstacles to avoid clipping
-  for (const t of state.towers){
-    const rad = t.r + 10;
-    const minC = Math.max(0, Math.floor((t.x - rad) / tile));
-    const maxC = Math.min(cols-1, Math.floor((t.x + rad) / tile));
-    const minR = Math.max(0, Math.floor((t.y - rad) / tile));
-    const maxR = Math.min(rows-1, Math.floor((t.y + rad) / tile));
-    for (let cy=minR; cy<=maxR; cy++){
-      for (let cx=minC; cx<=maxC; cx++){
-        const { x, y } = cellCenter(state, cx, cy);
-        if (Math.hypot(x - t.x, y - t.y) <= rad) walk[cy][cx] = 0;
+  // block river except narrow corridors at bridges
+  const top=riverY-riverH/2, bot=riverY+riverH/2;
+  for (let cy=0; cy<rows; cy++){
+    const y=cy*tile+tile/2;
+    if (y>=top && y<=bot){
+      for (let cx=0;cx<cols;cx++){
+        const x=cx*tile+tile/2;
+        const nearLane = Math.abs(x-lanesX[0])<Math.abs(x-lanesX[1])? lanesX[0]:lanesX[1];
+        const half=bridgeW*0.45;
+        walk[cy][cx] = (x>=nearLane-half && x<=nearLane+half) ? 1 : 0;
       }
     }
   }
-  state.nav = { cols, rows, walk };
+
+  // block space around towers
+  for (const t of state.towers){
+    const rad=t.r+(t.type==='xbow'?6:12);
+    for (let cy=0; cy<rows; cy++){
+      for (let cx=0; cx<cols; cx++){
+        const c=cellCenter(state,cx,cy);
+        if (Math.hypot(c.x-t.x,c.y-t.y)<=rad) walk[cy][cx]=0;
+      }
+    }
+  }
+  state.nav={cols,rows,walk};
 }
-
-function findPathWorld(state, fromPt, toPt){
-  const s = cellFromWorld(state, fromPt.x, fromPt.y);
-  const g = nearestWalkableCell(state, toPt.x, toPt.y);
-  if (!s || !g) return [];
-  const cells = aStar(state, s.cx, s.cy, g.cx, g.cy);
-  return cells.map(c => cellCenter(state, c.cx, c.cy));
+function findPathWorld(state,from,to){
+  const s=cellFromWorld(state,from.x,from.y), g=nearestWalkable(state,to.x,to.y);
+  if (!s||!g) return [];
+  const cells=aStar(state,s.cx,s.cy,g.cx,g.cy);
+  return cells.map(c=>cellCenter(state,c.cx,c.cy));
 }
-
-function aStar(state, sx, sy, gx, gy){
-  const { cols, rows, walk } = state.nav;
-  const key = (x,y)=> (y<<16)|x;
-  const open = new MinHeap((a,b)=>a.f-b.f);
-  const gScore = new Map(); const fScore = new Map(); const came = new Map();
-
-  const startK = key(sx,sy), goalK = key(gx,gy);
-  gScore.set(startK, 0); fScore.set(startK, heuristic8(sx,sy,gx,gy));
-  open.push({ cx:sx, cy:sy, f:fScore.get(startK), k:startK });
-
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-
-  while(!open.empty()){
-    const cur = open.pop();
-    if (cur.k === goalK) return reconstruct(came, cur);
-    const { cx, cy } = cur;
-
+function aStar(state,sx,sy,gx,gy){
+  const {cols,rows,walk}=state.nav;
+  const key=(x,y)=>(y<<16)|x;
+  const open=[]; const cmp=(a,b)=>a.f-b.f;
+  function push(n){ open.push(n); open.sort(cmp); }
+  function pop(){ return open.shift(); }
+  const gScore=new Map(), fScore=new Map(), came=new Map();
+  const startK=key(sx,sy), goalK=key(gx,gy);
+  gScore.set(startK,0); fScore.set(startK,heur8(sx,sy,gx,gy));
+  push({cx:sx,cy:sy,f:fScore.get(startK),k:startK});
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  while(open.length){
+    const cur=pop(); if (cur.k===goalK) return reconstruct(came,cur);
     for (const [dx,dy] of dirs){
-      const nx = cx+dx, ny = cy+dy;
+      const nx=cur.cx+dx, ny=cur.cy+dy;
       if (nx<0||ny<0||nx>=cols||ny>=rows) continue;
-      if (walk[ny][nx] !== 1) continue;
-      if (dx && dy){ if (walk[cy][nx] !== 1 || walk[ny][cx] !== 1) continue; } // prevent corner cut
-
-      const nk = key(nx,ny);
-      const candG = (gScore.get(cur.k) ?? Infinity) + ((dx && dy)? 1.4142 : 1);
-      if (candG < (gScore.get(nk) ?? Infinity)){
-        came.set(nk, cur); gScore.set(nk, candG);
-        const f = candG + heuristic8(nx,ny,gx,gy);
-        fScore.set(nk, f); open.push({ cx:nx, cy:ny, f, k:nk });
+      if (walk[ny][nx]!==1) continue;
+      if (dx&&dy && (walk[cur.cy][nx]!==1 || walk[ny][cur.cx]!==1)) continue;
+      const nk=key(nx,ny);
+      const cand=(gScore.get(cur.k)??Infinity)+((dx&&dy)?1.4142:1);
+      if (cand < (gScore.get(nk)??Infinity)){
+        came.set(nk,cur); gScore.set(nk,cand);
+        const f=cand+heur8(nx,ny,gx,gy); fScore.set(nk,f); push({cx:nx,cy:ny,f,k:nk});
       }
     }
   }
   return [];
 }
-function reconstruct(came, cur){
-  const out = [{ cx: cur.cx, cy: cur.cy }]; let node = cur;
-  while (came.has(node.k)){ node = came.get(node.k); out.push({ cx: node.cx, cy: node.cy }); }
-  out.reverse(); return out;
-}
-function heuristic8(x1,y1,x2,y2){ const dx=Math.abs(x1-x2), dy=Math.abs(y1-y2); const mn=Math.min(dx,dy), mx=Math.max(dx,dy); return mx - mn + 1.4142*mn; }
+function reconstruct(came,cur){ const out=[{cx:cur.cx,cy:cur.cy}]; let n=cur; while(came.has(n.k)){ n=came.get(n.k); out.push({cx:n.cx,cy:n.cy}); } out.reverse(); return out; }
+function heur8(x1,y1,x2,y2){ const dx=Math.abs(x1-x2),dy=Math.abs(y1-y2); const m=Math.min(dx,dy), M=Math.max(dx,dy); return M-m+1.4142*m; }
 
-/* ----------------- Helpers ----------------- */
-function bridgeExitPoint(state, side, laneIndex){
-  // IMPORTANT: pick a point just PAST the river on the ENEMY side
-  const { lanesX, riverY, riverH } = state.config;
-  const laneX = lanesX[laneIndex];
-  const enemyY = (side === 'blue') ? (riverY - riverH/2 - 12) : (riverY + riverH/2 + 12);
-  const c = nearestWalkableCell(state, laneX, enemyY);
-  return c ? cellCenter(state, c.cx, c.cy) : { x: laneX, y: enemyY };
+// ----- Helpers -----
+function cellFromWorld(state,x,y){ const t=state.config.tile; const cx=Math.floor(x/t), cy=Math.floor(y/t); return inBounds(state,cx,cy)?{cx,cy}:null; }
+function cellCenter(state,cx,cy){ const t=state.config.tile; return {x:cx*t+t/2,y:cy*t+t/2}; }
+function inBounds(state,cx,cy){ const {cols,rows}=state.nav; return cx>=0&&cy>=0&&cx<cols&&cy<rows; }
+function nearestWalkable(state,x,y){
+  const start=cellFromWorld(state,x,y); if (!start) return null;
+  if (state.nav.walk[start.cy][start.cx]===1) return start;
+  const {cols,rows}=state.nav; const seen=new Set([start.cy<<16|start.cx]); const q=[start];
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  while(q.length){ const c=q.shift();
+    for (const [dx,dy] of dirs){ const nx=c.cx+dx, ny=c.cy+dy; if (nx<0||ny<0||nx>=cols||ny>=rows) continue; const k=ny<<16|nx; if (seen.has(k)) continue; seen.add(k);
+      if (state.nav.walk[ny][nx]===1) return {cx:nx,cy:ny}; q.push({cx:nx,cy:ny});
+    }
+  } return null;
 }
-function targetPointFor(state, ref){
-  if (!ref) return { x: state.config.W/2, y: state.config.H/2 };
-  if ('r' in ref){
-    const near = nearestWalkableCell(state, ref.x, ref.y);
-    if (near) return cellCenter(state, near.cx, near.cy);
-  }
-  return { x: ref.x, y: ref.y };
+function laneForX(state,x){ const L=state.config.lanesX; return (Math.abs(x-L[0])<=Math.abs(x-L[1]))?0:1; }
+function bridgeExitPoint(state,side,laneIndex){
+  const {lanesX,riverY,riverH}=state.config; const laneX=lanesX[laneIndex];
+  const enemyY=(side==='blue')? (riverY - riverH/2 - 12) : (riverY + riverH/2 + 12);
+  const c=nearestWalkable(state,laneX,enemyY);
+  return c?cellCenter(state,c.cx,c.cy):{x:laneX,y:enemyY};
 }
-
-function xbowBandFor(state, t){
-  const { riverY, riverH, H } = state.config;
-  return (t.side==='blue') ? { yMin: riverY + riverH/2, yMax: H } : { yMin: 0, yMax: riverY - riverH/2 };
-}
-function kingOf(state, s){ return state.towers.find(t => t.type==='king' && t.side===s); }
-function enemyUnits(state, s){ return state.units.filter(u => u.side !== s && u.hp>0); }
-function enemyTowers(state, s){ return state.towers.filter(t => t.side !== s && t.hp>0); }
-function aliveCrossbowOn(state, s, laneX){
-  const list = state.towers.filter(t => t.type==='xbow' && t.side===s && t.hp>0);
-  if (!list.length) return null;
-  return list.reduce((best, t)=> Math.abs(t.x-laneX)<Math.abs(best.x-laneX)? t:best, list[0]);
-}
-function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function xbowBand(state,t){ const {riverY,riverH,H}=state.config; return (t.side==='blue')?{yMin:riverY+riverH/2,yMax:H}:{yMin:0,yMax:riverY-riverH/2}; }
+function kingOf(state,s){ return state.towers.find(t=>t.type==='king'&&t.side===s); }
+function aliveXbow(state,s,lx){ const xs=state.towers.filter(t=>t.type==='xbow'&&t.side===s&&t.hp>0); if(!xs.length) return null; return xs.reduce((b,t)=>Math.abs(t.x-lx)<Math.abs(b.x-lx)?t:b,xs[0]); }
+function enemyUnits(state,s){ return state.units.filter(u=>u.side!==s&&u.hp>0); }
+function enemyTowers(state,s){ return state.towers.filter(t=>t.side!==s&&t.hp>0); }
+function enemySide(s){ return s==='blue'?'red':'blue'; }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function heur(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
 function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 function randRange(a,b){ return a + Math.random()*(b-a); }
-function getLaneIndex(state, x){
-  const { lanesX } = state.config;
-  return (Math.abs(x - lanesX[0]) <= Math.abs(x - lanesX[1])) ? 0 : 1;
-}
+function changedGoal(a,b){ if(!a||!b) return true; return Math.abs(a.x-b.x)>0.5 || Math.abs(a.y-b.y)>0.5; }
 
-function getThreatenedLanes(state, side){
-  const k = kingOf(state, side);
-  const res = { awake: !!(k && k.awake), lanes: new Set() };
-  if (!k || !k.awake) return res;
-  const R = state.config.kingThreatRadius;
-  const foes = enemyUnits(state, side).filter(u => dist(u, k) < R);
-  for (const f of foes){ res.lanes.add(getLaneIndex(state, f.x)); }
-  return res;
-}
-
-/* ------------- grid helpers ------------- */
-function cellFromWorld(state, x, y){
-  const { tile } = state.config;
-  const cx = Math.floor(x / tile), cy = Math.floor(y / tile);
-  if (!inBounds(state, cx, cy)) return null; return { cx, cy };
-}
-function cellCenter(state, cx, cy){
-  const { tile } = state.config; return { x: cx*tile + tile/2, y: cy*tile + tile/2 };
-}
-function inBounds(state, cx, cy){
-  const { cols, rows } = state.nav; return cx>=0 && cy>=0 && cx<cols && cy<rows;
-}
-function nearestWalkableCell(state, x, y){
-  const c = cellFromWorld(state, x, y); if (!c) return null;
-  if (state.nav.walk[c.cy][c.cx]===1) return c;
-  const { cols, rows } = state.nav;
-  const visited = new Set(); const q = [c];
-  const key = (a)=> (a.cy<<16)|a.cx; visited.add(key(c));
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-  while(q.length){
-    const cur = q.shift();
-    for (const [dx,dy] of dirs){
-      const nx=cur.cx+dx, ny=cur.cy+dy;
-      if (nx<0||ny<0||nx>=cols||ny>=rows) continue;
-      const k=(ny<<16)|nx; if (visited.has(k)) continue;
-      visited.add(k);
-      if (state.nav.walk[ny][nx]===1) return { cx:nx, cy:ny };
-      q.push({ cx:nx, cy:ny });
-    }
-  }
-  return null;
-}
-
-function randomRedSpawnCell(state){
-  const cells = [];
-  const { rows, cols, walk } = state.nav;
-  const { riverY, riverH } = state.config;
-  const redMax = riverY - riverH/2 - 20;
-  for (let cy=0; cy<rows; cy++){
-    for (let cx=0; cx<cols; cx++){
-      if (walk[cy][cx] !== 1) continue;
-      const { y } = cellCenter(state, cx, cy);
-      if (y >= 40 && y <= redMax) cells.push({cx,cy});
-    }
-  }
-  if (!cells.length) return null;
-  return cells[(Math.random()*cells.length)|0];
-}
-
-/* ----------------- Projectiles / Damage ----------------- */
-function updateProjectiles(state, dt){
-  const list = state.projectiles;
-  for (const p of list){
-    const tgt = p.target;
-    if (!tgt || tgt.hp <= 0) { p.dead = true; continue; }
-    const dirx = tgt.x - p.x, diry = tgt.y - p.y, len = Math.hypot(dirx, diry) || 1;
-    p.vx = dirx/len; p.vy = diry/len;
-    p.x += p.vx * p.spd * dt; p.y += p.vy * p.spd * dt;
-    const rT = ('r' in tgt) ? tgt.r : tgt.radius;
-    if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (rT+6)){ dealDamage(state, tgt, p.dmg); p.dead = true; }
-  }
-  for (let i=list.length-1;i>=0;i--) if (list[i].dead) list.splice(i,1);
-}
-
-function dealDamage(state, target, amount){
-  if (!target || target.hp<=0) return;
-  target.hp -= amount;
-  const rT = ('r' in target) ? target.r : target.radius;
-  addHitFX(state, target.x, target.y - (rT*0.4), amount, '#ffd166');
-  if (target.type === 'king' && !target.awake){ target.awake = true; }
-}
-
-/* ---------- tiny MinHeap for A* ---------- */
-class MinHeap{
-  constructor(cmp){ this._a=[]; this._cmp=cmp; }
-  push(x){ const a=this._a, c=this._cmp; a.push(x); let i=a.length-1; while(i>0){ const p=(i-1)>>1; if(c(a[i],a[p])>=0) break; [a[i],a[p]]=[a[p],a[i]]; i=p; } }
-  pop(){ const a=this._a, c=this._cmp; if(!a.length) return null; const r=a[0], x=a.pop(); if(a.length){ a[0]=x; let i=0; while(true){ let l=i*2+1, rgt=l+1, m=i; if(l<a.length && c(a[l],a[m])<0) m=l; if(rgt<a.length && c(a[rgt],a[m])<0) m=rgt; if(m===i) break; [a[i],a[m]]=[a[m],a[i]]; i=m; } } return r; }
-  empty(){ return this._a.length===0; }
-}
-
-// short label for unit dots (used by render.js)
-export const labelFor = (k) => (k === 'knight' ? 'K' : k === 'archers' ? 'Ar' : 'MM');
-
+// Label helper used by renderer
+export const labelFor = (k)=> (k==='knight'?'K':k==='archers'?'Ar':'MM');
