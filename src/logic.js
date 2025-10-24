@@ -20,10 +20,10 @@ export function createGameState(canvas) {
     floatDMG: [],
     elixir: { blue: 5, red: 5 },
 
-    // NOTE: Archers range reduced to 150 so they can't hit towers from across the bridge.
+    // NOTE: Archers range reduced to 120.
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
-      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:15, atk:0.5, range:150, speed:90, radius:10, type:'ranged' },
+      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:15, atk:0.5, range:120, speed:90, radius:10, type:'ranged' },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
     ],
     deckOrder: shuffle([0,1,2]),
@@ -31,6 +31,15 @@ export function createGameState(canvas) {
 
     onElixirChange: () => {},
     rebuildCardBar: () => {},
+
+    // --- Simple Red AI ---
+    ai: {
+      enabled: true,
+      timer: 2.5,             // time to next decision
+      minInterval: 2.4,
+      maxInterval: 4.2,
+      aggression: 1.0,        // 1.0 = normal, >1 = more frequent
+    },
   };
   state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
 
@@ -52,18 +61,27 @@ export function createGameState(canvas) {
 /* ----------------- Update Loop ----------------- */
 export function update(state, dt) {
   const { ELIXIR_MAX, ELIXIR_PER_SEC } = state.config;
+  // regen both sides (AI needs elixir too)
   state.elixir.blue = Math.min(ELIXIR_MAX, state.elixir.blue + ELIXIR_PER_SEC * dt);
+  state.elixir.red  = Math.min(ELIXIR_MAX, state.elixir.red  + ELIXIR_PER_SEC * dt);
   state.onElixirChange();
 
+  // Red AI
+  aiUpdate(state, dt);
+
+  // Towers
   for (const t of state.towers) towerAI(state, t, dt);
+
+  // Units
   for (const u of state.units) unitUpdate(state, u, dt);
   for (let i = state.units.length - 1; i >= 0; i--) if (state.units[i].hp <= 0) state.units.splice(i, 1);
 
+  // Projectiles + FX
   updateProjectiles(state, dt);
   updateFX(state, dt);
 }
 
-/* ----------------- Input/Deploy ----------------- */
+/* ----------------- Input/Deploy (Blue) ----------------- */
 export function tryDeployAt(state, mx, my) {
   const { riverY, riverH, lanesX, H } = state.config;
   const halfMin = riverY + riverH/2 + 20, halfMax = H - 40;
@@ -79,7 +97,7 @@ export function tryDeployAt(state, mx, my) {
   if (!card || state.elixir.blue < card.cost) return false;
 
   state.elixir.blue -= card.cost;
-  spawnUnits(state, card, laneX, spawnY);
+  spawnUnits(state, 'blue', card, laneX, spawnY);
   rotateAfterPlay(state, idx, slot);
   state.selectedHandSlot = null;
   state.onElixirChange();
@@ -93,12 +111,48 @@ export function rotateAfterPlay(state, playedIdx, slot) {
   state.rebuildCardBar();
 }
 
+/* ----------------- AI (Red) ----------------- */
+function aiUpdate(state, dt){
+  const ai = state.ai;
+  if (!ai.enabled) return;
+  ai.timer -= dt * ai.aggression;
+  if (ai.timer > 0) return;
+
+  // Choose a card the AI can afford
+  const affordable = state.cards
+    .map((c, i) => ({c, i}))
+    .filter(({c}) => c.cost <= state.elixir.red);
+
+  if (affordable.length === 0){
+    // Not enough elixir; wait a bit and try again soon
+    ai.timer = 0.8;
+    return;
+  }
+
+  // Very light heuristic: heavier cards a bit more likely if player is pushing
+  const blueUnits = state.units.filter(u => u.side==='blue').length;
+  affordable.sort((a,b) => (b.c.cost + Math.random()*0.3) - (a.c.cost + Math.random()*0.3 + blueUnits*0.01));
+  const pick = affordable[0];
+
+  const { lanesX, riverY, riverH } = state.config;
+  const laneX = Math.random() < 0.5 ? lanesX[0] : lanesX[1];
+  // Red half spawn band (top)
+  const topMin = 40, topMax = riverY - riverH/2 - 20;
+  const y = randRange(topMin+20, topMax-10);
+
+  state.elixir.red -= pick.c.cost;
+  spawnUnits(state, 'red', pick.c, laneX, y);
+
+  // Schedule next decision
+  ai.timer = randRange(ai.minInterval, ai.maxInterval);
+}
+
 /* ----------------- Mechanics ----------------- */
-function spawnUnits(state, card, laneX, y) {
+function spawnUnits(state, side, card, laneX, y) {
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
     state.units.push({
-      side:'blue', x: laneX + off, y, laneX, // lane anchor; may drift AFTER crossing
+      side, x: laneX + off, y, laneX, // lane anchor; may drift AFTER crossing
       hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
       range: card.range, speed: card.speed, radius: card.radius,
       kind: card.id, type: card.type
@@ -141,9 +195,7 @@ function towerAI(state, t, dt) {
   }
 }
 
-/* ----------------- PATHING (fixed) -----------------
-   Units must stay on their lane until they've actually crossed the river.
-   Only AFTER crossing do they drift laterally toward the king.           */
+/* ----------------- PATHING (bridge-respecting) ----------------- */
 function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
@@ -189,7 +241,7 @@ function unitUpdate(state, u, dt) {
       const step = u.speed * dt;
       const s = (dNow - step < need) ? Math.max(0, dNow - need) : step;
 
-      // <<< BRIDGE RULE: while lockLane, forbid lateral motion >>>
+      // while lockLane, forbid lateral motion (keep to bridge)
       let stepX = nx * s;
       let stepY = ny * s;
       if (lockLane) stepX = 0;
@@ -198,8 +250,8 @@ function unitUpdate(state, u, dt) {
       u.y += stepY;
     }
   } else {
-    // No target: proceed along lane
-    u.y -= u.speed * dt; // (blue goes upward)
+    // No target: proceed along lane (blue up, red down)
+    u.y += (u.side==='blue' ? -1 : 1) * u.speed * dt;
   }
 
   // Keep glued to lane; stronger pull while lockLane (before/inside river)
@@ -253,5 +305,6 @@ function xbowBandFor(state, t){
 }
 function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function randRange(a,b){ return a + Math.random()*(b-a); }
 
 export const labelFor = k => k==='knight'?'K':k==='archers'?'Ar':'MM';
