@@ -19,7 +19,6 @@ export function createGameState(canvas){
     SEP_DIST: 18,            // friendly separation radius
     SEP_PUSH: 12,            // separation push strength
     GOAL_EPS: 8,             // waypoint epsilon
-    BRIDGE_BUFFER_Y: 8,      // not used here, but kept for stability
   };
 
   const state = {
@@ -51,7 +50,7 @@ export function createGameState(canvas){
   state.hand     = [ state.deckOrder[0], state.deckOrder[1] ];
   state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
-  // towers (further from river on 900px height)
+  // towers (positioned for 900px height)
   const K = (side,x,y)=>({type:'king', side,x,y,r:26,hp:2000,maxHp:2000,rof:1.0,range:260,cd:0,awake:false});
   const X = (side,x,y)=>({type:'xbow', side,x,y,r:16,hp:1000,maxHp:1000,rof:1.0,range:300,cd:0});
   state.towers.push(
@@ -63,10 +62,8 @@ export function createGameState(canvas){
     X('red',  config.lanesX[1], 250),
   );
 
-  // grid for placement / blocking (river is no-go except bridge band)
-  buildNav(state);
-  // lane polylines (3 per lane)
-  buildPaths(state);
+  buildNav(state);    // for placement blocking only
+  buildPaths(state);  // 3 polylines per lane
 
   // placement rules (blue half & walkable)
   state.canPlaceCell = (cx,cy)=>{
@@ -154,7 +151,6 @@ function aiUpdate(state, dt){
 // ---------- Mechanics ----------
 function spawnUnits(state, side, card, cx, cy, x, y){
   const laneIndex = laneForX(state, x);
-  // choose nearest of the 3 polylines for this lane
   const { whichPath, segIndex, point } = projectToNearestPath(state, laneIndex, {x,y});
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
@@ -166,10 +162,12 @@ function spawnUnits(state, side, card, cx, cy, x, y){
       // path-following
       pathLane: laneIndex,
       pathWhich: whichPath,
-      pathDir: (side==='blue')? +1 : -1, // blue goes up the polyline, red goes down
-      pathI: segIndex,  // aiming towards next point based on dir
-      lastSnap: {x:point.x, y:point.y},
+      pathDir: (side==='blue')? +1 : -1,   // poly points are bottom→top
+      pathI: segIndex,                     // current segment index
+      onPath: true,                        // becomes false when we exit poly to go to structure
     };
+    // snap to the polyline’s nearest point (one-time join)
+    u.x = point.x + off; u.y = point.y;
     state.units.push(u);
   }
 }
@@ -218,36 +216,49 @@ function unitUpdate(state,u,dt){
     targetUnit = best;
   }
 
-  // 3) Follow lane polyline toward the opposite side, then toward the structure
-  const poly = state.paths[u.pathLane][u.pathWhich]; // array of points from bottom→top
-  // Ensure pathI is within valid segment range [0..poly.length-2] depending on dir
+  // 3) Move along the lane polyline (or, after it ends, head straight to the structure)
+  const poly = state.paths[u.pathLane][u.pathWhich]; // array of points bottom→top
+  // Keep pathI within [0, poly.length-2]
   u.pathI = clamp(u.pathI, 0, poly.length-2);
-  const iNext = (u.pathDir>0) ? u.pathI+1 : u.pathI;
-  const iCurr = (u.pathDir>0) ? u.pathI : u.pathI+1;
+
+  const forward = (u.pathDir > 0);
+  const iCurr = forward ? u.pathI     : u.pathI+1;
+  const iNext = forward ? u.pathI + 1 : u.pathI;
   const A = poly[iCurr], B = poly[iNext];
 
   let vx=0, vy=0;
   const step = u.speed*dt;
 
-  // Move along current segment
-  {
+  // If still on path, traverse segment
+  if (u.onPath){
     const dx=B.x-u.x, dy=B.y-u.y; const d=Math.hypot(dx,dy);
     const EPS = cfg.GOAL_EPS;
-    if (d <= Math.max(EPS, step*1.25)){ u.x=B.x; u.y=B.y; u.pathI += (u.pathDir>0?1:-1); }
-    else { vx += dx/d*step; vy += dy/d*step; }
-  }
+    if (d <= Math.max(EPS, step*1.25)){ // snap and advance segment
+      u.x=B.x; u.y=B.y;
+      u.pathI += (forward?1:-1);
+    } else { // move toward next point
+      vx += dx/d*step; vy += dy/d*step;
+    }
 
-  // If we reached end of polyline (for our direction), walk straight to the structure
-  const atEnd = (u.pathDir>0 && u.pathI>=poly.length-1) || (u.pathDir<0 && u.pathI<=0);
-  if (atEnd && structTarget){
-    const dx=structTarget.x-u.x, dy=structTarget.y-u.y; const d=Math.hypot(dx,dy);
-    if (d>1){ vx += dx/d*step; vy += dy/d*step; }
-  } else {
-    // small recentering towards the current segment line
+    // recenter gently to segment line
     const q = nearestPointOnSegment({x:u.x,y:u.y}, A, B);
     const px=q.x-u.x, py=q.y-u.y; const L=Math.hypot(px,py)||1;
     const attr = Math.min(cfg.PATH_ATTR*dt, L);
     vx += px/L * attr; vy += py/L * attr;
+
+    // end-of-polyline detection (robust)
+    const endIdx = forward ? (poly.length-2) : 0;
+    const endPoint = forward ? poly[poly.length-1] : poly[0];
+    const closeToEnd = nearPoint(u, endPoint, cfg.GOAL_EPS+1.5);
+    if ((forward && u.pathI > endIdx) || (!forward && u.pathI < endIdx) || (u.pathI===endIdx && closeToEnd)){
+      u.onPath = false; // leave path; from now on go directly to structure
+    }
+  }
+
+  // If off the path, go straight at the structure target
+  if (!u.onPath && structTarget){
+    const dx=structTarget.x-u.x, dy=structTarget.y-u.y; const d=Math.hypot(dx,dy);
+    if (d>1){ vx += dx/d*step; vy += dy/d*step; }
   }
 
   // Separation (friendly unstack)
@@ -257,13 +268,13 @@ function unitUpdate(state,u,dt){
     if (d>0 && d<cfg.SEP_DIST){ const push=(1 - d/cfg.SEP_DIST)*(cfg.SEP_PUSH*dt); vx += (dx/d)*push; vy += (dy/d)*push; }
   }
 
-  // Melee tiny lateral step to connect, without chase (≤12px extra)
+  // Melee tiny lateral step to connect, without chase (≤12px)
   if (targetUnit && u.type==='melee'){
     const need = u.radius + (targetUnit.radius||12) + 2;
     const d = dist(u,targetUnit);
     if (d > need && d <= need + 12){
       const dx=targetUnit.x-u.x, dy=targetUnit.y-u.y; const L=Math.hypot(dx,dy)||1;
-      const extra = Math.min((d-need), 12) * 2 * dt; // small nudge
+      const extra = Math.min((d-need), 12) * 2 * dt;
       vx += dx/L * extra; vy += dy/L * extra;
     }
   }
@@ -271,22 +282,16 @@ function unitUpdate(state,u,dt){
   // Apply motion
   u.x += vx; u.y += vy;
 
-  // 4) Attack selection & fire
+  // 4) Attack resolution
   let victim = null;
-
-  // Unit victim if within weapon range (only if targetUnit exists)
   if (targetUnit){
     const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
     if (dist(u,targetUnit) <= need) victim = targetUnit;
   }
-
-  // Otherwise structure if in range
   if (!victim && structTarget){
     const need = (u.type==='melee' ? ((structTarget.r||20)+u.radius+2) : u.range);
     if (dist(u,structTarget) <= need) victim = structTarget;
   }
-
-  // Fallback close melee vs any enemy if bumping
   if (!victim){
     const meleeRange = (u.radius + 12 + 2);
     const near = enemyUnits(state,u.side).filter(e=>dist(u,e)<= (u.type==='melee' ? meleeRange : u.range));
@@ -307,12 +312,11 @@ function buildPaths(state){
   const yT0 = 260;                        // top approach
 
   const OFFS = [-24, 0, 24];
-  const paths = [[],[]]; // [lane0: [p0,p1,p2], lane1: [..]]
+  const paths = [[],[]]; // [lane0, lane1] each with 3 polylines
 
   for (let lane=0; lane<2; lane++){
     const lx = lanesX[lane];
     for (const o of OFFS){
-      // slight "curves": start half offset, straighten at bridge, half offset again near top
       const poly = [
         { x: lx + o*0.6, y: yB0 },
         { x: lx + o,     y: yB1 },
@@ -325,7 +329,6 @@ function buildPaths(state){
   state.paths = paths;
 }
 
-// Projection to nearest path, returns which path and nearest segment index
 function projectToNearestPath(state, laneIndex, p){
   const polys = state.paths[laneIndex];
   let best=null, bdist=1e9, which=0, idx=0, q=null;
@@ -367,7 +370,7 @@ function updateFX(state,dt){
   state.floatDMG = state.floatDMG.filter(f=>f.a>0);
 }
 
-// ---------- Navigation (grid for placement, not used for unit motion) ----------
+// ---------- Navigation (for placement only) ----------
 function buildNav(state){
   const {W,H,tile,riverY,riverH,lanesX,bridgeW}=state.config;
   const cols=Math.floor(W/tile), rows=Math.floor(H/tile);
@@ -410,6 +413,7 @@ function nearestPointOnSegment(p, a, b){
   let t=(vx*wx+vy*wy)/L2; t=Math.max(0,Math.min(1,t));
   return { x:a.x+vx*t, y:a.y+vy*t, t };
 }
+function nearPoint(p,q,eps){ return Math.abs(p.x-q.x)<=eps && Math.abs(p.y-q.y)<=eps; }
 function cellFromWorld(state,x,y){ const t=state.config.tile; const cx=Math.floor(x/t), cy=Math.floor(y/t); return inBounds(state,cx,cy)?{cx,cy}:null; }
 function cellCenter(state,cx,cy){ const t=state.config.tile; return {x:cx*t+t/2,y:cy*t+t/2}; }
 function inBounds(state,cx,cy){ const {cols,rows}=state.nav; return cx>=0&&cy>=0&&cx<cols&&cy<rows; }
