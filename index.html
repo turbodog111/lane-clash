@@ -32,7 +32,7 @@
         <button id="backFromPlay" class="btn" type="button">Back</button>
       </div>
 
-      <!-- Expanded vertically to 900 -->
+      <!-- Expanded to height 900 -->
       <canvas id="game" width="960" height="900" aria-label="Battlefield"></canvas>
 
       <div class="cardhud" aria-label="Card and Elixir HUD">
@@ -64,7 +64,7 @@
               <div class="label">Speed</div><div>1</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable.</p>
+            <p class="desc">A brave melee fighter with balanced stats.</p>
           </div>
         </article>
 
@@ -80,7 +80,7 @@
               <div class="label">Speed</div><div>1.5</div>
               <div class="label">Unit Count</div><div>2</div>
             </div>
-            <p class="desc">Paired ranged attackers that pepper targets from a safe distance.</p>
+            <p class="desc">Paired ranged attackers.</p>
           </div>
         </article>
 
@@ -95,7 +95,7 @@
               <div class="label">Speed</div><div>0.75</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">A compact, tanky robot with surprising punch power. Slow stride, heavy hit.</p>
+            <p class="desc">Compact, tanky robot with a heavy punch.</p>
           </div>
         </article>
       </div>
@@ -111,14 +111,15 @@
         <h3>v0.1.4</h3>
         <h4>Gameplay / Pathing</h4>
         <ul>
-          <li>Expanded battlefield height to 900 for more lane space.</li>
-          <li>Lane-specific priorities: (1) King if lane xbow destroyed, (2) lane xbow, (3) nearby enemy units (60px, same lane) only for attacks; troops keep marching to structure.</li>
+          <li>Invisible lane paths (3 per lane) with snap-on-spawn & bridge-only crossing.</li>
+          <li>Lane targeting: lane xbow → king (if lane xbow dead); small aggro (60px) only affects attacks.</li>
+          <li>Expanded height to 900; towers positioned farther from river.</li>
         </ul>
       </article>
     </section>
   </main>
 
-  <!-- Keep same version string -->
+  <!-- Keep same version param -->
   <script>window.__LC_DEF_VER = '0.1.4';</script>
   <script type="module" src="src/main.js?v=0.1.4"></script>
   <noscript>Please enable JavaScript to run this game.</noscript>
