@@ -1,4 +1,3 @@
-// src/main.js
 const qs = new URLSearchParams(location.search);
 const VER = qs.get('v') || window.__LC_DEF_VER || 'dev';
 window.__LC_VER = VER;
@@ -13,10 +12,9 @@ try {
     import(`./game.js?v=${VER}`)
   ]);
 
-  const ui = initUI();
-  const game = await initGame(diag); // returns { start, stop, getState }
+  const ui   = initUI();
+  const game = await initGame(diag); // {start, stop, getState}
 
-  // wire buttons
   const $ = (id)=>document.getElementById(id);
   const bind = (id, fn) => { const b=$(id); if(!b){ diag.warn(`missing #${id}`); return; } b.onclick = (e)=>{ e.preventDefault(); fn(); }; };
 
