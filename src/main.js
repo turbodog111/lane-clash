@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt } from './logic.js';
 
-const VERSION = '0.1.4';
+const VERSION = '0.1.5';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
