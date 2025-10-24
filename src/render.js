@@ -35,11 +35,36 @@ export function setupRenderer(ctx, state) {
       for (let i=-3;i<=3;i++){ const bx = x + (i*bridgeW/7); ctx.beginPath(); ctx.moveTo(bx, riverY-bridgeH/2+6); ctx.lineTo(bx, riverY+bridgeH/2-6); ctx.stroke(); }
     }
 
-    // Lane guides
+    // Lanes
     for (const x of lanesX){
       ctx.strokeStyle = CSS('--lane'); ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
       ctx.strokeStyle = CSS('--laneCtr'); ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke(); ctx.setLineDash([]);
     }
+  }
+
+  // Placement tiles: only when a card is selected
+  function drawPlacementTiles(){
+    if (!state.showPlacementOverlay) return;
+
+    const tile = 40;
+    const yMin = riverY + riverH/2 + 20;
+    const yMax = H - 40;
+
+    ctx.save();
+    for (let y = yMin; y < yMax; y += tile){
+      for (let x = tile/2; x < W; x += tile){
+        const w = tile-4, h = tile-4;
+        const cx = x, cy = y + tile/2;
+        const valid = cy >= yMin && cy <= yMax;
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = valid ? '#6bff95' : '#ff6b6b';
+        ctx.fillRect(x - w/2, y + 2, w, h);
+        ctx.globalAlpha = 0.26;
+        ctx.strokeStyle = valid ? '#1f6d3a' : '#6d2b2b';
+        ctx.strokeRect(x - w/2, y + 2, w, h);
+      }
+    }
+    ctx.restore();
   }
 
   function drawTower(t){
@@ -57,7 +82,6 @@ export function setupRenderer(ctx, state) {
       ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
     }
 
-    // HP bar + number
     const pct = Math.max(0, Math.min(1, t.hp/t.maxHp));
     const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -70,30 +94,19 @@ export function setupRenderer(ctx, state) {
 
   function drawUnit(u){
     ctx.save();
-    // colored ring + soft glow by side
     const ring = (u.side === 'blue') ? CSS('--blue') : CSS('--red');
     ctx.shadowColor = (u.side === 'blue') ? 'rgba(88,166,255,0.35)' : 'rgba(255,107,107,0.35)';
     ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
-
-    // soft colored halo
     ctx.fillStyle = (u.side === 'blue') ? 'rgba(88,166,255,0.22)' : 'rgba(255,107,107,0.22)';
     ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 4, 0, Math.PI*2); ctx.fill();
 
-    // inner dot
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    ctx.fillStyle = '#eaf4ff';
-    ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#eaf4ff'; ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = ring; ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 1.2, 0, Math.PI*2); ctx.stroke();
 
-    // side-colored ring
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = ring;
-    ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 1.2, 0, Math.PI*2); ctx.stroke();
-
-    // label
     ctx.font = 'bold 11px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#0b1433';
     ctx.fillText(labelFor(u.kind), u.x, u.y);
 
-    // HP bar + number
     const w=38, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
     const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -130,10 +143,8 @@ export function setupRenderer(ctx, state) {
     if (!state.winner) return;
     ctx.save();
     ctx.globalAlpha = 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H); ctx.globalAlpha = 1;
-
     const msg = state.winner === 'blue' ? 'BLUE VICTORY!' : 'RED VICTORY!';
     const col = state.winner === 'blue' ? CSS('--blue') : CSS('--red');
-
     ctx.font = 'bold 56px system-ui, -apple-system, Segoe UI, Roboto, Arial';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = col; ctx.strokeStyle = '#0b0f18'; ctx.lineWidth = 6;
@@ -144,6 +155,7 @@ export function setupRenderer(ctx, state) {
 
   function drawAll(state){
     drawBattlefield();
+    drawPlacementTiles();     // overlay under actors
     for (const t of state.towers) drawTower(t);
     for (const u of state.units)  drawUnit(u);
     drawProjectiles(state.projectiles);
