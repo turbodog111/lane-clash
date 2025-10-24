@@ -521,3 +521,7 @@ class MinHeap{
   pop(){ const a=this._a, c=this._cmp; if(!a.length) return null; const r=a[0], x=a.pop(); if(a.length){ a[0]=x; let i=0; while(true){ let l=i*2+1, rgt=l+1, m=i; if(l<a.length && c(a[l],a[m])<0) m=l; if(rgt<a.length && c(a[rgt],a[m])<0) m=rgt; if(m===i) break; [a[i],a[m]]=[a[m],a[i]]; i=m; } } return r; }
   empty(){ return this._a.length===0; }
 }
+
+// short label for unit dots (used by render.js)
+export const labelFor = (k) => (k === 'knight' ? 'K' : k === 'archers' ? 'Ar' : 'MM');
+
