@@ -85,7 +85,7 @@
         <!-- KNIGHT -->
         <article class="entry" role="article" aria-labelledby="knightTitle">
           <div class="cardFrame">
-            <!-- Provide this file: assets/knight-card.png (transparent PNG) -->
+            <!-- Now pointing to assets/Knight.png -->
             <img src="assets/Knight.png"
                  alt="Knight card (Common, Cost 2)"
                  onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
@@ -99,15 +99,16 @@
               <div class="label">Speed</div><div>1</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.</p>
+            <p class="desc">
+              A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.
+            </p>
           </div>
         </article>
 
         <!-- ARCHERS -->
         <article class="entry" role="article" aria-labelledby="archersTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
-            <!-- Optional art: assets/archers-card.png -->
-            <img src="assets/archers-card.png"
+            <img src="assets/Archers.png"
                  alt="Archers card (Common, Cost 2)"
                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
           </div>
@@ -120,7 +121,9 @@
               <div class="label">Speed</div><div>1.5</div>
               <div class="label">Unit Count</div><div>2</div>
             </div>
-            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
+            <p class="desc">
+              Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.
+            </p>
           </div>
         </article>
       </div>
@@ -128,7 +131,8 @@
   </main>
 
   <footer>
-    Tip: enable GitHub Pages (Settings → Pages → Branch: <strong>main</strong>, Folder: <strong>/ (root)</strong>) and visit your site URL.
+    Tip: Make sure your image is located at <code>assets/Knight.png</code>.<br>
+    You can enable GitHub Pages (Settings → Pages → Branch: <strong>main</strong>, Folder: <strong>/ (root)</strong>) and open your site.
   </footer>
 
   <script>
@@ -137,7 +141,6 @@
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
 
-    // Open encyclopedia (click or Enter/Space when focused)
     function openPanel(){
       menu.classList.add('hidden');
       ency.classList.remove('hidden');
