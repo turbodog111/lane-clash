@@ -10,7 +10,9 @@ export function createGameState(canvas) {
     ELIXIR_MAX: 10,
     ELIXIR_PER_SEC: 0.5, // 1 per 2s
     riverMargin: 2,      // safety pixels to keep off the texture seam
-    bridgeCorridorFactor: 0.45 // % of bridge width allowed for units
+    bridgeCorridorFactor: 0.45, // % of bridge width allowed for units
+    defendCorridor: 40,  // max lateral drift (px) while defending on own side
+    kingThreatRadius: 240
   };
 
   const state = {
@@ -133,12 +135,8 @@ function aiUpdate(state, dt){
     .map((idx, slot) => ({ idx, slot, card: state.cards[idx] }))
     .filter(({card}) => card.cost <= state.elixir.red);
 
-  if (affordable.length === 0) {
-    ai.timer = 0.8; // wait until enough elixir
-    return;
-  }
+  if (affordable.length === 0) { ai.timer = 0.8; return; }
 
-  // very light heuristic: bias toward higher cost if player has lots on board
   const blueUnits = state.units.filter(u => u.side==='blue').length;
   affordable.sort((a,b)=>(b.card.cost+Math.random()*0.25)-(a.card.cost+Math.random()*0.25+blueUnits*0.01));
   const choice = affordable[0];
@@ -164,10 +162,14 @@ function aiRotateAfterPlay(state, playedIdx, slot){
 
 /* ----------------- Mechanics ----------------- */
 function spawnUnits(state, side, card, laneX, y) {
+  const laneIndex = getLaneIndex(state, laneX);
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
     state.units.push({
-      side, x: laneX + off, y, laneX,
+      side, x: laneX + off, y,
+      // lane anchoring
+      laneX, homeLaneX: laneX, homeLaneIndex: laneIndex,
+      // core stats
       hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
       range: card.range, speed: card.speed, radius: card.radius,
       kind: card.id, type: card.type
@@ -210,7 +212,7 @@ function towerAI(state, t, dt) {
   }
 }
 
-/* -------- PATHING (bridge-respecting + defend-king + RIVER NO-GO) -------- */
+/* -------- PATHING (bridge-respecting + lane-local defend + river NO-GO) -------- */
 function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
@@ -218,24 +220,34 @@ function unitUpdate(state, u, dt) {
   const laneCrossbow = aliveCrossbowOn(state, foe, u.laneX);
   let struct = laneCrossbow || kingOf(state, foe);
 
-  const { riverY, riverH, riverMargin } = state.config;
+  const { riverY, riverH, riverMargin, defendCorridor } = state.config;
   const riverTop = riverY - riverH/2 + riverMargin;
   const riverBot = riverY + riverH/2 - riverMargin;
 
   const crossed = (u.side==='blue') ? (u.y < riverTop) : (u.y > riverBot);
   const inRiver = (u.y > riverTop && u.y < riverBot);
-  const defending = isKingThreatened(state, u.side);
 
-  // lock lateral movement while: before crossing OR inside river
-  const lockLane = (!crossed) || inRiver;
+  // --- Lane-local defense: only if king is awake AND threat exists on THIS lane ---
+  const threat = getThreatenedLanes(state, u.side); // {awake:boolean, lanes:Set}
+  const defendThisLane = threat.awake && threat.lanes.has(u.homeLaneIndex);
 
-  // desired lane anchor: toward enemy king after crossing; while defending (own side) drift toward own king
+  // While on own side or in river ⇒ keep to lane; but allow limited strafe if defending on this lane (not in river)
+  const mustKeepLane = (!crossed) || inRiver;
+  let canStrafe = !mustKeepLane;
+  if (defendThisLane && !inRiver) canStrafe = true;
+
+  // Desired lane anchor:
+  //  - Own side: ALWAYS return toward home lane anchor (resets after defending)
+  //  - Enemy side: drift toward enemy king X only if aiming at king
   let desiredLaneX = u.laneX;
-  if (struct?.type === 'king' && crossed) desiredLaneX = kingOf(state, foe).x;
-  if (defending && !inRiver) desiredLaneX = kingOf(state, u.side).x; // allow defending lateral, but never in river
+  if (!crossed) {
+    desiredLaneX = u.homeLaneX;
+  } else if (struct?.type === 'king') {
+    desiredLaneX = kingOf(state, foe).x;
+  }
   u.laneX += (desiredLaneX - u.laneX) * Math.min(1, dt * 2.5);
 
-  // acquire targets (units first, then structures if in range)
+  // Acquire targets (units first, then structures if in range)
   let close = enemyUnits(state, u.side)
     .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
   if (!close.length && struct){
@@ -260,7 +272,7 @@ function unitUpdate(state, u, dt) {
       const s = (dNow - step < need) ? Math.max(0, dNow - need) : step;
 
       let stepX = nx * s, stepY = ny * s;
-      if (lockLane) stepX = 0; // never strafe before crossing or while in river
+      if (!canStrafe) stepX = 0; // no lateral motion if not allowed
 
       u.x += stepX; u.y += stepY;
     }
@@ -269,14 +281,22 @@ function unitUpdate(state, u, dt) {
     u.y += (u.side==='blue' ? -1 : 1) * u.speed * dt;
   }
 
-  // keep glued to lane (stronger pull while lockLane)
-  const lanePull = lockLane ? 20 : 6;
+  // Keep glued to (possibly updated) lane anchor
+  const lanePull = (!crossed || inRiver) ? 20 : 6;
   u.x += (u.laneX - u.x) * Math.min(1, dt * lanePull);
 
-  // --- Hard river NO-GO: if inside river, clamp to nearest bridge corridor and forbid being off-corridor ---
+  // If defending on own side, clamp within a narrow corridor around HOME lane (prevents group drift to middle)
+  if (defendThisLane && !inRiver && !crossed) {
+    const minX = u.homeLaneX - defendCorridor;
+    const maxX = u.homeLaneX + defendCorridor;
+    if (u.x < minX) u.x = minX;
+    if (u.x > maxX) u.x = maxX;
+  }
+
+  // River NO-GO hard clamp
   applyRiverNoGo(state, u);
 
-  // attack timings
+  // Attack timings
   u.cd -= dt;
   if (best && u.cd<=0){ dealDamage(state, best, u.dmg); u.cd = u.atk; }
   else if (!best && struct && u.cd<=0){
@@ -292,18 +312,13 @@ function applyRiverNoGo(state, u){
 
   if (u.y <= riverTop || u.y >= riverBot) return; // not in river band
 
-  // Inside river: clamp X to nearest bridge corridor, and do not allow being "in the water"
+  // Inside river: clamp X to nearest bridge corridor
   const laneC = Math.abs(u.x - lanesX[0]) < Math.abs(u.x - lanesX[1]) ? lanesX[0] : lanesX[1];
   const half = bridgeW * bridgeCorridorFactor;
   const minX = laneC - half, maxX = laneC + half;
 
   if (u.x < minX) u.x = minX;
   if (u.x > maxX) u.x = maxX;
-
-  // Nudge across if somehow stalled: tiny forward step
-  const nudge = 6;
-  if (u.side === 'blue') u.y = Math.max(u.y - 0.0001, u.y - nudge * 0.0);
-  else u.y = Math.min(u.y + 0.0001, u.y + nudge * 0.0);
 }
 
 function updateProjectiles(state, dt){
@@ -345,10 +360,24 @@ function xbowBandFor(state, t){
 function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 function randRange(a,b){ return a + Math.random()*(b-a); }
-function isKingThreatened(state, side){
-  const k = kingOf(state, side); if (!k) return false;
-  if (k.hp < k.maxHp) return true; // already hit
-  return enemyUnits(state, side).some(u => dist(u,k) < 220);
+
+function getLaneIndex(state, x){
+  const { lanesX } = state.config;
+  return (Math.abs(x - lanesX[0]) <= Math.abs(x - lanesX[1])) ? 0 : 1;
+}
+
+/** Returns {awake:boolean, lanes:Set<int>} — threatened lanes for 'side' */
+function getThreatenedLanes(state, side){
+  const k = kingOf(state, side);
+  const res = { awake: !!(k && k.awake), lanes: new Set() };
+  if (!k || !k.awake) return res; // do not defend until king is activated
+
+  const R = state.config.kingThreatRadius;
+  const foes = enemyUnits(state, side).filter(u => dist(u, k) < R);
+  for (const f of foes){
+    res.lanes.add(getLaneIndex(state, f.x));
+  }
+  return res;
 }
 
 export const labelFor = k => k==='knight'?'K':k==='archers'?'Ar':'MM';
