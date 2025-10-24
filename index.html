@@ -4,31 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lane Clash</title>
-
-  <!-- (optional) ask browsers not to cache the HTML; JS is cache-busted via ?v= -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
   <header><div class="title">Lane Clash — Prototype</div></header>
 
   <main>
-    <!-- MENU -->
     <section id="menu" class="panel center">
       <h1 class="brand">Lane Clash</h1>
       <div class="subtitle">A tiny lane strategy prototype</div>
       <div class="menu-buttons">
         <button id="playBtn" class="btn" type="button">Play</button>
         <button id="openEncy" class="btn" type="button">Encyclopedia</button>
-        <button id="openLog" class="btn" type="button">Update Log (v0.1.3)</button>
+        <button id="openLog" class="btn" type="button">Update Log (v0.1.3b)</button>
       </div>
       <p class="muted">Blue (you) at the bottom. Red (AI) at the top.</p>
     </section>
 
-    <!-- PLAY -->
     <section id="play" class="panel hidden">
       <div class="toolbar">
         <h2 class="toolbar-title">Play — Blue (You) vs Red (AI)</h2>
@@ -46,29 +41,26 @@
       </div>
     </section>
 
-    <!-- ENCYCLOPEDIA -->
     <section id="ency" class="panel hidden">
       <div class="toolbar">
         <h2 class="toolbar-title">Encyclopedia</h2>
         <button id="backBtn" class="btn" type="button">Back</button>
       </div>
-      <!-- (your existing card entries) -->
+      <!-- keep your encyclopedia markup here -->
     </section>
 
-    <!-- UPDATE LOG -->
     <section id="log" class="panel hidden">
       <div class="toolbar">
-        <h2 class="toolbar-title">Update Log — v0.1.3</h2>
+        <h2 class="toolbar-title">Update Log — v0.1.3b</h2>
         <button id="backFromLog" class="btn" type="button">Back</button>
       </div>
-      <!-- (your existing log entries) -->
+      <!-- keep your update log markup here -->
     </section>
   </main>
 
-<script>window.__LC_DEF_VER = '0.1.3b';</script>
-<script type="module" src="src/main.js?v=0.1.3b"></script>
-
-
+  <!-- The single source of truth for the version param -->
+  <script>window.__LC_DEF_VER = '0.1.3b';</script>
+  <script type="module" src="src/main.js?v=0.1.3b"></script>
   <noscript>Please enable JavaScript to run this game.</noscript>
 </body>
 </html>
