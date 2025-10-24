@@ -32,5 +32,8 @@ try {
 
   diag.ok('modules loaded');
   diag.ok('buttons wired');
-  goMenu();
-} catch (e) { console.error(e); diag.error(e?.message || 'boot failed'); }
+  ui.showMenu();
+} catch (e) {
+  console.error(e);
+  diag.error(e?.message || 'boot failed');
+}
