@@ -1,4 +1,7 @@
-import { labelFor } from './logic.js';
+// src/render.js
+const VER = window.__LC_VER || 'dev';
+const { labelFor } = await import(`./logic.js?v=${VER}`);  // versioned, cache-safe
+
 
 export function setupRenderer(ctx, state) {
   const CSS = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff';
