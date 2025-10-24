@@ -7,7 +7,17 @@
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-  <header><div class="title">Lane Clash — Prototype</div></header>
+  <header>
+  <div class="title">Lane Clash — Prototype</div>
+  <!-- If your site is built by GitHub Pages/Jekyll (default), these Liquid tags
+       resolve to the commit + build time. If not, main.js falls back to version.json -->
+  <div id="version" class="version"
+       data-commit="{{ site.github.build_revision | slice: 0,7 }}"
+       data-built="{{ site.time | date: '%Y-%m-%d %H:%M %Z' }}">
+    dev
+  </div>
+</header>
+
 
   <main>
     <!-- MAIN MENU (only navigation; Encyclopedia is its own page/section) -->
