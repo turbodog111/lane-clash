@@ -30,7 +30,6 @@
     }
     .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
 
-    /* Fancy title */
     .brand{
       font-weight:900; font-size:44px; line-height:1;
       background: linear-gradient(90deg, #70d6ff, #6bff95, #ffd166);
@@ -111,7 +110,6 @@
 
       <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
 
-      <!-- CARD HUD with Elixir bar above cards -->
       <div class="cardhud" aria-label="Card and Elixir HUD">
         <div class="elixirRow">
           <span style="color:#9fb4ff;">Elixir</span>
@@ -120,9 +118,7 @@
         </div>
         <div id="cards" class="cards"></div>
         <p class="muted" style="margin:6px 2px 0;">Click a card, then click your half of the arena to deploy. Hand shows 2 rotating cards out of 3.</p>
-        <p class="muted" style="margin:6px 2px 0;">
-          Tower stats — King: 2000 HP, 50 / 1s (wakes after first damage). Crossbow: 1000 HP, 30 / 1s.
-        </p>
+        <p class="muted" style="margin:6px 2px 0;">Tower stats — King: 2000 HP, 50 / 1s (wakes after first damage). Crossbow: 1000 HP, 30 / 1s.</p>
       </div>
     </section>
 
@@ -136,8 +132,7 @@
         <!-- KNIGHT -->
         <article class="entry" role="article" aria-labelledby="knightTitle">
           <div class="cardFrame">
-            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)"
-                 onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
           </div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
@@ -292,7 +287,7 @@
       renderCardBar();
     }
 
-    // ===== Towers (with new stats) =====
+    // ===== Towers =====
     // King: 2000 HP, 50 dmg / 1s; starts asleep until damaged once
     function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false}; }
     // Crossbow: 1000 HP, 30 dmg / 1s
@@ -307,7 +302,6 @@
       tXbow('red',  lanesX[1], 180),
     ];
 
-    // Helpers to find key towers
     function enemySideOf(side){ return side === 'blue' ? 'red' : 'blue'; }
     function kingOf(side){ return towers.find(t => t.type==='king' && t.side===side); }
     function aliveCrossbowOn(side, laneX){
@@ -341,14 +335,14 @@
       return imageCache[src];
     }
 
-    // Projectiles (towers)
+    // ===== Projectiles =====
     const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
     function spawnBolt(from, target, dmg=30, spd=360){
       const ang = Math.atan2(target.y - from.y, target.x - from.x);
       projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
     }
 
-    // FX: particles + floating damage
+    // ===== FX =====
     const particles = []; // {x,y,vx,vy,life,ttl,size,color}
     const floatDMG = [];  // {x,y,vy,life,ttl,text,color}
     function addHitFX(x,y,dmg,color='#ffd166'){
@@ -367,7 +361,6 @@
       for (let i=floatDMG.length-1;i>=0;i--) if (floatDMG[i].life>floatDMG[i].ttl) floatDMG.splice(i,1);
     }
     function drawFX(){
-      // particles
       for (const p of particles){
         const a = 1 - (p.life/p.ttl);
         if (a <= 0) continue;
@@ -376,7 +369,6 @@
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
         ctx.globalAlpha = 1;
       }
-      // damage numbers
       for (const f of floatDMG){
         const a = 1 - (f.life/f.ttl);
         if (a <= 0) continue;
@@ -389,7 +381,7 @@
       }
     }
 
-    // Helpers
+    // ===== Helpers =====
     function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
     function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
     function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
@@ -455,7 +447,7 @@
         : { yMin: 0, yMax: riverY - riverH/2 };
     }
 
-    // Towers draw (with numeric HP; uses maxHp on object)
+    // Towers draw (with numeric HP)
     function drawTower(t){
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
 
@@ -497,43 +489,11 @@
       ctx.fillText(Math.max(0, Math.ceil(t.hp)), t.x, by-2);
     }
 
-    // Units draw (circle + small HP bar + portrait)
-    function drawUnit(u){
-      ctx.fillStyle = '#9dd1ff';
-      ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
-
-      // portrait (small)
-      const img = getImage(u.imgSrc);
-      if (img && img.complete && img.naturalWidth){
-        const w=36, h=46;
-        ctx.save();
-        ctx.beginPath();
-        const px=u.x + u.radius + 8, py=u.y - u.radius - h + 6, r=8;
-        roundedRect(px, py, w, h, r);
-        ctx.clip();
-        ctx.drawImage(img, px, py, w, h);
-        ctx.restore();
-        ctx.strokeStyle='#20306a'; ctx.lineWidth=1;
-        roundedRect(u.x + u.radius + 8, u.y - u.radius - h + 6, w, h, 8); ctx.stroke();
-      }
-
-      // HP bar
-      const w=36, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
-      const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
-      ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
-      ctx.fillStyle= pct>0.5 ? '#6bff95' : (pct>0.25? '#ffd166' : '#ff7b7b');
-      ctx.fillRect(bx,by,w*pct,h);
-      ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
-      ctx.font='11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillStyle='#dfe7ff';
-      ctx.fillText(Math.max(0, Math.ceil(u.hp)), u.x, by-2);
-    }
-
     // Targeting helpers
     function enemyUnits(side){ return units.filter(u => u.side !== side && u.hp>0); }
     function enemyTowers(side){ return towers.filter(t => t.side !== side && t.hp>0); }
 
-    // Tower AI (units first, then towers; crossbows limited to their half; King sleeps until hit)
+    // Tower AI
     function towerAI(t, dt){
       if (t.hp <= 0) return;
       if (t.type==='king' && !t.awake) return; // sleeping king
@@ -569,7 +529,7 @@
       }
     }
 
-    // Unit update: lane-aware structural target (Crossbow->King), keep fighting units in range
+    // Unit update: lane-aware structural target (Crossbow->King), fight units in range
     function unitUpdate(u, dt){
       if (u.hp<=0) return;
 
@@ -618,7 +578,7 @@
       }
     }
 
-    // Projectiles update/draw (towers)
+    // Projectiles update/draw
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -642,17 +602,16 @@
         ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
       }
     }
-    const projectiles = [];
 
     function drawAll(){
       drawBattlefield();
       for (const t of towers) drawTower(t);
       for (const u of units)  drawUnit(u);
       drawProjectiles();
-      drawFX(); // particles & damage numbers on top
+      drawFX();
     }
 
-    // ===== Main loop (resilient) =====
+    // ===== Main loop =====
     let last = performance.now();
     function tick(now){
       try{
@@ -719,7 +678,6 @@
 
     // ===== Init =====
     renderCardBar();
-
   });
   </script>
 </body>
