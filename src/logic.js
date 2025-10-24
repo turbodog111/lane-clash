@@ -12,7 +12,7 @@ export function createGameState(canvas){
     ELIXIR_PER_SEC: 0.5, // 1 per 2s
 
     // path/aggro tuning
-    AGGRO_RADIUS: 140,
+    AGGRO_RADIUS: 40,
     LANE_TOLERANCE: 80,
     CORRIDOR_W: 90,     // cheaper-cost corridor half-width
     REPTHROTTLE: 0.35,  // repath throttle seconds
