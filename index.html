@@ -14,7 +14,7 @@
     }
     *{ box-sizing:border-box; }
     html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-    header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+    header{ padding:12px; background:#11162b; border-bottom:1px solid --line; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
     .title{ font-weight:750; letter-spacing:.2px; }
     main{ max-width:1024px; margin:24px auto; padding:0 12px; }
     .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
@@ -37,7 +37,7 @@
     }
     @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
     .cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px; min-height:220px; }
-    .cardFrame img{ width:100%; height:auto; display:block; }
+    .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
     .details h2{ margin:0 0 8px; font-size:22px; display:flex; align-items:center; gap:8px; }
     .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#0b1433; border:1px solid #20306a; font-size:12px; }
     .grid{ display:grid; grid-template-columns:120px 1fr; gap:8px 12px; margin:8px 0 10px; }
@@ -54,7 +54,7 @@
     .fill.red{ background:linear-gradient(90deg,#ff7b7b,#ffb3a3); }
     .barlabel{ font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
 
-    /* Canvas (taller now) */
+    /* Canvas (taller) */
     canvas{ width:100%; height:720px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
     .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
   </style>
@@ -91,7 +91,7 @@
       </div>
 
       <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
-      <p class="muted" style="margin-top:10px;">Crossbows are placed further from the river; they only target on their own half. Numeric HP shown above bars.</p>
+      <p class="muted" style="margin-top:10px;">Crossbows repositioned farther from the river; they only target on their own half. Numeric HP shown above bars.</p>
     </section>
 
     <!-- ENCYCLOPEDIA -->
@@ -183,7 +183,7 @@
     openEncy.onclick = () => show(ency);
     backBtn.onclick = () => show(menu);
 
-    // ===== PLAY: flipped arena + taller map + river/bridges + towers + projectiles + elixir =====
+    // ===== PLAY: taller map + river/bridges + towers + projectiles + elixir =====
     const W = 960, H = 720;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
@@ -199,8 +199,8 @@
     const ELIXIR_PER_SEC = 0.5; // 1 every 2 sec
     const elixir = { blue: 5, red: 5 };
 
-    // Battlefield layout (taller)
-    const riverY = H/2, riverH = 100;
+    // Battlefield layout
+    const riverY = H/2, riverH = 100; // river spans [riverY - riverH/2, riverY + riverH/2] => [310..410]
     const lanesX = [ W*0.33, W*0.67 ];
     const bridgeW = 120, bridgeH = riverH + 18;
 
@@ -252,12 +252,12 @@
     const towers = [
       // BLUE (bottom)
       tKing('blue', W/2, H-100),
-      tXbow('blue', lanesX[0], H-280),  // further from river
-      tXbow('blue', lanesX[1], H-280),
+      tXbow('blue', lanesX[0], H-200),  // moved farther from river (closer to king at 620)
+      tXbow('blue', lanesX[1], H-200),
       // RED (top)
       tKing('red',  W/2, 100),
-      tXbow('red',  lanesX[0], 280),    // further from river
-      tXbow('red',  lanesX[1], 280),
+      tXbow('red',  lanesX[0], 200),    // moved farther from river (closer to king at 100)
+      tXbow('red',  lanesX[1], 200),
     ];
 
     // Projectiles
@@ -369,6 +369,8 @@
       }
     }
 
+    // Projectiles
+    const projectiles = [];
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -387,7 +389,6 @@
       // prune
       for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
     }
-
     function drawProjectiles(){
       ctx.fillStyle = '#ffd166';
       for (const p of projectiles){
