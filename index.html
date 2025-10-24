@@ -21,7 +21,7 @@
     .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
     .center{ display:flex; flex-direction:column; align-items:center; gap:18px; margin-top:8vh; text-align:center; }
     .muted{ color:var(--muted); }
-    .hidden{ display:none; }
+    .hidden{ display:none; pointer-events:none; }
 
     .btn{
       appearance:none; border:1px solid var(--line); background:linear-gradient(180deg,#203061,#18244b);
@@ -63,9 +63,7 @@
       margin-top:12px;
       background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:10px;
     }
-    .elixirRow{
-      display:flex; align-items:center; gap:12px; margin-bottom:8px;
-    }
+    .elixirRow{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
     .elixirBar{
       position:relative; height:14px; flex:1; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden;
     }
@@ -196,26 +194,26 @@
   </main>
 
   <script>
-  (() => {
+  document.addEventListener('DOMContentLoaded', () => {
     "use strict";
 
     // ===== Scene switching =====
-    const menu = document.getElementById('menu');
-    const play = document.getElementById('play');
-    const ency = document.getElementById('ency');
+    const menuSection = document.getElementById('menu');
+    const playSection = document.getElementById('play');
+    const encySection = document.getElementById('ency');
     const playBtn = document.getElementById('playBtn');
     const backFromPlay = document.getElementById('backFromPlay');
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
 
     function show(el){
-      menu.classList.add('hidden'); play.classList.add('hidden'); ency.classList.add('hidden');
+      [menuSection, playSection, encySection].forEach(s => s.classList.add('hidden'));
       el.classList.remove('hidden'); window.scrollTo(0,0);
     }
-    playBtn.addEventListener('click', () => show(play));
-    backFromPlay.addEventListener('click', () => show(menu));
-    openEncy.addEventListener('click', () => show(ency));
-    backBtn.addEventListener('click', () => show(menu));
+    playBtn?.addEventListener('click', () => show(playSection));
+    backFromPlay?.addEventListener('click', () => show(menuSection));
+    openEncy?.addEventListener('click', () => show(encySection));
+    backBtn?.addEventListener('click', () => show(menuSection));
 
     // ===== PLAY: Battlefield + Towers + Projectiles + Units + Cards + FX =====
     const canv = document.getElementById('game');
@@ -295,7 +293,9 @@
     }
 
     // ===== Towers (with new stats) =====
+    // King: 2000 HP, 50 dmg / 1s; starts asleep until damaged once
     function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false}; }
+    // Crossbow: 1000 HP, 30 dmg / 1s
     function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16,  hp:1000, maxHp:1000, rof:1.0, range:300, cd:0}; }
 
     const towers = [
@@ -307,6 +307,7 @@
       tXbow('red',  lanesX[1], 180),
     ];
 
+    // Helpers to find key towers
     function enemySideOf(side){ return side === 'blue' ? 'red' : 'blue'; }
     function kingOf(side){ return towers.find(t => t.type==='king' && t.side===side); }
     function aliveCrossbowOn(side, laneX){
@@ -364,6 +365,28 @@
       for (let i=particles.length-1;i>=0;i--) if (particles[i].life>particles[i].ttl) particles.splice(i,1);
       for (const f of floatDMG){ f.life += dt; f.y += f.vy*dt; f.vy *= 0.98; }
       for (let i=floatDMG.length-1;i>=0;i--) if (floatDMG[i].life>floatDMG[i].ttl) floatDMG.splice(i,1);
+    }
+    function drawFX(){
+      // particles
+      for (const p of particles){
+        const a = 1 - (p.life/p.ttl);
+        if (a <= 0) continue;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      // damage numbers
+      for (const f of floatDMG){
+        const a = 1 - (f.life/f.ttl);
+        if (a <= 0) continue;
+        ctx.globalAlpha = a;
+        ctx.font = 'bold 14px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, f.x, f.y);
+        ctx.globalAlpha = 1;
+      }
     }
 
     // Helpers
@@ -596,7 +619,6 @@
     }
 
     // Projectiles update/draw (towers)
-    const projectiles = [];
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -620,6 +642,7 @@
         ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
       }
     }
+    const projectiles = [];
 
     function drawAll(){
       drawBattlefield();
@@ -629,7 +652,7 @@
       drawFX(); // particles & damage numbers on top
     }
 
-    // ===== Main loop (hardened: one bad frame won't kill it) =====
+    // ===== Main loop (resilient) =====
     let last = performance.now();
     function tick(now){
       try{
@@ -654,10 +677,6 @@
 
         // draw
         drawAll();
-      }catch(e){
-        // Keep the loop running even if something went wrong this frame.
-        // (Optional: uncomment next line to see the error in console)
-        // console.error(e);
       }finally{
         requestAnimationFrame(tick);
       }
@@ -701,7 +720,7 @@
     // ===== Init =====
     renderCardBar();
 
-  })();
+  });
   </script>
 </body>
 </html>
