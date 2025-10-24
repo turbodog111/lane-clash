@@ -1,5 +1,4 @@
-// Particles + floating damage numbers live in state.particles / state.floatDMG
-
+// Particles + floating damage numbers
 export function addHitFX(state, x, y, dmg, color = '#ffd166') {
   for (let i = 0; i < 10; i++) {
     const a = Math.random() * Math.PI * 2;
