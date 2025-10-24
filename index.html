@@ -9,12 +9,13 @@
       --bg:#0e1220; --panel:#161b2e; --ink:#e9f1ff; --muted:#a9b7ff;
       --line:#24315c; --accent:#70d6ff;
       --blue:#58a6ff; --red:#ff6b6b; --gold:#ffd166;
+      --river:#0e3a69; --riverHi:#13518f; --bridge:#6d5538;
+      --lane:#1e2a5c; --laneCtr:#28377a;
     }
     *{ box-sizing:border-box; }
     html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
     header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
     .title{ font-weight:750; letter-spacing:.2px; }
-
     main{ max-width:1024px; margin:24px auto; padding:0 12px; }
     .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
     .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; text-align:center; }
@@ -28,12 +29,9 @@
     }
     .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
 
-    /* Encyclopedia cards layout (same as before) */
+    /* Encyclopedia styles (unchanged) */
     .entries{ display:grid; gap:16px; }
-    .entry{
-      display:grid; grid-template-columns: min(360px, 45%) 1fr; gap:18px; align-items:center;
-      background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px;
-    }
+    .entry{ display:grid; grid-template-columns:min(360px,45%) 1fr; gap:18px; align-items:center; background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px; }
     @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
     .cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px; min-height:220px; }
     .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
@@ -43,24 +41,19 @@
     .label{ color:#9fb4ff; }
     .desc{ color:#cfe1ff; }
 
-    /* PLAY scene */
-    .hud{
-      display:flex; align-items:center; gap:16px;
-      padding:8px 12px; background:#0f1530; border:1px solid #27305a; border-radius:12px; margin-bottom:12px;
-    }
+    /* HUD bars */
+    .hud{ display:flex; align-items:center; gap:16px; padding:8px 12px; background:#0f1530; border:1px solid #27305a; border-radius:12px; margin-bottom:12px; }
     .badge{ padding:2px 10px; border-radius:999px; font-size:12px; border:1px solid #20306a; }
     .blue{ background:rgba(88,166,255,.12); color:var(--blue); }
     .red{ background:rgba(255,107,107,.12); color:var(--red); }
-
     .bar{ position:relative; width:220px; height:14px; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden; }
     .fill{ position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff); }
     .fill.red{ background:linear-gradient(90deg,#ff7b7b,#ffb3a3); }
     .barlabel{ font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
 
+    /* Canvas */
     canvas{ width:100%; height:560px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
     .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-
-    footer{ text-align:center; color:#8ea1c9; padding:16px 0; font-size:12px; }
   </style>
 </head>
 <body>
@@ -74,13 +67,13 @@
         <button id="playBtn" class="btn">Play</button>
         <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
       </div>
-      <p class="muted">Start a match (static towers for now) or browse unit cards.</p>
+      <p class="muted">Start a match (towers only) or browse unit cards.</p>
     </section>
 
     <!-- PLAY -->
     <section id="play" class="panel hidden" aria-labelledby="playTitle">
       <div class="toolbar">
-        <h2 id="playTitle" style="margin:0;">Play — Blue (You) vs Red (AI)</h2>
+        <h2 id="playTitle" style="margin:0;">Play — Blue (You) at Bottom vs Red (AI) at Top</h2>
         <button id="backFromPlay" class="btn">Back</button>
       </div>
 
@@ -91,26 +84,22 @@
         <span class="badge red" style="margin-left:18px;">Red (AI)</span>
         <div class="bar" aria-label="Red Elixir"><div id="redFill" class="fill red"></div></div>
         <span id="redText" class="barlabel">0</span>
-        <span class="muted" style="margin-left:auto;">Regen: 1 elixir / 2s (max 10)</span>
+        <span class="muted" style="margin-left:auto;">Regen: 1 / 2s (max 10)</span>
       </div>
 
       <canvas id="game" width="960" height="560" aria-label="Battlefield"></canvas>
-      <p class="muted" style="margin-top:10px;">Towers are placeholders; we’ll add targeting, projectiles, and deployment next.</p>
+      <p class="muted" style="margin-top:10px;">Towers now target & shoot. River + two bridges added; we’ll path units over bridges later.</p>
     </section>
 
-    <!-- ENCYCLOPEDIA -->
+    <!-- ENCYCLOPEDIA (same as before; Knight shown) -->
     <section id="ency" class="panel hidden" aria-labelledby="encyTitle">
       <div class="toolbar">
         <h2 id="encyTitle" style="margin:0;">Encyclopedia</h2>
         <button id="backBtn" class="btn">Back</button>
       </div>
-
       <div class="entries">
-        <!-- KNIGHT -->
         <article class="entry" role="article" aria-labelledby="knightTitle">
-          <div class="cardFrame">
-            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
-          </div>
+          <div class="cardFrame"><img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;"></div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
             <div class="grid" aria-label="Knight stats">
@@ -123,48 +112,9 @@
             <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.</p>
           </div>
         </article>
-
-        <!-- ARCHERS -->
-        <article class="entry" role="article" aria-labelledby="archersTitle">
-          <div class="cardFrame" style="border:1px dashed #27305a;">
-            <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"
-                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
-          </div>
-          <div class="details">
-            <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
-            <div class="grid" aria-label="Archers stats">
-              <div class="label">Elixir Cost</div><div>2</div>
-              <div class="label">HP</div><div>60</div>
-              <div class="label">DMG</div><div>15 / 0.5s</div>
-              <div class="label">Speed</div><div>1.5</div>
-              <div class="label">Unit Count</div><div>2</div>
-            </div>
-            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
-          </div>
-        </article>
-
-        <!-- MINI-MEGA (card art optional for now) -->
-        <article class="entry" role="article" aria-labelledby="miniMegaTitle">
-          <div class="cardFrame" style="border:1px dashed #27305a;">
-            <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"
-                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Mini-MEGA card art coming soon',className:'muted'}));">
-          </div>
-          <div class="details">
-            <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
-            <div class="grid" aria-label="Mini-MEGA stats">
-              <div class="label">Elixir Cost</div><div>3</div>
-              <div class="label">DMG</div><div>80 / 1.5s</div>
-              <div class="label">Speed</div><div>0.75</div>
-              <div class="label">Unit Count</div><div>1</div>
-            </div>
-            <p class="desc">A compact but tanky robot with surprising punch power. Slow stride, heavy hit.</p>
-          </div>
-        </article>
       </div>
     </section>
   </main>
-
-  <footer>Tip: Enable GitHub Pages (Settings → Pages → Branch: <b>main</b>, Folder: <b>/ (root)</b>) to run this live.</footer>
 
   <script>
     // --- Scene switching ---
@@ -175,67 +125,111 @@
     const backFromPlay = document.getElementById('backFromPlay');
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
-
     function show(el){ menu.classList.add('hidden'); play.classList.add('hidden'); ency.classList.add('hidden'); el.classList.remove('hidden'); window.scrollTo(0,0); }
     playBtn.onclick = () => show(play);
     backFromPlay.onclick = () => show(menu);
     openEncy.onclick = () => show(ency);
     backBtn.onclick = () => show(menu);
 
-    // --- PLAY: basic battlefield + towers + elixir ---
+    // --- PLAY: flipped arena + river/bridges + towers + projectiles + elixir ---
     const W = 960, H = 560;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
 
-    // Elixir model
-    const ELIXIR_MAX = 10;
-    const ELIXIR_PER_SEC = 0.5; // 1 every 2 seconds
-    const elixir = { blue: 5, red: 5 };
-    const blueFill = document.getElementById('blueFill');
-    const redFill  = document.getElementById('redFill');
-    const blueText = document.getElementById('blueText');
-    const redText  = document.getElementById('redText');
+    // Layout: river horizontal through center; two vertical lanes/bridges (left/right)
+    const riverY = H/2, riverH = 82;
+    const lanesX = [ W*0.33, W*0.67 ];
+    const bridgeW = 120, bridgeH = riverH + 16;
 
-    // Simple map + tower positions
-    function laneY(i, n){ return H * ((i+1)/(n+1)); }
-    const lanes = [ laneY(0,2), laneY(1,2) ];
-
-    const towers = [
-      // BLUE side (human)
-      { type:'king', side:'blue', x:120, y:H/2, r:26, hp:1200 },
-      { type:'xbow', side:'blue', x:240, y:lanes[0], r:16, hp:600 },
-      { type:'xbow', side:'blue', x:240, y:lanes[1], r:16, hp:600 },
-      // RED side (AI)
-      { type:'king', side:'red',  x:W-120, y:H/2, r:26, hp:1200 },
-      { type:'xbow', side:'red',  x:W-240, y:lanes[0], r:16, hp:600 },
-      { type:'xbow', side:'red',  x:W-240, y:lanes[1], r:16, hp:600 },
-    ];
-
-    function draw(){
-      // Background
+    function drawBattlefield(){
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle = '#0b1026'; ctx.fillRect(0,0,W,H);
 
-      // Lanes
-      for (const y of lanes){
-        ctx.strokeStyle = '#1e2a5c'; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(160,y); ctx.lineTo(W-160,y); ctx.stroke();
-        ctx.strokeStyle = '#28377a'; ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(160,y); ctx.lineTo(W-160,y); ctx.stroke(); ctx.setLineDash([]);
+      // Side ground color bands
+      ctx.fillStyle = '#0c1431'; ctx.fillRect(0, 0, W, riverY - riverH/2);
+      ctx.fillRect(0, riverY + riverH/2, W, H - (riverY + riverH/2));
+
+      // River
+      const grad = ctx.createLinearGradient(0, riverY-riverH/2, 0, riverY+riverH/2);
+      grad.addColorStop(0, getCSS('--riverHi'));
+      grad.addColorStop(1, getCSS('--river'));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, riverY - riverH/2, W, riverH);
+
+      // Bridges (left & right)
+      ctx.fillStyle = getCSS('--bridge');
+      for (const x of lanesX){
+        roundedRect(x - bridgeW/2, riverY - bridgeH/2, bridgeW, bridgeH, 10);
+        ctx.fill();
+        // board lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 2;
+        for (let i=-3;i<=3;i++){
+          const bx = x + (i*bridgeW/7);
+          ctx.beginPath();
+          ctx.moveTo(bx, riverY-bridgeH/2+6);
+          ctx.lineTo(bx, riverY+bridgeH/2-6);
+          ctx.stroke();
+        }
       }
 
-      // Mid divider
-      ctx.strokeStyle = '#15224a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W/2,60); ctx.lineTo(W/2,H-60); ctx.stroke();
-
-      // Towers
-      for (const t of towers){
-        drawTower(t);
+      // Lanes (visual guides) as vertical strips along bridges
+      for (const x of lanesX){
+        ctx.strokeStyle = getCSS('--lane'); ctx.lineWidth = 22;
+        ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
+        ctx.strokeStyle = getCSS('--laneCtr'); ctx.lineWidth = 2; ctx.setLineDash([8,8]);
+        ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke(); ctx.setLineDash([]);
       }
     }
+
+    // Towers (bottom = blue human, top = red AI)
+    function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:1200, rof:1.6, range:260, cd:0}; }
+    function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16, hp:600,  rof:1.1, range:300, cd:0}; }
+
+    const towers = [
+      // BLUE (bottom)
+      tKing('blue', W/2, H-90),
+      tXbow('blue', lanesX[0], H-200),
+      tXbow('blue', lanesX[1], H-200),
+      // RED (top)
+      tKing('red',  W/2, 90),
+      tXbow('red',  lanesX[0], 200),
+      tXbow('red',  lanesX[1], 200),
+    ];
+
+    // Projectiles
+    const projectiles = []; // {x,y,vx,vy,spd, dmg, targetRef}
+    function spawnBolt(from, target, dmg=30, spd=360){
+      const ang = Math.atan2(target.y - from.y, target.x - from.x);
+      projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
+    }
+
+    // Elixir (still running in background)
+    const ELIXIR_MAX = 10;
+    const ELIXIR_PER_SEC = 0.5; // 1 / 2s
+    const elixir = { blue: 5, red: 5 };
+    const blueFill = document.getElementById('blueFill'), redFill = document.getElementById('redFill');
+    const blueText = document.getElementById('blueText'), redText = document.getElementById('redText');
+
+    // Helpers
+    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+    function enemiesOf(side){ return towers.filter(t => t.side !== side && t.hp > 0); }
+    function roundedRect(x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.arcTo(x+w, y,   x+w, y+h, r);
+      ctx.arcTo(x+w, y+h, x,   y+h, r);
+      ctx.arcTo(x,   y+h, x,   y,   r);
+      ctx.arcTo(x,   y,   x+w, y,   r);
+      ctx.closePath();
+    }
+    function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
 
     function drawTower(t){
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
 
       if (t.type === 'king'){
-        // pedestal
+        // pedestal shadow
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath(); ctx.ellipse(t.x, t.y+28, 36, 12, 0, 0, Math.PI*2); ctx.fill();
 
@@ -246,16 +240,15 @@
         // crown
         ctx.fillStyle = getCSS('--gold'); ctx.strokeStyle = '#7a5a00';
         ctx.beginPath();
-        const cw = 30, ch = 12;
+        const cw=30; 
         ctx.moveTo(t.x - cw/2, t.y - 40);
         ctx.lineTo(t.x - cw/6, t.y - 28);
         ctx.lineTo(t.x,        t.y - 38);
         ctx.lineTo(t.x + cw/6, t.y - 28);
         ctx.lineTo(t.x + cw/2, t.y - 40);
         ctx.closePath(); ctx.fill(); ctx.stroke();
-
       } else {
-        // Crossbow tower: base + arm
+        // crossbow tower
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath(); ctx.ellipse(t.x, t.y+18, 26, 9, 0, 0, Math.PI*2); ctx.fill();
 
@@ -265,49 +258,84 @@
         // bow arm
         ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
-        // string
-        ctx.strokeStyle = '#98a0b5'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
       }
 
-      // HP bar (placeholder)
-      const pct = Math.max(0, Math.min(1, t.hp / (t.type==='king'?1200:600)));
-      const w = 60, h = 6; const bx = t.x - w/2, by = t.y - (t.type==='king'?52:38);
-      ctx.fillStyle = '#0a1129'; ctx.fillRect(bx, by, w, h);
-      ctx.fillStyle = '#6bff95'; ctx.fillRect(bx, by, w*pct, h);
-      ctx.strokeStyle = '#0a0f25'; ctx.strokeRect(bx, by, w, h);
+      // HP bar
+      const maxHP = (t.type==='king')?1200:600;
+      const pct = Math.max(0, Math.min(1, t.hp/maxHP));
+      const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
+      ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
+      ctx.fillStyle='#6bff95'; ctx.fillRect(bx,by,w*pct,h);
+      ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
     }
 
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r, y);
-      ctx.arcTo(x+w, y,   x+w, y+h, r);
-      ctx.arcTo(x+w, y+h, x,   y+h, r);
-      ctx.arcTo(x,   y+h, x,   y,   r);
-      ctx.arcTo(x,   y,   x+w, y,   r);
-      ctx.closePath();
-    }
-    function getCSS(varName){
-      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#fff';
+    function towerAI(t, dt){
+      if (t.hp <= 0) return;
+      t.cd -= dt; if (t.cd > 0) return;
+      // pick nearest enemy tower in range
+      let best=null, bestD=1e9;
+      for (const e of enemiesOf(t.side)){
+        const d = dist(t,e);
+        if (d < t.range && d < bestD){ best=e; bestD=d; }
+      }
+      if (best){
+        spawnBolt(t, best, (t.type==='king'?40:30), (t.type==='king'?340:380));
+        t.cd = t.rof;
+      }
     }
 
-    // Game loop + elixir regen
+    function updateProjectiles(dt){
+      for (const p of projectiles){
+        const tgt = p.target;
+        if (!tgt || tgt.hp <= 0) { p.dead = true; continue; }
+        const dirx = tgt.x - p.x, diry = tgt.y - p.y;
+        const len = Math.hypot(dirx, diry) || 1;
+        p.vx = dirx/len; p.vy = diry/len;
+        p.x += p.vx * p.spd * dt;
+        p.y += p.vy * p.spd * dt;
+        // hit check
+        if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (tgt.r+6)){
+          tgt.hp -= p.dmg;
+          p.dead = true;
+        }
+      }
+      // prune
+      for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
+    }
+
+    function drawProjectiles(){
+      ctx.fillStyle = '#ffd166';
+      for (const p of projectiles){
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    // Game loop
+    const blueFill = document.getElementById('blueFill'), redFill = document.getElementById('redFill');
+    const blueText = document.getElementById('blueText'), redText = document.getElementById('redText');
     let last = performance.now();
     function loop(now){
-      const dt = Math.min(0.033, (now - last)/1000);
-      last = now;
+      const dt = Math.min(0.033, (now-last)/1000); last = now;
 
-      // elixir regen (1 every 2s => 0.5/sec)
-      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
-      elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + ELIXIR_PER_SEC*dt);
-
-      // HUD update
+      // elixir regen (1 per 2s)
+      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + 0.5*dt);
+      elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + 0.5*dt);
       blueFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
       redFill.style.transform  = `scaleX(${elixir.red/ELIXIR_MAX})`;
       blueText.textContent = Math.floor(elixir.blue);
       redText.textContent  = Math.floor(elixir.red);
 
-      draw();
+      // AI for towers (both sides)
+      for (const t of towers) towerAI(t, dt);
+
+      // Projectiles
+      updateProjectiles(dt);
+
+      // Draw
+      drawBattlefield();
+      for (const t of towers) drawTower(t);
+      drawProjectiles();
+
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
