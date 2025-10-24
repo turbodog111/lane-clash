@@ -208,11 +208,8 @@
     const backBtn = document.getElementById('backBtn');
 
     function show(el){
-      menu.classList.add('hidden');
-      play.classList.add('hidden');
-      ency.classList.add('hidden');
-      el.classList.remove('hidden');
-      window.scrollTo(0,0);
+      menu.classList.add('hidden'); play.classList.add('hidden'); ency.classList.add('hidden');
+      el.classList.remove('hidden'); window.scrollTo(0,0);
     }
     playBtn.addEventListener('click', () => show(play));
     backFromPlay.addEventListener('click', () => show(menu));
@@ -239,15 +236,15 @@
     // Card deck (2-card hand rotation from 3)
     const allCards = [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',
-        count:1, hp:100, dmg:20, atk:1.0, range:22, speed:60, radius:12, type:'melee' },
+        count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:12, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',
         count:2, hp:60,  dmg:15, atk:0.5, range:200, speed:90, radius:10, type:'ranged' },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png',
-        count:1, hp:300, dmg:80, atk:1.5, range:26, speed:45, radius:14, type:'melee' },
+        count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:14, type:'melee' },
     ];
-    let deckOrder = shuffle([0,1,2]);          // queue of indices
-    let hand = [ deckOrder[0], deckOrder[1] ]; // show 2
-    let selectedHandSlot = null;               // 0 or 1 when selected
+    let deckOrder = shuffle([0,1,2]);
+    let hand = [ deckOrder[0], deckOrder[1] ];
+    let selectedHandSlot = null;
 
     // DOM: render cards
     const cardsRoot = document.getElementById('cards');
@@ -255,26 +252,26 @@
       cardsRoot.innerHTML = '';
       hand.forEach((idx, slot)=>{
         const c = allCards[idx];
-        const canAfford = elixir.blue >= c.cost;
         const btn = document.createElement('button');
-        btn.className = 'cardBtn' + (selectedHandSlot===slot?' selected':'') + (canAfford?'':' disabled');
+        btn.className = 'cardBtn' + (selectedHandSlot===slot?' selected':'');
         btn.type='button';
         btn.title = `${c.name} — Cost ${c.cost}`;
+        btn.dataset.slot = String(slot);
+
         btn.addEventListener('click', ()=>{
-          if (!canAfford) return;
+          // Allow selection even if can't afford; placement check happens on canvas click
           selectedHandSlot = (selectedHandSlot===slot? null : slot);
-          renderCardBar();
+          refreshCardAffordability();
         });
+
         const thumb = document.createElement('div');
         thumb.className = 'thumb';
         const img = document.createElement('img');
-        img.src = c.img;
-        img.alt = `${c.name} card`;
+        img.src = c.img; img.alt = `${c.name} card`;
         img.onerror = () => { thumb.textContent = c.name[0]; };
         thumb.appendChild(img);
 
-        const meta = document.createElement('div');
-        meta.className='meta';
+        const meta = document.createElement('div'); meta.className='meta';
         const name = document.createElement('div'); name.className='name'; name.textContent=c.name;
         const cost = document.createElement('div'); cost.className='cost'; cost.textContent=`Cost: ${c.cost}`;
         meta.appendChild(name); meta.appendChild(cost);
@@ -282,19 +279,26 @@
         btn.appendChild(thumb); btn.appendChild(meta);
         cardsRoot.appendChild(btn);
       });
+      refreshCardAffordability();
+    }
 
-      // elixir UI update
+    function refreshCardAffordability(){
+      // Toggle disabled/selected styling live based on CURRENT elixir & selection
+      [...cardsRoot.children].forEach((node, slot)=>{
+        const idx = hand[slot], c = allCards[idx];
+        node.classList.toggle('disabled', elixir.blue < c.cost);
+        node.classList.toggle('selected', selectedHandSlot === slot);
+      });
       elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
       elixirText.textContent = Math.floor(elixir.blue);
     }
 
     // Rotation: after playing one card, refill with next from deck
     function rotateAfterPlay(playedIdx, slot){
-      // Move played card to end of deckOrder
       deckOrder = deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
-      // Fill that slot with the first deck item not already in hand
       const next = deckOrder.find(i => !hand.includes(i));
       if (next !== undefined) hand[slot] = next;
+      renderCardBar();
     }
 
     // Towers
@@ -312,19 +316,29 @@
     ];
 
     // Units
-    const units = []; // {side:'blue'|'red', x,y,laneX, hp,maxHp, dmg, atk, cd, range, speed, radius, kind:'knight'...}
+    const units = []; // {side,x,y,laneX,hp,maxHp,dmg,atk,cd,range,speed,radius,kind,type,imgSrc}
     function spawnUnits(card, laneX, y){
       for (let i=0;i<card.count;i++){
         const off = (card.count>1? (i===0?-12:12) : 0);
         units.push({
-          side:'blue', x: laneX + off, y, laneX, hp: card.hp, maxHp: card.hp,
-          dmg: card.dmg, atk: card.atk, cd:0, range: card.range, speed: card.speed,
-          radius: card.radius, kind: card.id, type: card.type
+          side:'blue', x: laneX + off, y, laneX,
+          hp: card.hp, maxHp: card.hp,
+          dmg: card.dmg, atk: card.atk, cd:0,
+          range: card.range, speed: card.speed,
+          radius: card.radius, kind: card.id, type: card.type,
+          imgSrc: card.img
         });
       }
     }
 
-    // Projectiles (towers only for now)
+    // Image cache for portraits
+    const imageCache = {};
+    function getImage(src){
+      if (!imageCache[src]){ const im = new Image(); im.src = src; imageCache[src]=im; }
+      return imageCache[src];
+    }
+
+    // Projectiles (towers)
     const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
     function spawnBolt(from, target, dmg=30, spd=360){
       const ang = Math.atan2(target.y - from.y, target.x - from.x);
@@ -332,7 +346,7 @@
     }
 
     // Helpers
-    function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j= (Math.random()* (i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+    function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
     function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
     function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
 
@@ -346,10 +360,8 @@
 
       // River
       const grad = ctx.createLinearGradient(0, riverY-riverH/2, 0, riverY+riverH/2);
-      grad.addColorStop(0, getCSS('--riverHi'));
-      grad.addColorStop(1, getCSS('--river'));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, riverY - riverH/2, W, riverH);
+      grad.addColorStop(0, getCSS('--riverHi')); grad.addColorStop(1, getCSS('--river'));
+      ctx.fillStyle = grad; ctx.fillRect(0, riverY - riverH/2, W, riverH);
 
       // Bridges
       ctx.fillStyle = getCSS('--bridge');
@@ -357,18 +369,15 @@
         roundedRect(x - bridgeW/2, riverY - bridgeH/2, bridgeW, bridgeH, 10);
         ctx.fill();
         // board lines
-        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2;
         for (let i=-3;i<=3;i++){
           const bx = x + (i*bridgeW/7);
-          ctx.beginPath();
-          ctx.moveTo(bx, riverY-bridgeH/2+6);
-          ctx.lineTo(bx, riverY+bridgeH/2-6);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(bx, riverY-bridgeH/2+6);
+          ctx.lineTo(bx, riverY+bridgeH/2-6); ctx.stroke();
         }
       }
 
-      // Lane guide lines (vertical)
+      // Lane guides
       for (const x of lanesX){
         ctx.strokeStyle = getCSS('--lane'); ctx.lineWidth = 22;
         ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
@@ -389,11 +398,9 @@
 
     // Crossbow half-bands (towers only)
     function xbowBandFor(t){
-      if (t.side === 'blue'){
-        return { yMin: riverY + riverH/2, yMax: H }; // bottom half
-      } else {
-        return { yMin: 0, yMax: riverY - riverH/2 }; // top half
-      }
+      return (t.side === 'blue')
+        ? { yMin: riverY + riverH/2, yMax: H }
+        : { yMin: 0, yMax: riverY - riverH/2 };
     }
 
     // Towers draw (with numeric HP)
@@ -401,18 +408,14 @@
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
 
       if (t.type === 'king'){
-        // shadow
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath(); ctx.ellipse(t.x, t.y+28, 36, 12, 0, 0, Math.PI*2); ctx.fill();
 
-        // body
         ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3;
         roundedRect(t.x-28, t.y-36, 56, 72, 10); ctx.fill(); ctx.stroke();
 
-        // crown
         ctx.fillStyle = getCSS('--gold'); ctx.strokeStyle = '#7a5a00';
-        ctx.beginPath();
-        const cw=30;
+        ctx.beginPath(); const cw=30;
         ctx.moveTo(t.x - cw/2, t.y - 40);
         ctx.lineTo(t.x - cw/6, t.y - 28);
         ctx.lineTo(t.x,        t.y - 38);
@@ -420,36 +423,50 @@
         ctx.lineTo(t.x + cw/2, t.y - 40);
         ctx.closePath(); ctx.fill(); ctx.stroke();
       } else {
-        // crossbow
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath(); ctx.ellipse(t.x, t.y+18, 26, 9, 0, 0, Math.PI*2); ctx.fill();
 
         ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3;
         roundedRect(t.x-18, t.y-22, 36, 44, 8); ctx.fill(); ctx.stroke();
 
-        // bow arm
         ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
       }
 
-      // HP UI (bar + numeric label)
+      // HP bar + number
       const maxHP = (t.type==='king')?1200:600;
       const pct = Math.max(0, Math.min(1, t.hp/maxHP));
       const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
       ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
       ctx.fillStyle='#6bff95'; ctx.fillRect(bx,by,w*pct,h);
       ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
-
       ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#dfe7ff';
       ctx.fillText(Math.max(0, Math.ceil(t.hp)), t.x, by-2);
     }
 
-    // Units draw (simple circles + small HP bar)
+    // Units draw (circle + small HP bar + portrait)
     function drawUnit(u){
       // body
       ctx.fillStyle = '#9dd1ff';
       ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
+
+      // portrait (small)
+      const img = getImage(u.imgSrc);
+      if (img && img.complete){
+        const w=36, h=46;
+        ctx.save();
+        ctx.beginPath(); // rounded rect clip
+        const px=u.x + u.radius + 8, py=u.y - u.radius - h + 6, r=8;
+        roundedRect(px, py, w, h, r);
+        ctx.clip();
+        ctx.drawImage(img, px, py, w, h);
+        ctx.restore();
+        // small frame
+        ctx.strokeStyle='#20306a'; ctx.lineWidth=1;
+        roundedRect(u.x + u.radius + 8, u.y - u.radius - h + 6, w, h, 8); ctx.stroke();
+      }
+
       // HP bar
       const w=36, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
       const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
@@ -457,7 +474,6 @@
       ctx.fillStyle= pct>0.5 ? '#6bff95' : (pct>0.25? '#ffd166' : '#ff7b7b');
       ctx.fillRect(bx,by,w*pct,h);
       ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
-      // number
       ctx.font='11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
       ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillStyle='#dfe7ff';
       ctx.fillText(Math.max(0, Math.ceil(u.hp)), u.x, by-2);
@@ -467,21 +483,18 @@
     function enemyUnits(side){ return units.filter(u => u.side !== side && u.hp>0); }
     function enemyTowers(side){ return towers.filter(t => t.side !== side && t.hp>0); }
 
-    // Tower AI: prefer units, then towers; crossbows limited to their half
+    // Tower AI (units first, then towers; crossbows limited to their half)
     function towerAI(t, dt){
       if (t.hp <= 0) return;
       t.cd -= dt; if (t.cd > 0) return;
 
       let candidates = enemyUnits(t.side);
-      // crossbow half-limit on units
       if (t.type==='xbow'){
         const band = xbowBandFor(t);
         candidates = candidates.filter(e => e.y >= band.yMin && e.y <= band.yMax);
       }
-      // in range
       candidates = candidates.filter(e => dist(t,e) < t.range);
 
-      // fallback to towers if no units
       if (candidates.length === 0){
         let ets = enemyTowers(t.side);
         if (t.type==='xbow'){
@@ -492,50 +505,59 @@
         candidates = ets;
       }
 
-      // nearest
       let best=null, bestD=1e9;
       for (const e of candidates){
         const d = dist(t,e);
         if (d < bestD){ best=e; bestD=d; }
       }
-
       if (best){
         spawnBolt(t, best, (t.type==='king'?40:30), (t.type==='king'?340:380));
         t.cd = t.rof;
       }
     }
 
-    // Unit update: move up along lane, attack enemies in range
+    // Unit update: move toward nearest enemy; stop at attack distance (no tower clipping)
     function unitUpdate(u, dt){
       if (u.hp<=0) return;
-      // move toward enemy side (upwards)
-      u.y -= u.speed * dt;
 
-      // stop drifting off lane
+      // choose a target: nearest enemy unit; else nearest enemy tower
+      let candidates = enemyUnits(u.side);
+      let best=null, bestD=1e9;
+      for (const e of candidates){ const d=dist(u,e); if (d<bestD){ best=e; bestD=d; } }
+      if (!best){
+        const ets = enemyTowers(u.side);
+        for (const e of ets){ const d=dist(u,e); if (d<bestD){ best=e; bestD=d; } }
+      }
+
+      // movement toward target (or straight up if none)
+      let nx=0, ny=-1; // default straight up
+      if (best){
+        const dx = best.x - u.x, dy = best.y - u.y, len = Math.hypot(dx,dy) || 1;
+        nx = dx/len; ny = dy/len;
+      }
+
+      // desired attack distance (stop distance)
+      const tgtR = best ? ('r' in best ? best.r : best.radius) : 0;
+      const attackRange = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
+
+      // If too far, move closer but don't cross the attack boundary
+      if (!best || bestD > attackRange){
+        const step = u.speed * dt;
+        // if moving would overshoot the boundary, clamp
+        if (best && bestD - step < attackRange){
+          const clampStep = Math.max(0, bestD - attackRange);
+          u.x += nx * clampStep; u.y += ny * clampStep;
+        } else {
+          u.x += nx * step; u.y += ny * step;
+        }
+      }
+      // keep on lane X
       u.x += (u.laneX - u.x) * Math.min(1, dt*6);
 
-      // choose target: prefer enemy units, then towers
-      let candidates = enemyUnits(u.side);
-      // in range
-      candidates = candidates.filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
-
-      if (candidates.length === 0){
-        let ets = enemyTowers(u.side).filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.r + 2) : u.range));
-        candidates = ets;
-      }
-
-      let best=null, bestD=1e9;
-      for (const e of candidates){
-        const d = dist(u,e);
-        if (d < bestD){ best=e; bestD=d; }
-      }
-
+      // attack if in range
       u.cd -= dt;
-      if (best && u.cd<=0){
-        // apply damage (instant for now)
-        if ('hp' in best){
-          best.hp -= u.dmg;
-        }
+      if (best && bestD <= attackRange && u.cd<=0){
+        best.hp -= u.dmg;
         u.cd = u.atk;
       }
     }
@@ -550,14 +572,11 @@
         p.vx = dirx/len; p.vy = diry/len;
         p.x += p.vx * p.spd * dt;
         p.y += p.vy * p.spd * dt;
-        // hit check
         const rT = ('r' in tgt) ? tgt.r : tgt.radius;
         if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (rT+6)){
-          tgt.hp -= p.dmg;
-          p.dead = true;
+          tgt.hp -= p.dmg; p.dead = true;
         }
       }
-      // prune
       for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
     }
     function drawProjectiles(){
@@ -567,7 +586,6 @@
       }
     }
 
-    // Draw loop helpers
     function drawAll(){
       drawBattlefield();
       for (const t of towers) drawTower(t);
@@ -582,8 +600,7 @@
 
       // elixir regen (player)
       elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
-      elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
-      elixirText.textContent = Math.floor(elixir.blue);
+      refreshCardAffordability();
 
       // towers
       for (const t of towers) towerAI(t, dt);
@@ -591,22 +608,21 @@
       // units
       for (const u of units) unitUpdate(u, dt);
 
+      // cleanup
+      for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
+
       // projectiles
       updateProjectiles(dt);
 
-      // remove dead units
-      for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
-
       // draw
       drawAll();
-
       requestAnimationFrame(gameLoop);
     }
     requestAnimationFrame(gameLoop);
 
     // ===== Deployment: card click then canvas click on player's half =====
     canv.addEventListener('click', (ev)=>{
-      if (selectedHandSlot===null) return; // no card selected
+      if (selectedHandSlot===null) return;
       const rect = canv.getBoundingClientRect();
       const mx = (ev.clientX - rect.left) * (W / rect.width);
       const my = (ev.clientY - rect.top)  * (H / rect.height);
@@ -622,19 +638,18 @@
 
       const idx = hand[selectedHandSlot];
       const card = allCards[idx];
-      if (elixir.blue < card.cost) return;
+      if (elixir.blue < card.cost) return; // CURRENT elixir check (fixes prior bug)
 
       // Spend elixir, spawn, rotate hand
       elixir.blue -= card.cost;
       spawnUnits(card, laneX, spawnY);
       rotateAfterPlay(idx, selectedHandSlot);
       selectedHandSlot = null;
-      renderCardBar();
+      refreshCardAffordability();
     });
 
     // Initial render of hand
     renderCardBar();
-
   </script>
 </body>
 </html>
