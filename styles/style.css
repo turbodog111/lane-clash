@@ -58,8 +58,31 @@ canvas{ width:100%; height:720px; display:block; border-radius:12px; background:
     rgba(207,225,255,0.22) 10%
   );
 }
-.elixirFill{ position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff); transform:scaleX(0); }
+/* Elixir Bar (10 segments visible above the fill) */
+.elixirRow{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.elixirBar{
+  position:relative; height:14px; flex:1;
+  border:1px solid #2c355c; border-radius:999px; background:#0b0f1c;
+  overflow:hidden;
+}
+.elixirFill{
+  position:absolute; inset:0; transform-origin:left center; transform:scaleX(0);
+  background:linear-gradient(90deg,#2b68ff,#70d6ff);
+  z-index:1; /* fill sits below the ticks */
+}
+/* ticks drawn ABOVE the fill so they’re always visible */
+.elixirBar::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent,
+    transparent calc(10% - 1px),
+    rgba(207,225,255,0.35) calc(10% - 1px),
+    rgba(207,225,255,0.35) 10%
+  );
+}
 .elixirText{ font-variant-numeric: tabular-nums; min-width:2ch; text-align:right; color:#cfe1ff; }
+
 
 .cards{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
 .cardBtn{
