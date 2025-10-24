@@ -1,0 +1,16 @@
+import { initUI } from './ui.js';
+import { initGame } from './game.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const { showMenu, showPlay, showEncy } = initUI();
+  const game = initGame();               // sets up state, renderers, loop
+
+  // Buttons
+  document.getElementById('playBtn').addEventListener('click', () => {
+    showPlay();
+    game.start();
+  });
+  document.getElementById('openEncy').addEventListener('click', showEncy);
+  document.getElementById('backBtn').addEventListener('click', showMenu);
+  document.getElementById('backFromPlay').addEventListener('click', showMenu);
+});
