@@ -171,7 +171,7 @@ async function start(){
   // screens & buttons (IDs must match)
   const scrMenu=$('screenMenu'), scrPlay=$('screenPlay'), scrEnc=$('screenEncyclopedia'), scrLog=$('screenUpdateLog');
   const btnPlay=$('btnPlay'), btnEnc=$('btnEncyclopedia'), btnLog=$('btnUpdateLog');
-  const backP=$('btnBackFromPlay'), backE=$('btnBackFromEnc')||$('btnBackFromEncyclopedia'), backL=$('btnBackFromLog');
+  const backP=$('btnBackFromPlay'), backE=$('btnBackFromEnc'), backL=$('btnBackFromLog');
 
   const showMenu=()=>{ show(scrMenu); hide(scrPlay); hide(scrEnc); hide(scrLog); canvas.style.pointerEvents='none'; };
   const showPlay=()=>{ hide(scrMenu); show(scrPlay); hide(scrEnc); hide(scrLog); canvas.style.pointerEvents='auto'; };
@@ -238,6 +238,7 @@ async function start(){
   function tick(now){
     try{
       const dt = Math.max(0.001, Math.min(0.05, (now-last)/1000)); last = now;
+      // Update when play screen is visible (or doesn't exist for testing)
       if (!scrPlay || scrPlay.style.display !== 'none'){ update(state, dt); draw(state); }
     }catch(e){ console.error(e); window.__LC_DIAG?.err(e?.stack || e?.message || String(e)); }
     requestAnimationFrame(tick);
