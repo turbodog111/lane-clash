@@ -1,13 +1,9 @@
-// src/game.js
 export async function initGame(diag){
   const VER = window.__LC_VER || 'dev';
-
-  // Versioned, single-shot dynamic imports
   const logic  = await import(`./logic.js?v=${VER}`);
   const render = await import(`./render.js?v=${VER}`);
 
-  // Pull what we need into local names (no top-level duplicates)
-  const { createGameState, update, tryDeployAt, rotateAfterPlay, labelFor } = logic;
+  const { createGameState, update, tryDeployAt, rotateAfterPlay } = logic;
   const { setupRenderer } = render;
 
   const canvas     = document.getElementById('game');
@@ -17,17 +13,16 @@ export async function initGame(diag){
 
   const state = createGameState(canvas);
 
-  // ========= UI callbacks from state =========
+  // HUD callbacks
   state.onElixirChange = () => {
     const pct = Math.min(1, state.elixir.blue/state.config.ELIXIR_MAX);
     elixirFill.style.width = `${pct*100}%`;
     elixirText.textContent = Math.floor(state.elixir.blue).toString();
   };
-
   state.rebuildCardBar = () => {
     cardsWrap.innerHTML = '';
-    state.hand.forEach((cardIdx, slot) => {
-      const c = state.cards[cardIdx];
+    state.hand.forEach((idx, slot) => {
+      const c = state.cards[idx];
       const btn = document.createElement('button');
       btn.className = 'cardBtn';
       btn.innerHTML = `
@@ -43,24 +38,20 @@ export async function initGame(diag){
       cardsWrap.appendChild(btn);
     });
   };
+  state.rebuildCardBar(); state.onElixirChange();
 
-  state.rebuildCardBar();
-  state.onElixirChange();
+  // Renderer
+  const { drawAll } = setupRenderer(canvas);
 
-  // ========= Renderer =========
-  const { drawAll, setHelpers } = setupRenderer(canvas);
-  // provide helpers so render.js never imports logic.js
-  setHelpers({ labelFor, getState: ()=>state });
-
-  // ========= Input: placement =========
+  // Input (grid-snapped placement)
   canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (e.clientY - rect.top)  * (canvas.height/ rect.height);
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (canvas.width / r.width);
+    const y = (e.clientY - r.top)  * (canvas.height/ r.height);
     tryDeployAt(state, x, y);
   });
 
-  // ========= Game Loop =========
+  // Loop
   let raf = 0, last = 0, running = false;
   function frame(ts){
     if (!running) return;
@@ -70,10 +61,8 @@ export async function initGame(diag){
     drawAll(state);
     raf = requestAnimationFrame(frame);
   }
-
   function start(){ if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(frame); }
   function stop(){ running = false; if (raf) cancelAnimationFrame(raf); }
 
-  // expose for diagnostics
-  return { start, stop, getState: () => state };
+  return { start, stop, getState:()=>state, rotateAfterPlay };
 }
