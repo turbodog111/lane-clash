@@ -38,7 +38,7 @@
     }
     .subtitle{ color:#9fb4ff; margin-top:-6px; }
 
-    /* Encyclopedia styles */
+    /* Encyclopedia */
     .entries{ display:grid; gap:16px; }
     .entry{
       display:grid; grid-template-columns:min(360px,45%) 1fr; gap:18px; align-items:center;
@@ -46,26 +46,21 @@
     }
     @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
     .cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px; min-height:220px; }
-    .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
+    .cardFrame img{ width:100%; height:auto; display:block; }
     .details h2{ margin:0 0 8px; font-size:22px; display:flex; align-items:center; gap:8px; }
     .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#0b1433; border:1px solid #20306a; font-size:12px; }
     .grid{ display:grid; grid-template-columns:120px 1fr; gap:8px 12px; margin:8px 0 10px; }
     .label{ color:#9fb4ff; }
     .desc{ color:#cfe1ff; }
 
-    /* Play canvas */
+    /* Play */
     canvas{ width:100%; height:720px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
     .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 
-    /* Card HUD (bottom of Play) */
-    .cardhud{
-      margin-top:12px;
-      background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:10px;
-    }
+    /* Card HUD */
+    .cardhud{ margin-top:12px; background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:10px; }
     .elixirRow{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }
-    .elixirBar{
-      position:relative; height:14px; flex:1; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden;
-    }
+    .elixirBar{ position:relative; height:14px; flex:1; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden; }
     .elixirFill{ position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff); transform:scaleX(0); }
     .elixirText{ font-variant-numeric: tabular-nums; min-width:2ch; text-align:right; color:#cfe1ff; }
     .cards{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
@@ -76,9 +71,7 @@
     }
     .cardBtn:hover{ transform: translateY(-1px); filter: brightness(1.05); box-shadow:0 8px 20px rgba(112,214,255,.12); }
     .cardBtn.selected{ outline:2px solid #70d6ff; border-color:#70d6ff; }
-    .thumb{
-      width:56px; height:72px; border-radius:10px; background:#0b1433; border:1px solid #20306a; display:flex; align-items:center; justify-content:center; overflow:hidden;
-    }
+    .thumb{ width:56px; height:72px; border-radius:10px; background:#0b1433; border:1px solid #20306a; display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .thumb img{ width:100%; height:auto; display:block; }
     .meta{ display:flex; flex-direction:column; gap:3px; }
     .name{ font-weight:700; }
@@ -90,7 +83,7 @@
   <header><div class="title">Lane Clash — Prototype</div></header>
 
   <main>
-    <!-- MAIN MENU -->
+    <!-- MENU -->
     <section id="menu" class="panel center" aria-labelledby="menuTitle">
       <h1 id="menuTitle" class="brand">Lane Clash</h1>
       <div class="subtitle">A tiny lane strategy prototype</div>
@@ -129,59 +122,57 @@
         <button id="backBtn" class="btn">Back</button>
       </div>
       <div class="entries">
-        <!-- KNIGHT -->
-        <article class="entry" role="article" aria-labelledby="knightTitle">
+        <!-- Knight -->
+        <article class="entry" aria-labelledby="knightTitle">
           <div class="cardFrame">
             <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
           </div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
-            <div class="grid" aria-label="Knight stats">
+            <div class="grid">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>100</div>
               <div class="label">DMG</div><div>20 / 1s</div>
               <div class="label">Speed</div><div>1</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.</p>
+            <p class="desc">A brave melee fighter with balanced stats—reliable on the field.</p>
           </div>
         </article>
-
-        <!-- ARCHERS -->
-        <article class="entry" role="article" aria-labelledby="archersTitle">
+        <!-- Archers -->
+        <article class="entry" aria-labelledby="archersTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
             <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"
                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
           </div>
           <div class="details">
             <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
-            <div class="grid" aria-label="Archers stats">
+            <div class="grid">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>60</div>
               <div class="label">DMG</div><div>15 / 0.5s</div>
               <div class="label">Speed</div><div>1.5</div>
               <div class="label">Unit Count</div><div>2</div>
             </div>
-            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
+            <p class="desc">Ranged pair that pepper foes from afar—fragile but efficient.</p>
           </div>
         </article>
-
-        <!-- MINI-MEGA -->
-        <article class="entry" role="article" aria-labelledby="miniMegaTitle">
+        <!-- Mini-MEGA -->
+        <article class="entry" aria-labelledby="miniMegaTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
             <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"
                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Mini-MEGA card art coming soon',className:'muted'}));">
           </div>
           <div class="details">
             <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
-            <div class="grid" aria-label="Mini-MEGA stats">
+            <div class="grid">
               <div class="label">Elixir Cost</div><div>3</div>
               <div class="label">HP</div><div>300</div>
               <div class="label">DMG</div><div>80 / 1.5s</div>
               <div class="label">Speed</div><div>0.75</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">A compact but tanky robot with surprising punch power. Slow stride, heavy hit.</p>
+            <p class="desc">Compact robot with a heavy punch. Slow stride, high impact.</p>
           </div>
         </article>
       </div>
@@ -192,7 +183,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     "use strict";
 
-    // ===== Scene switching =====
+    /* ---------- Scene switching ---------- */
     const menuSection = document.getElementById('menu');
     const playSection = document.getElementById('play');
     const encySection = document.getElementById('ency');
@@ -201,46 +192,38 @@
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
 
-    function show(el){
-      [menuSection, playSection, encySection].forEach(s => s.classList.add('hidden'));
-      el.classList.remove('hidden'); window.scrollTo(0,0);
-    }
-    playBtn?.addEventListener('click', () => show(playSection));
-    backFromPlay?.addEventListener('click', () => show(menuSection));
-    openEncy?.addEventListener('click', () => show(encySection));
-    backBtn?.addEventListener('click', () => show(menuSection));
+    function show(el){ [menuSection, playSection, encySection].forEach(s => s.classList.add('hidden')); el.classList.remove('hidden'); window.scrollTo(0,0); }
+    playBtn.addEventListener('click', () => show(playSection));
+    backFromPlay.addEventListener('click', () => show(menuSection));
+    openEncy.addEventListener('click', () => show(encySection));
+    backBtn.addEventListener('click', () => show(menuSection));
 
-    // ===== PLAY: Battlefield + Towers + Projectiles + Units + Cards + FX =====
+    /* ---------- Canvas ---------- */
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
     const W = canv.width, H = canv.height;
 
-    // Battlefield
+    // Battlefield layout
     const riverY = H/2, riverH = 100;
     const lanesX = [ W*0.33, W*0.67 ];
     const bridgeW = 120, bridgeH = riverH + 18;
 
-    // Elixir (player)
-    const ELIXIR_MAX = 10;
-    const ELIXIR_PER_SEC = 0.5; // 1 per 2s
+    // Elixir
+    const ELIXIR_MAX = 10, ELIXIR_PER_SEC = 0.5; // 1 per 2s
     const elixir = { blue: 5, red: 5 };
     const elixirFill = document.getElementById('elixirFill');
     const elixirText = document.getElementById('elixirText');
 
-    // Cards (2-card hand from 3)
+    // Cards (2-of-3)
     const allCards = [
-      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',
-        count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:12, type:'melee' },
-      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',
-        count:2, hp:60,  dmg:15, atk:0.5, range:200, speed:90, radius:10, type:'ranged' },
-      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png',
-        count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:14, type:'melee' },
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',   count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
+      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',  count:2, hp:60,  dmg:15, atk:0.5, range:200, speed:90, radius:10, type:'ranged' },
+      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png',count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
     ];
     let deckOrder = shuffle([0,1,2]);
     let hand = [ deckOrder[0], deckOrder[1] ];
     let selectedHandSlot = null;
 
-    // DOM: card bar
     const cardsRoot = document.getElementById('cards');
     function renderCardBar(){
       cardsRoot.innerHTML = '';
@@ -250,35 +233,27 @@
         btn.className = 'cardBtn' + (selectedHandSlot===slot?' selected':'');
         btn.type='button';
         btn.title = `${c.name} — Cost ${c.cost}`;
-        btn.dataset.slot = String(slot);
-        btn.addEventListener('click', ()=>{
-          selectedHandSlot = (selectedHandSlot===slot? null : slot);
-          refreshCardAffordability();
-        });
-
+        btn.addEventListener('click', ()=>{ selectedHandSlot = (selectedHandSlot===slot? null : slot); refreshElixirUI(); });
         const thumb = document.createElement('div'); thumb.className='thumb';
-        const img = document.createElement('img'); img.src=c.img; img.alt=`${c.name} card`;
-        img.onerror = () => { thumb.textContent = c.name[0]; };
+        const img = document.createElement('img'); img.src=c.img; img.alt=`${c.name} card`; img.onerror = () => { thumb.textContent = c.name[0]; };
         thumb.appendChild(img);
-
         const meta = document.createElement('div'); meta.className='meta';
         const name = document.createElement('div'); name.className='name'; name.textContent=c.name;
         const cost = document.createElement('div'); cost.className='cost'; cost.textContent=`Cost: ${c.cost}`;
         meta.appendChild(name); meta.appendChild(cost);
-
         btn.appendChild(thumb); btn.appendChild(meta);
         cardsRoot.appendChild(btn);
       });
-      refreshCardAffordability();
+      refreshElixirUI();
     }
-    function refreshCardAffordability(){
-      Array.from(cardsRoot.children).forEach((node, slot)=>{
-        const idx = hand[slot], c = allCards[idx];
+    function refreshElixirUI(){
+      [...cardsRoot.children].forEach((node, i)=>{
+        const c = allCards[hand[i]];
         node.classList.toggle('disabled', elixir.blue < c.cost);
-        node.classList.toggle('selected', selectedHandSlot === slot);
+        node.classList.toggle('selected', selectedHandSlot === i);
       });
-      if (elixirFill) elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
-      if (elixirText) elixirText.textContent = String(Math.floor(elixir.blue));
+      elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
+      elixirText.textContent = String(Math.floor(elixir.blue));
     }
     function rotateAfterPlay(playedIdx, slot){
       deckOrder = deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
@@ -287,33 +262,31 @@
       renderCardBar();
     }
 
-    // ===== Towers =====
-    // King: 2000 HP, 50 dmg / 1s; starts asleep until damaged once
+    /* ---------- Towers ---------- */
     function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false}; }
-    // Crossbow: 1000 HP, 30 dmg / 1s
     function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16,  hp:1000, maxHp:1000, rof:1.0, range:300, cd:0}; }
-
     const towers = [
       tKing('blue', W/2, H-100),
-      tXbow('blue', lanesX[0], H-180),
-      tXbow('blue', lanesX[1], H-180),
+      tXbow('blue', lanesX[0], H-190),
+      tXbow('blue', lanesX[1], H-190),
       tKing('red',  W/2, 100),
-      tXbow('red',  lanesX[0], 180),
-      tXbow('red',  lanesX[1], 180),
+      tXbow('red',  lanesX[0], 190),
+      tXbow('red',  lanesX[1], 190),
     ];
-
-    function enemySideOf(side){ return side === 'blue' ? 'red' : 'blue'; }
-    function kingOf(side){ return towers.find(t => t.type==='king' && t.side===side); }
-    function aliveCrossbowOn(side, laneX){
-      const list = towers.filter(t => t.type==='xbow' && t.side===side && t.hp>0);
-      if (list.length===0) return null;
-      let best=null, bd=1e9;
-      for (const t of list){ const d = Math.abs(t.x - laneX); if (d<bd){ bd=d; best=t; } }
-      return best;
+    function enemySideOf(s){ return s==='blue' ? 'red' : 'blue'; }
+    function kingOf(s){ return towers.find(t => t.type==='king' && t.side===s); }
+    function aliveCrossbowOn(s, laneX){
+      const list = towers.filter(t => t.type==='xbow' && t.side===s && t.hp>0);
+      if (!list.length) return null;
+      return list.reduce((best, t)=> Math.abs(t.x-laneX)<Math.abs(best.x-laneX)? t:best, list[0]);
     }
 
-    // ===== Units =====
+    /* ---------- Units / Projectiles / FX ---------- */
     const units = []; // {side,x,y,laneX,hp,maxHp,dmg,atk,cd,range,speed,radius,kind,type,imgSrc}
+    const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
+    const particles = [];   // {x,y,vx,vy,life,ttl,size,color}
+    const floatDMG = [];    // {x,y,vy,life,ttl,text,color}
+
     function spawnUnits(card, laneX, y){
       for (let i=0;i<card.count;i++){
         const off = (card.count>1? (i===0?-12:12) : 0);
@@ -328,65 +301,25 @@
       }
     }
 
-    // Image cache for portraits
-    const imageCache = {};
-    function getImage(src){
-      if (!imageCache[src]){ const im = new Image(); im.src = src; imageCache[src]=im; }
-      return imageCache[src];
-    }
-
-    // ===== Projectiles =====
-    const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
     function spawnBolt(from, target, dmg=30, spd=360){
       const ang = Math.atan2(target.y - from.y, target.x - from.x);
       projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
     }
 
-    // ===== FX =====
-    const particles = []; // {x,y,vx,vy,life,ttl,size,color}
-    const floatDMG = [];  // {x,y,vy,life,ttl,text,color}
     function addHitFX(x,y,dmg,color='#ffd166'){
-      const n = 10;
-      for(let i=0;i<n;i++){
-        const a = Math.random()*Math.PI*2;
-        const s = 60 + Math.random()*160;
+      for(let i=0;i<10;i++){
+        const a = Math.random()*Math.PI*2, s = 60 + Math.random()*160;
         particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life:0, ttl:0.35+Math.random()*0.25, size: 2 + Math.random()*2, color });
       }
       floatDMG.push({ x, y: y-8, vy: -40, life:0, ttl:0.8, text: String(Math.round(dmg)), color });
     }
-    function updateFX(dt){
-      for (const p of particles){ p.life += dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.94; p.vy *= 0.94; }
-      for (let i=particles.length-1;i>=0;i--) if (particles[i].life>particles[i].ttl) particles.splice(i,1);
-      for (const f of floatDMG){ f.life += dt; f.y += f.vy*dt; f.vy *= 0.98; }
-      for (let i=floatDMG.length-1;i>=0;i--) if (floatDMG[i].life>floatDMG[i].ttl) floatDMG.splice(i,1);
-    }
-    function drawFX(){
-      for (const p of particles){
-        const a = 1 - (p.life/p.ttl);
-        if (a <= 0) continue;
-        ctx.globalAlpha = a;
-        ctx.fillStyle = p.color;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-      for (const f of floatDMG){
-        const a = 1 - (f.life/f.ttl);
-        if (a <= 0) continue;
-        ctx.globalAlpha = a;
-        ctx.font = 'bold 14px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillStyle = f.color;
-        ctx.fillText(f.text, f.x, f.y);
-        ctx.globalAlpha = 1;
-      }
-    }
 
-    // ===== Helpers =====
+    /* ---------- Helpers ---------- */
     function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
-    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+    function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
     function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
+    const labelFor = k => k==='knight'?'K':k==='archers'?'Ar':'MM';
 
-    // Damage funnel (handles king wake)
     function dealDamage(target, amount){
       if (!target || target.hp<=0) return;
       target.hp -= amount;
@@ -395,9 +328,9 @@
       if (target.type === 'king' && !target.awake){ target.awake = true; }
     }
 
+    /* ---------- Drawing ---------- */
     function drawBattlefield(){
       ctx.clearRect(0,0,W,H);
-      ctx.fillStyle = '#0b1026'; ctx.fillRect(0,0,W,H);
 
       // Ground halves
       ctx.fillStyle = '#0c1431'; ctx.fillRect(0, 0, W, riverY - riverH/2);
@@ -411,22 +344,15 @@
       // Bridges
       ctx.fillStyle = getCSS('--bridge');
       for (const x of lanesX){
-        roundedRect(x - bridgeW/2, riverY - bridgeH/2, bridgeW, bridgeH, 10);
-        ctx.fill();
+        roundedRect(x - bridgeW/2, riverY - bridgeH/2, bridgeW, bridgeH, 10); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2;
-        for (let i=-3;i<=3;i++){
-          const bx = x + (i*bridgeW/7);
-          ctx.beginPath(); ctx.moveTo(bx, riverY-bridgeH/2+6);
-          ctx.lineTo(bx, riverY+bridgeH/2-6); ctx.stroke();
-        }
+        for (let i=-3;i<=3;i++){ const bx = x + (i*bridgeW/7); ctx.beginPath(); ctx.moveTo(bx, riverY-bridgeH/2+6); ctx.lineTo(bx, riverY+bridgeH/2-6); ctx.stroke(); }
       }
 
       // Lane guides
       for (const x of lanesX){
-        ctx.strokeStyle = getCSS('--lane'); ctx.lineWidth = 22;
-        ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
-        ctx.strokeStyle = getCSS('--laneCtr'); ctx.lineWidth = 2; ctx.setLineDash([8,8]);
-        ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = getCSS('--lane'); ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
+        ctx.strokeStyle = getCSS('--laneCtr'); ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke(); ctx.setLineDash([]);
       }
     }
 
@@ -440,167 +366,152 @@
       ctx.closePath();
     }
 
-    // Crossbow half-bands (towers only)
-    function xbowBandFor(t){
-      return (t.side === 'blue')
-        ? { yMin: riverY + riverH/2, yMax: H }
-        : { yMin: 0, yMax: riverY - riverH/2 };
-    }
-
-    // Towers draw (with numeric HP)
     function drawTower(t){
+      ctx.save();
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
 
       if (t.type === 'king'){
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.beginPath(); ctx.ellipse(t.x, t.y+28, 36, 12, 0, 0, Math.PI*2); ctx.fill();
-
-        ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3;
-        roundedRect(t.x-28, t.y-36, 56, 72, 10); ctx.fill(); ctx.stroke();
-
-        ctx.fillStyle = getCSS('--gold'); ctx.strokeStyle = '#7a5a00';
-        ctx.beginPath(); const cw=30;
-        ctx.moveTo(t.x - cw/2, t.y - 40);
-        ctx.lineTo(t.x - cw/6, t.y - 28);
-        ctx.lineTo(t.x,        t.y - 38);
-        ctx.lineTo(t.x + cw/6, t.y - 28);
-        ctx.lineTo(t.x + cw/2, t.y - 40);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.ellipse(t.x, t.y+28, 36, 12, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3; roundedRect(t.x-28, t.y-36, 56, 72, 10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = getCSS('--gold'); ctx.strokeStyle = '#7a5a00'; ctx.beginPath(); const cw=30;
+        ctx.moveTo(t.x - cw/2, t.y - 40); ctx.lineTo(t.x - cw/6, t.y - 28); ctx.lineTo(t.x, t.y - 38); ctx.lineTo(t.x + cw/6, t.y - 28); ctx.lineTo(t.x + cw/2, t.y - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
       } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.beginPath(); ctx.ellipse(t.x, t.y+18, 26, 9, 0, 0, Math.PI*2); ctx.fill();
-
-        ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3;
-        roundedRect(t.x-18, t.y-22, 36, 44, 8); ctx.fill(); ctx.stroke();
-
-        ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.ellipse(t.x, t.y+18, 26, 9, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3; roundedRect(t.x-18, t.y-22, 36, 44, 8); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
       }
 
-      // HP bar + number
-      const maxHP = t.maxHp || (t.type==='king'?2000:1000);
-      const pct = Math.max(0, Math.min(1, t.hp/maxHP));
+      const maxHP = t.maxHp; const pct = Math.max(0, Math.min(1, t.hp/maxHP));
       const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
       ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
       ctx.fillStyle='#6bff95'; ctx.fillRect(bx,by,w*pct,h);
       ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
-      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#dfe7ff';
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#dfe7ff';
       ctx.fillText(Math.max(0, Math.ceil(t.hp)), t.x, by-2);
+      ctx.restore();
     }
 
-    // Targeting helpers
+    function drawUnit(u){
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+      ctx.fillStyle = '#eaf4ff'; ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      ctx.lineWidth = 2; ctx.strokeStyle = '#0a1a3d'; ctx.stroke();
+
+      // label
+      ctx.font = 'bold 11px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#0b1433';
+      ctx.fillText(labelFor(u.kind), u.x, u.y);
+
+      // HP bar + number
+      const w=38, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
+      const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
+      ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
+      ctx.fillStyle= pct>0.5 ? '#6bff95' : (pct>0.25? '#ffd166' : '#ff7b7b');
+      ctx.fillRect(bx,by,w*pct,h);
+      ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
+      ctx.font='11px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillStyle='#dfe7ff';
+      ctx.fillText(Math.max(0, Math.ceil(u.hp)), u.x, by-2);
+      ctx.restore();
+    }
+
+    function drawProjectiles(){
+      ctx.save();
+      ctx.fillStyle = '#ffd166';
+      ctx.shadowColor = 'rgba(255,209,102,0.6)'; ctx.shadowBlur = 8;
+      for (const p of projectiles){ ctx.beginPath(); ctx.arc(p.x, p.y, 3.2, 0, Math.PI*2); ctx.fill(); }
+      ctx.restore();
+    }
+
+    function drawFX(){
+      ctx.save();
+      // particles
+      for (const p of particles){
+        const a = 1 - (p.life/p.ttl); if (a <= 0) continue;
+        ctx.globalAlpha = a; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+      }
+      // damage numbers
+      for (const f of floatDMG){
+        const a = 1 - (f.life/f.ttl); if (a <= 0) continue;
+        ctx.globalAlpha = a; ctx.font = 'bold 14px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+      }
+      ctx.restore();
+    }
+
+    /* ---------- AI / Updates ---------- */
+    function xbowBandFor(t){ return (t.side==='blue') ? { yMin: riverY + riverH/2, yMax: H } : { yMin: 0, yMax: riverY - riverH/2 }; }
     function enemyUnits(side){ return units.filter(u => u.side !== side && u.hp>0); }
     function enemyTowers(side){ return towers.filter(t => t.side !== side && t.hp>0); }
 
-    // Tower AI
     function towerAI(t, dt){
       if (t.hp <= 0) return;
-      if (t.type==='king' && !t.awake) return; // sleeping king
-
+      if (t.type==='king' && !t.awake) return;
       t.cd -= dt; if (t.cd > 0) return;
 
       let candidates = enemyUnits(t.side);
-      if (t.type==='xbow'){
-        const band = xbowBandFor(t);
-        candidates = candidates.filter(e => e.y >= band.yMin && e.y <= band.yMax);
-      }
+      if (t.type==='xbow'){ const band = xbowBandFor(t); candidates = candidates.filter(e => e.y >= band.yMin && e.y <= band.yMax); }
       candidates = candidates.filter(e => dist(t,e) < t.range);
 
-      if (candidates.length === 0){
+      if (!candidates.length){
         let ets = enemyTowers(t.side);
-        if (t.type==='xbow'){
-          const band = xbowBandFor(t);
-          ets = ets.filter(e => e.y >= band.yMin && e.y <= band.yMax);
-        }
+        if (t.type==='xbow'){ const band = xbowBandFor(t); ets = ets.filter(e => e.y >= band.yMin && e.y <= band.yMax); }
         ets = ets.filter(e => dist(t,e) < t.range);
         candidates = ets;
       }
 
       let best=null, bestD=1e9;
-      for (const e of candidates){
-        const d = dist(t,e);
-        if (d < bestD){ best=e; bestD=d; }
-      }
-      if (best){
-        const dmg = (t.type==='king'?50:30);
-        spawnBolt(t, best, dmg, (t.type==='king'?340:380));
-        t.cd = t.rof;
-      }
+      for (const e of candidates){ const d = dist(t,e); if (d < bestD){ best=e; bestD=d; } }
+      if (best){ spawnBolt(t, best, (t.type==='king'?50:30), (t.type==='king'?340:380)); t.cd = t.rof; }
     }
 
-    // Unit update: lane-aware structural target (Crossbow->King), fight units in range
     function unitUpdate(u, dt){
       if (u.hp<=0) return;
+      const foe = enemySideOf(u.side);
+      let struct = aliveCrossbowOn(foe, u.laneX) || kingOf(foe);
 
-      const foeSide = enemySideOf(u.side);
-      let struct = aliveCrossbowOn(foeSide, u.laneX) || kingOf(foeSide);
-
-      let candidates = enemyUnits(u.side)
-        .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
-
-      if (candidates.length === 0 && struct){
-        const inRange = dist(u,struct) <= (u.type==='melee' ? (u.radius + struct.r + 2) : u.range);
-        if (inRange) candidates = [struct];
+      let close = enemyUnits(u.side).filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
+      if (!close.length && struct){
+        const inR = dist(u,struct) <= (u.type==='melee' ? (u.radius + struct.r + 2) : u.range);
+        if (inR) close = [struct];
       }
 
-      let best=null, bestD=1e9;
-      for (const e of candidates){ const d=dist(u,e); if (d<bestD){ best=e; bestD=d; } }
+      let best=null, bestD=1e9; for (const e of close){ const d=dist(u,e); if (d<bestD){ best=e; bestD=d; } }
 
-      let moveTarget = best || struct;
+      const moveTarget = best || struct;
       if (moveTarget){
         const dx = moveTarget.x - u.x, dy = moveTarget.y - u.y, len = Math.hypot(dx,dy) || 1;
-        const nx = dx/len, ny = dy/len;
-        const tgtR = ('r' in moveTarget) ? moveTarget.r : moveTarget.radius;
-        const attackRange = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
-
+        const nx = dx/len, ny = dy/len; const tgtR = ('r' in moveTarget) ? moveTarget.r : moveTarget.radius;
+        const need = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
         const dNow = dist(u, moveTarget);
-        if (dNow > attackRange){
-          const step = u.speed * dt;
-          const s = (dNow - step < attackRange) ? Math.max(0, dNow - attackRange) : step;
-          u.x += nx * s; u.y += ny * s;
-        }
-      } else {
-        u.y -= u.speed * dt; // drift up lane
-      }
+        if (dNow > need){ const step = u.speed * dt; const s = (dNow - step < need) ? Math.max(0, dNow - need) : step; u.x += nx*s; u.y += ny*s; }
+      } else { u.y -= u.speed * dt; }
 
-      // keep on lane X
       u.x += (u.laneX - u.x) * Math.min(1, dt*6);
 
-      // attack
       u.cd -= dt;
-      if (best && u.cd<=0){
-        dealDamage(best, u.dmg); u.cd = u.atk;
-      } else if (!best && struct && u.cd<=0){
-        const d = dist(u, struct);
-        const need = (u.type==='melee') ? (struct.r + u.radius + 2) : u.range;
+      if (best && u.cd<=0){ dealDamage(best, u.dmg); u.cd = u.atk; }
+      else if (!best && struct && u.cd<=0){
+        const d = dist(u, struct), need = (u.type==='melee') ? (struct.r + u.radius + 2) : u.range;
         if (d <= need){ dealDamage(struct, u.dmg); u.cd = u.atk; }
       }
     }
 
-    // Projectiles update/draw
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
         if (!tgt || tgt.hp <= 0) { p.dead = true; continue; }
-        const dirx = tgt.x - p.x, diry = tgt.y - p.y;
-        const len = Math.hypot(dirx, diry) || 1;
-        p.vx = dirx/len; p.vy = diry/len;
-        p.x += p.vx * p.spd * dt;
-        p.y += p.vy * p.spd * dt;
+        const dirx = tgt.x - p.x, diry = tgt.y - p.y, len = Math.hypot(dirx, diry) || 1;
+        p.vx = dirx/len; p.vy = diry/len; p.x += p.vx * p.spd * dt; p.y += p.vy * p.spd * dt;
         const rT = ('r' in tgt) ? tgt.r : tgt.radius;
-        if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (rT+6)){
-          dealDamage(tgt, p.dmg);
-          p.dead = true;
-        }
+        if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (rT+6)){ dealDamage(tgt, p.dmg); p.dead = true; }
       }
       for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
     }
-    function drawProjectiles(){
-      ctx.fillStyle = '#ffd166';
-      for (const p of projectiles){
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
-      }
+
+    function updateFX(dt){
+      for (const p of particles){ p.life += dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.94; p.vy *= 0.94; }
+      for (let i=particles.length-1;i>=0;i--) if (particles[i].life>particles[i].ttl) particles.splice(i,1);
+      for (const f of floatDMG){ f.life += dt; f.y += f.vy*dt; f.vy *= 0.98; }
+      for (let i=floatDMG.length-1;i>=0;i--) if (floatDMG[i].life>floatDMG[i].ttl) floatDMG.splice(i,1);
     }
 
     function drawAll(){
@@ -611,72 +522,51 @@
       drawFX();
     }
 
-    // ===== Main loop =====
+    /* ---------- Main Loop ---------- */
     let last = performance.now();
     function tick(now){
-      try{
-        const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
+      const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
 
-        // elixir regen (player)
-        elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
-        refreshCardAffordability();
+      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
+      refreshElixirUI();
 
-        // towers
-        for (const t of towers) towerAI(t, dt);
+      for (const t of towers) towerAI(t, dt);
+      for (const u of units) unitUpdate(u, dt);
+      for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
 
-        // units
-        for (const u of units) unitUpdate(u, dt);
+      updateProjectiles(dt);
+      updateFX(dt);
+      drawAll();
 
-        // cleanup dead units
-        for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
-
-        // projectiles + FX
-        updateProjectiles(dt);
-        updateFX(dt);
-
-        // draw
-        drawAll();
-      }finally{
-        requestAnimationFrame(tick);
-      }
+      requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
 
-    // ===== Deployment =====
+    /* ---------- Deployment ---------- */
     function canvasPoint(ev){
-      const rect = canv.getBoundingClientRect();
-      return {
-        x: (ev.clientX - rect.left) * (canv.width / rect.width),
-        y: (ev.clientY - rect.top)  * (canv.height / rect.height),
-      };
+      const r = canv.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) * (canv.width / r.width), y: (ev.clientY - r.top) * (canv.height / r.height) };
     }
     canv.addEventListener('click', (ev)=>{
       if (selectedHandSlot===null) return;
       const {x:mx, y:my} = canvasPoint(ev);
-
-      // Only player's half
-      const halfMin = riverY + riverH/2 + 20;
-      const halfMax = H - 40;
+      const halfMin = riverY + riverH/2 + 20, halfMax = H - 40;
       if (my < halfMin || my > halfMax) return;
 
-      // Snap to nearest lane
       const laneX = Math.abs(mx - lanesX[0]) < Math.abs(mx - lanesX[1]) ? lanesX[0] : lanesX[1];
       const spawnY = Math.max(halfMin+10, Math.min(halfMax, my));
 
-      const idx = hand[selectedHandSlot];
-      const card = allCards[idx];
-      if (!card) return;
-      if (elixir.blue < card.cost) return;
+      const idx = hand[selectedHandSlot]; const card = allCards[idx];
+      if (!card || elixir.blue < card.cost) return;
 
-      // Spend elixir, spawn, rotate hand
       elixir.blue -= card.cost;
       spawnUnits(card, laneX, spawnY);
       rotateAfterPlay(idx, selectedHandSlot);
       selectedHandSlot = null;
-      refreshCardAffordability();
+      refreshElixirUI();
     });
 
-    // ===== Init =====
+    /* ---------- Init ---------- */
     renderCardBar();
   });
   </script>
