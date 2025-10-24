@@ -19,9 +19,11 @@ export function createGameState(canvas) {
     particles: [],
     floatDMG: [],
     elixir: { blue: 5, red: 5 },
+
+    // NOTE: Archers range reduced to 150 so they can't hit towers from across the bridge.
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
-      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:15, atk:0.5, range:200, speed:90, radius:10, type:'ranged' },
+      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:15, atk:0.5, range:150, speed:90, radius:10, type:'ranged' },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
     ],
     deckOrder: shuffle([0,1,2]),
@@ -96,7 +98,7 @@ function spawnUnits(state, card, laneX, y) {
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
     state.units.push({
-      side:'blue', x: laneX + off, y, laneX, // laneX is dynamic; can drift toward king later
+      side:'blue', x: laneX + off, y, laneX, // lane anchor; may drift AFTER crossing
       hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
       range: card.range, speed: card.speed, radius: card.radius,
       kind: card.id, type: card.type
@@ -139,6 +141,9 @@ function towerAI(state, t, dt) {
   }
 }
 
+/* ----------------- PATHING (fixed) -----------------
+   Units must stay on their lane until they've actually crossed the river.
+   Only AFTER crossing do they drift laterally toward the king.           */
 function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
@@ -146,20 +151,21 @@ function unitUpdate(state, u, dt) {
   const laneCrossbow = aliveCrossbowOn(state, foe, u.laneX);
   let struct = laneCrossbow || kingOf(state, foe);
 
-  // ----- PATHING FIX -----
-  // When targeting the king (or once we've crossed the river), gently shift the unit's laneX toward the king,
-  // so melee units can actually reach the king instead of freezing along a vertical lane.
   const { riverY, riverH } = state.config;
-  const crossed = (u.side==='blue') ? (u.y < riverY - riverH/2) : (u.y > riverY + riverH/2);
-  let desiredLaneX = u.laneX;
-  if ((!laneCrossbow && struct?.type==='king') || (struct?.type==='king' && crossed)) {
-    desiredLaneX = struct.x; // pull toward the king once in enemy territory or no xbows remain
-  }
-  // Smooth lane drift
-  u.laneX += (desiredLaneX - u.laneX) * Math.min(1, dt * 2.5);
-  // ------------------------
+  const crossed = (u.side==='blue') ? (u.y < riverY - riverH/2)
+                                     : (u.y > riverY + riverH/2);
+  const lockLane = !crossed; // while on own side OR inside river band
 
-  // Acquire targets
+  // Desired lane anchor:
+  let desiredLaneX = u.laneX;
+  if (struct?.type === 'king' && crossed) {
+    // Pull toward king ONLY after crossing.
+    desiredLaneX = struct.x;
+  }
+  // Smoothly move lane anchor
+  u.laneX += (desiredLaneX - u.laneX) * Math.min(1, dt * 2.5);
+
+  // Acquire targets near us (units first, then structures if in range)
   let close = enemyUnits(state, u.side)
     .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
   if (!close.length && struct){
@@ -173,23 +179,34 @@ function unitUpdate(state, u, dt) {
   const moveTarget = best || struct;
   if (moveTarget){
     const dx = moveTarget.x - u.x, dy = moveTarget.y - u.y, len = Math.hypot(dx,dy) || 1;
-    const nx = dx/len, ny = dy/len;
+    let nx = dx/len, ny = dy/len;
+
     const tgtR = ('r' in moveTarget) ? moveTarget.r : moveTarget.radius;
     const need = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
     const dNow = dist(u, moveTarget);
+
     if (dNow > need){
       const step = u.speed * dt;
       const s = (dNow - step < need) ? Math.max(0, dNow - need) : step;
-      u.x += nx * s; u.y += ny * s;
+
+      // <<< BRIDGE RULE: while lockLane, forbid lateral motion >>>
+      let stepX = nx * s;
+      let stepY = ny * s;
+      if (lockLane) stepX = 0;
+
+      u.x += stepX;
+      u.y += stepY;
     }
   } else {
-    u.y -= u.speed * dt; // drift up lane
+    // No target: proceed along lane
+    u.y -= u.speed * dt; // (blue goes upward)
   }
 
-  // Keep near desired lane (after possible drift toward king)
-  u.x += (u.laneX - u.x) * Math.min(1, dt*6);
+  // Keep glued to lane; stronger pull while lockLane (before/inside river)
+  const lanePull = lockLane ? 20 : 6;
+  u.x += (u.laneX - u.x) * Math.min(1, dt * lanePull);
 
-  // Attack
+  // Attack timings
   u.cd -= dt;
   if (best && u.cd<=0){ dealDamage(state, best, u.dmg); u.cd = u.atk; }
   else if (!best && struct && u.cd<=0){
