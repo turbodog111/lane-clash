@@ -7,29 +7,31 @@
   <style>
     :root{
       --bg:#0e1220; --panel:#161b2e; --ink:#e9f1ff; --muted:#a9b7ff;
-      --line:#24315c; --accent:#70d6ff; --accent2:#6bff95;
+      --line:#24315c; --accent:#70d6ff;
     }
     *{ box-sizing:border-box; }
-    html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
 
     header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
     .title{ font-weight:750; letter-spacing:.2px; }
 
-    main{ max-width:1000px; margin:24px auto; padding:0 12px; }
+    main{ max-width:1024px; margin:24px auto; padding:0 12px; }
 
     /* Buttons */
     .btn{
       appearance:none; border:1px solid var(--line); background:linear-gradient(180deg,#203061,#18244b);
       color:var(--ink); padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer;
-      transition:transform .08s ease, filter .12s ease;
+      transition:transform .08s ease, filter .12s ease, box-shadow .12s ease;
+      box-shadow:0 0 0 0 rgba(112,214,255,0);
     }
-    .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+    .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); box-shadow:0 6px 18px rgba(112,214,255,.18); }
+    .btn:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(112,214,255,.35); }
 
     /* Panels */
     .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
 
     /* Main menu */
-    .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; }
+    .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; text-align:center; }
     .muted{ color:var(--muted); }
 
     /* Encyclopedia */
@@ -41,18 +43,21 @@
       display:grid; grid-template-columns: min(360px, 45%) 1fr; gap:18px; align-items:center;
       background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px;
     }
+    @media (max-width: 720px){
+      .entry{ grid-template-columns: 1fr; }
+    }
     .cardFrame{
       display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px;
+      min-height: 220px;
     }
     .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
 
-    .details h2{ margin:0 0 8px; font-size:22px; }
+    .details h2{ margin:0 0 8px; font-size:22px; display:flex; align-items:center; gap:8px; }
     .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#0b1433; border:1px solid #20306a; font-size:12px; }
     .grid{ display:grid; grid-template-columns: 120px 1fr; gap:8px 12px; margin:8px 0 10px; }
     .label{ color:#9fb4ff; }
     .desc{ color:#cfe1ff; }
 
-    /* Footer */
     footer{ text-align:center; color:#8ea1c9; padding:16px 0; font-size:12px; }
   </style>
 </head>
@@ -66,7 +71,7 @@
     <section id="menu" class="panel center" aria-labelledby="menuTitle">
       <h1 id="menuTitle" style="position:absolute;left:-9999px;">Main Menu</h1>
       <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
-      <div class="muted">Browse unit cards and their stats.</div>
+      <p class="muted">Browse unit cards and their stats.</p>
     </section>
 
     <!-- ENCYCLOPEDIA -->
@@ -78,14 +83,16 @@
 
       <div class="entries">
         <!-- KNIGHT -->
-        <article class="entry">
+        <article class="entry" role="article" aria-labelledby="knightTitle">
           <div class="cardFrame">
             <!-- Provide this file: assets/knight-card.png (transparent PNG) -->
-            <img src="assets/knight-card.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+            <img src="assets/knight-card.png"
+                 alt="Knight card (Common, Cost 2)"
+                 onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
           </div>
           <div class="details">
-            <h2>Knight <span class="pill">Common</span></h2>
-            <div class="grid">
+            <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
+            <div class="grid" aria-label="Knight stats">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>100</div>
               <div class="label">DMG</div><div>20 / sec</div>
@@ -96,14 +103,17 @@
           </div>
         </article>
 
-        <!-- ARCHERS (text layout for now; we’ll swap to an image later) -->
-        <article class="entry">
+        <!-- ARCHERS -->
+        <article class="entry" role="article" aria-labelledby="archersTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
-            <span class="muted">Archers card art coming soon</span>
+            <!-- Optional art: assets/archers-card.png -->
+            <img src="assets/archers-card.png"
+                 alt="Archers card (Common, Cost 2)"
+                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
           </div>
           <div class="details">
-            <h2>Archers <span class="pill">Common</span></h2>
-            <div class="grid">
+            <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
+            <div class="grid" aria-label="Archers stats">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>60</div>
               <div class="label">DMG</div><div>15 / 0.5s</div>
@@ -118,7 +128,7 @@
   </main>
 
   <footer>
-    Tip: add your Knight PNG at <code>assets/knight-card.png</code>. We’ll wire Archers art next.
+    Tip: enable GitHub Pages (Settings → Pages → Branch: <strong>main</strong>, Folder: <strong>/ (root)</strong>) and visit your site URL.
   </footer>
 
   <script>
@@ -127,20 +137,25 @@
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
 
-    openEncy.addEventListener('click', () => {
+    // Open encyclopedia (click or Enter/Space when focused)
+    function openPanel(){
       menu.classList.add('hidden');
       ency.classList.remove('hidden');
       openEncy.setAttribute('aria-expanded','true');
       window.scrollTo(0,0);
-    });
-
-    backBtn.addEventListener('click', () => {
+    }
+    function closePanel(){
       ency.classList.add('hidden');
       menu.classList.remove('hidden');
       openEncy.setAttribute('aria-expanded','false');
       window.scrollTo(0,0);
-    });
+      openEncy.focus();
+    }
+
+    openEncy.addEventListener('click', openPanel);
+    openEncy.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openPanel(); }});
+    backBtn.addEventListener('click', closePanel);
+    document.addEventListener('keydown', (e)=>{ if(!ency.classList.contains('hidden') && e.key==='Escape'){ closePanel(); }});
   </script>
 </body>
 </html>
-
