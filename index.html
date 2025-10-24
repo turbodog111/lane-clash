@@ -196,6 +196,9 @@
   </main>
 
   <script>
+  (() => {
+    "use strict";
+
     // ===== Scene switching =====
     const menu = document.getElementById('menu');
     const play = document.getElementById('play');
@@ -215,9 +218,9 @@
     backBtn.addEventListener('click', () => show(menu));
 
     // ===== PLAY: Battlefield + Towers + Projectiles + Units + Cards + FX =====
-    const W = 960, H = 720;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
+    const W = canv.width, H = canv.height;
 
     // Battlefield
     const riverY = H/2, riverH = 100;
@@ -276,13 +279,13 @@
       refreshCardAffordability();
     }
     function refreshCardAffordability(){
-      [...cardsRoot.children].forEach((node, slot)=>{
+      Array.from(cardsRoot.children).forEach((node, slot)=>{
         const idx = hand[slot], c = allCards[idx];
         node.classList.toggle('disabled', elixir.blue < c.cost);
         node.classList.toggle('selected', selectedHandSlot === slot);
       });
-      elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
-      elixirText.textContent = Math.floor(elixir.blue);
+      if (elixirFill) elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
+      if (elixirText) elixirText.textContent = String(Math.floor(elixir.blue));
     }
     function rotateAfterPlay(playedIdx, slot){
       deckOrder = deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
@@ -292,9 +295,7 @@
     }
 
     // ===== Towers (with new stats) =====
-    // King: 2000 HP, 50 dmg / 1s; starts asleep until damaged once
     function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false}; }
-    // Crossbow: 1000 HP, 30 dmg / 1s
     function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16,  hp:1000, maxHp:1000, rof:1.0, range:300, cd:0}; }
 
     const towers = [
@@ -306,18 +307,13 @@
       tXbow('red',  lanesX[1], 180),
     ];
 
-    // Helpers to find key towers
     function enemySideOf(side){ return side === 'blue' ? 'red' : 'blue'; }
     function kingOf(side){ return towers.find(t => t.type==='king' && t.side===side); }
     function aliveCrossbowOn(side, laneX){
       const list = towers.filter(t => t.type==='xbow' && t.side===side && t.hp>0);
       if (list.length===0) return null;
-      // choose the crossbow whose x is closest to this lane
       let best=null, bd=1e9;
-      for (const t of list){
-        const d = Math.abs(t.x - laneX);
-        if (d<bd){ bd=d; best=t; }
-      }
+      for (const t of list){ const d = Math.abs(t.x - laneX); if (d<bd){ bd=d; best=t; } }
       return best;
     }
 
@@ -359,12 +355,7 @@
       for(let i=0;i<n;i++){
         const a = Math.random()*Math.PI*2;
         const s = 60 + Math.random()*160;
-        particles.push({
-          x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s,
-          life:0, ttl:0.35+Math.random()*0.25,
-          size: 2 + Math.random()*2,
-          color
-        });
+        particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life:0, ttl:0.35+Math.random()*0.25, size: 2 + Math.random()*2, color });
       }
       floatDMG.push({ x, y: y-8, vy: -40, life:0, ttl:0.8, text: String(Math.round(dmg)), color });
     }
@@ -386,9 +377,7 @@
       target.hp -= amount;
       const rT = ('r' in target) ? target.r : target.radius;
       addHitFX(target.x, target.y - (rT*0.4), amount, '#ffd166');
-      if (target.type === 'king' && !target.awake){
-        target.awake = true; // King turret wakes after first damage
-      }
+      if (target.type === 'king' && !target.awake){ target.awake = true; }
     }
 
     function drawBattlefield(){
@@ -492,7 +481,7 @@
 
       // portrait (small)
       const img = getImage(u.imgSrc);
-      if (img && img.complete){
+      if (img && img.complete && img.naturalWidth){
         const w=36, h=46;
         ctx.save();
         ctx.beginPath();
@@ -524,9 +513,7 @@
     // Tower AI (units first, then towers; crossbows limited to their half; King sleeps until hit)
     function towerAI(t, dt){
       if (t.hp <= 0) return;
-
-      // King turret sleeps until awakened by damage
-      if (t.type==='king' && !t.awake) return;
+      if (t.type==='king' && !t.awake) return; // sleeping king
 
       t.cd -= dt; if (t.cd > 0) return;
 
@@ -559,16 +546,13 @@
       }
     }
 
-    // Unit update: lane-aware structural target (Princess->King), keep fighting units in range
+    // Unit update: lane-aware structural target (Crossbow->King), keep fighting units in range
     function unitUpdate(u, dt){
       if (u.hp<=0) return;
 
       const foeSide = enemySideOf(u.side);
-
-      // structural target: crossbow in same lane if alive; else king
       let struct = aliveCrossbowOn(foeSide, u.laneX) || kingOf(foeSide);
 
-      // dynamic targets: prefer enemy units in range, else structural target
       let candidates = enemyUnits(u.side)
         .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
 
@@ -577,52 +561,42 @@
         if (inRange) candidates = [struct];
       }
 
-      // pick nearest among candidates
       let best=null, bestD=1e9;
       for (const e of candidates){ const d=dist(u,e); if (d<bestD){ best=e; bestD=d; } }
 
-      // move toward primary path target if not in range of a unit
       let moveTarget = best || struct;
       if (moveTarget){
         const dx = moveTarget.x - u.x, dy = moveTarget.y - u.y, len = Math.hypot(dx,dy) || 1;
         const nx = dx/len, ny = dy/len;
-
-        // desired attack distance against chosen target
         const tgtR = ('r' in moveTarget) ? moveTarget.r : moveTarget.radius;
         const attackRange = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
 
-        if (dist(u, moveTarget) > attackRange){
+        const dNow = dist(u, moveTarget);
+        if (dNow > attackRange){
           const step = u.speed * dt;
-          const dNow = dist(u, moveTarget);
-          const willOvershoot = (dNow - step < attackRange);
-          const s = willOvershoot ? Math.max(0, dNow - attackRange) : step;
+          const s = (dNow - step < attackRange) ? Math.max(0, dNow - attackRange) : step;
           u.x += nx * s; u.y += ny * s;
         }
       } else {
-        // no target at all -> drift up lane toward enemy side
-        u.y -= u.speed * dt;
+        u.y -= u.speed * dt; // drift up lane
       }
 
       // keep on lane X
       u.x += (u.laneX - u.x) * Math.min(1, dt*6);
 
-      // attack if in range
+      // attack
       u.cd -= dt;
       if (best && u.cd<=0){
-        dealDamage(best, u.dmg);
-        u.cd = u.atk;
+        dealDamage(best, u.dmg); u.cd = u.atk;
       } else if (!best && struct && u.cd<=0){
         const d = dist(u, struct);
-        const tgtR = struct.r;
-        const need = (u.type==='melee') ? (tgtR + u.radius + 2) : u.range;
-        if (d <= need){
-          dealDamage(struct, u.dmg);
-          u.cd = u.atk;
-        }
+        const need = (u.type==='melee') ? (struct.r + u.radius + 2) : u.range;
+        if (d <= need){ dealDamage(struct, u.dmg); u.cd = u.atk; }
       }
     }
 
     // Projectiles update/draw (towers)
+    const projectiles = [];
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -655,40 +629,52 @@
       drawFX(); // particles & damage numbers on top
     }
 
-    // Main loop
+    // ===== Main loop (hardened: one bad frame won't kill it) =====
     let last = performance.now();
-    function gameLoop(now){
-      const dt = Math.min(0.033, (now - last) / 1000); last = now;
+    function tick(now){
+      try{
+        const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
 
-      // elixir regen (player)
-      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
-      refreshCardAffordability();
+        // elixir regen (player)
+        elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
+        refreshCardAffordability();
 
-      // towers
-      for (const t of towers) towerAI(t, dt);
+        // towers
+        for (const t of towers) towerAI(t, dt);
 
-      // units
-      for (const u of units) unitUpdate(u, dt);
+        // units
+        for (const u of units) unitUpdate(u, dt);
 
-      // cleanup dead units
-      for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
+        // cleanup dead units
+        for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
 
-      // projectiles + FX
-      updateProjectiles(dt);
-      updateFX(dt);
+        // projectiles + FX
+        updateProjectiles(dt);
+        updateFX(dt);
 
-      // draw
-      drawAll();
-      requestAnimationFrame(gameLoop);
+        // draw
+        drawAll();
+      }catch(e){
+        // Keep the loop running even if something went wrong this frame.
+        // (Optional: uncomment next line to see the error in console)
+        // console.error(e);
+      }finally{
+        requestAnimationFrame(tick);
+      }
     }
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(tick);
 
     // ===== Deployment =====
+    function canvasPoint(ev){
+      const rect = canv.getBoundingClientRect();
+      return {
+        x: (ev.clientX - rect.left) * (canv.width / rect.width),
+        y: (ev.clientY - rect.top)  * (canv.height / rect.height),
+      };
+    }
     canv.addEventListener('click', (ev)=>{
       if (selectedHandSlot===null) return;
-      const rect = canv.getBoundingClientRect();
-      const mx = (ev.clientX - rect.left) * (W / rect.width);
-      const my = (ev.clientY - rect.top)  * (H / rect.height);
+      const {x:mx, y:my} = canvasPoint(ev);
 
       // Only player's half
       const halfMin = riverY + riverH/2 + 20;
@@ -701,6 +687,7 @@
 
       const idx = hand[selectedHandSlot];
       const card = allCards[idx];
+      if (!card) return;
       if (elixir.blue < card.cost) return;
 
       // Spend elixir, spawn, rotate hand
@@ -713,6 +700,8 @@
 
     // ===== Init =====
     renderCardBar();
+
+  })();
   </script>
 </body>
 </html>
