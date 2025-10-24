@@ -50,5 +50,12 @@ header .title{padding:10px 16px;border-bottom:1px solid var(--stroke);opacity:.8
 .muted{color:var(--muted)}
 .small{font-size:12px}
 
-/* Diagnostics panel (from diag.js) */
+/* Diagnostics panel (diag.js) */
+#lc-diag{position:fixed;right:10px;bottom:10px;width:360px;max-height:50vh;overflow:auto;padding:8px 10px;background:#091126;border:1px solid #21304f;border-radius:8px;box-shadow:0 6px 30px rgba(0,0,0,.3);font:12px/1.3 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;color:#cfe1ff;z-index:99999}
+#lc-diag .hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+#lc-diag .hdr .v{opacity:.8}
+#lc-diag .row{padding:3px 0;border-bottom:1px dotted #203157}
+#lc-diag .ok{color:#8ff0a4}
+#lc-diag .warn{color:#ffe08a}
+#lc-diag .err{color:#ff8f8f}
 #lc-diag kbd{background:#0f1b33;border:1px solid #2a3a66;border-radius:4px;padding:1px 6px}
