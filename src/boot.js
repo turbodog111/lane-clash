@@ -1,8 +1,8 @@
 // src/boot.js
 const VERSION = '0.1.4';
-window.LC_VERSION = VERSION; // so every module can read the same version
+window.LC_VERSION = VERSION;
 
-// ---- super simple fatal error overlay ----
+// Simple fatal overlay
 function showFatal(msg) {
   let box = document.getElementById('lc-fatal');
   if (!box) {
@@ -21,12 +21,10 @@ function showFatal(msg) {
 window.addEventListener('error',  e => showFatal(e.message || String(e)));
 window.addEventListener('unhandledrejection', e => showFatal(e.reason?.stack || e.reason?.message || String(e.reason)));
 
-// ---- load diagnostics first, then the game ----
 (async () => {
-  // If this import fails, the overlay above will show it.
   const { initDiag } = await import(`./diag.js?v=${VERSION}`);
-  const diag = initDiag({ version: VERSION });
-  diag.step(`boot: requested game.js (v=${VERSION})`);
+  const diag = initDiag({ version: VERSION, startOpen:true }); // force open
+  diag.step(`boot: requesting game.js (v=${VERSION})`);
 
   const { boot } = await import(`./game.js?v=${VERSION}`);
   await boot(VERSION);
