@@ -39,9 +39,9 @@ export function createGameState(canvas){
     GOAL_EPS: 8,
     WORLD_PAD: 8,
 
-    // new: when two enemies meet on the SAME PATH
-    PATH_BLOCK_PAD: 6,     // extra standoff beyond radii
-    PATH_BLOCK_DETECT: 18, // extra detection beyond standoff
+    // path fight / ranged hold
+    PATH_BLOCK_PAD: 6,      // extra standoff beyond radii for melee
+    PATH_BLOCK_DETECT: 18,  // detection margin to notice the clash sooner
   };
 
   const state = {
@@ -52,7 +52,7 @@ export function createGameState(canvas){
     elixir: { blue: 5, red: 5 },
     winner: null,
 
-    // Cards (Archers nerfed to 10 / 0.75)
+    // Cards (Archers nerfed earlier to 10 / 0.75)
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged' },
@@ -87,8 +87,8 @@ export function createGameState(canvas){
     X('red',  config.lanesX[1], 250),
   );
 
-  buildNav(state);    // placement grid
-  buildPaths(state);  // movement polylines
+  buildNav(state);
+  buildPaths(state);
 
   // placement: player bottom half only, walkable cell
   state.canPlaceCell = (cx,cy)=>{
@@ -161,15 +161,13 @@ function aiUpdate(state, dt){
     .filter(x=>x.card.cost<=state.elixir.red);
 
   if (!choices.length){ ai.timer = 0.8; return; }
-
-  // prefer pricier card slightly
   const pick = choices.sort((a,b)=>(b.card.cost+Math.random())-(a.card.cost+Math.random()))[0];
 
   let cell = randomRedSpawnCell(state);
   if (!cell){
     const lane = (Math.random()<0.5?0:1);
     const which = (Math.random()*3)|0;
-    const poly = state.paths[lane][which]; // bottom->top
+    const poly = state.paths[lane][which];
     const topPt = poly[poly.length-1];
     cell = nearestWalkable(state, topPt.x, topPt.y) || cellFromWorld(state, topPt.x, topPt.y);
   }
@@ -205,19 +203,16 @@ function spawnUnits(state, side, card, cx, cy, x, y){
   }
 }
 
-// NEW: find a blocking enemy on the SAME PATH (lane + which)
+// Find a blocking enemy on the SAME PATH (lane + which)
 function findPathBlockEnemy(state, u){
   const { PATH_BLOCK_PAD, PATH_BLOCK_DETECT } = state.config;
   let best=null, bd=1e9;
   for (const e of enemyUnits(state, u.side)){
     if (e.hp<=0) continue;
-    if (e.pathLane!==u.pathLane || e.pathWhich!==u.pathWhich) continue; // must be same path
+    if (e.pathLane!==u.pathLane || e.pathWhich!==u.pathWhich) continue;
     const d = dist(u,e);
-    // engage window: standoff + small detection margin
     const standoff = u.radius + (e.radius||12) + PATH_BLOCK_PAD;
-    if (d <= standoff + PATH_BLOCK_DETECT && d < bd){
-      bd = d; best = e;
-    }
+    if (d <= standoff + PATH_BLOCK_DETECT && d < bd){ bd = d; best = e; }
   }
   return best;
 }
@@ -258,7 +253,7 @@ function unitUpdate(state, u, dt){
   const laneXbow = aliveXbow(state,foe,laneX);
   const structTarget = laneXbow || kingOf(state,foe);
 
-  // same-lane aggro candidate (no chasing; only affects attack selection)
+  // same-lane aggro candidate (no chasing)
   let targetUnit = null;
   {
     const sameHalf = (e)=> ((u.side==='blue' && e.y>cfg.riverY) || (u.side==='red' && e.y<cfg.riverY));
@@ -273,9 +268,17 @@ function unitUpdate(state, u, dt){
     targetUnit = best;
   }
 
-  // NEW: path-block enemy takes priority if present
+  // Path-block enemy takes priority if present
   const blockEnemy = findPathBlockEnemy(state, u);
   if (blockEnemy) targetUnit = blockEnemy;
+
+  // Decide if a RANGED unit should HOLD and FIRE from range
+  let holdRanged = false;
+  if (u.type === 'ranged'){
+    if (blockEnemy && dist(u, blockEnemy) <= u.range) holdRanged = true;
+    else if (targetUnit && dist(u, targetUnit) <= u.range) holdRanged = true;
+    else if (!u.onPath && structTarget && dist(u, structTarget) <= u.range) holdRanged = true;
+  }
 
   // follow polyline; then approach structure but stop at standoff
   const poly = state.paths[u.pathLane][u.pathWhich];
@@ -289,22 +292,22 @@ function unitUpdate(state, u, dt){
   let vx=0, vy=0;
   const step = Math.max(0, u.speed*dt);
 
-  // If we have a path-block enemy, override movement to engage it and avoid passing through
   if (blockEnemy){
+    // Engage enemy on path. Ranged steps JUST enough to reach range, then holds.
     const need = (u.type==='melee'
       ? (u.radius + (blockEnemy.radius||12) + cfg.PATH_BLOCK_PAD)
-      : u.range); // ranged: stop at weapon range
+      : u.range);
     const dx = blockEnemy.x - u.x, dy = blockEnemy.y - u.y, d = Math.hypot(dx,dy)||1;
     const remain = d - need;
-    if (remain > 0){
-      const m = Math.min(step, remain);
-      vx += dx/d * m; vy += dy/d * m; // move just enough to reach standoff
-    } else {
-      // already at or inside standoff → hold position (don’t advance)
+    if (u.type==='ranged' && remain <= 0){
+      // Already in range → hold position
       vx = 0; vy = 0;
+    } else if (remain > 0){
+      const m = Math.min(step, remain);
+      vx += dx/d * m; vy += dy/d * m;
     }
-  } else {
-    // Normal movement
+  } else if (!holdRanged) {
+    // Normal movement (ranged will skip this if holding to fire)
     if (u.onPath){
       let dx = B.x-u.x, dy = B.y-u.y; let d = Math.hypot(dx,dy);
       const EPS = cfg.GOAL_EPS;
@@ -340,15 +343,16 @@ function unitUpdate(state, u, dt){
       }
     }
   }
+  // If holdRanged is true (and no block step was needed), we leave vx,vy at 0.
 
-  // separation (friendly)
+  // separation (friendly) — keep, but small; prevents overlap without pushing forward much
   for (const f of state.units){
     if (f===u || f.side!==u.side || f.hp<=0) continue;
     let dx=u.x-f.x, dy=u.y-f.y, d=Math.hypot(dx,dy);
     if (d===0){ dx=(Math.random()-0.5)*0.01; dy=(Math.random()-0.5)*0.01; d=Math.hypot(dx,dy); }
     if (d>0 && d<cfg.SEP_DIST){
       const push=(1 - d/cfg.SEP_DIST)*(cfg.SEP_PUSH*dt);
-      vx += (dx/d)*push; vy += (dy/d)*push;
+      vx += (dx/d)*push*0.6; vy += (dy/d)*push*0.6; // softened so archers don't creep forward
     }
   }
 
@@ -360,9 +364,12 @@ function unitUpdate(state, u, dt){
   let victim = null;
 
   // prefer unit if small-aggro or path-block target exists and is in weapon range
-  if (targetUnit){
-    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + cfg.PATH_BLOCK_PAD) : u.range);
-    if (dist(u,targetUnit) <= need) victim = targetUnit;
+  const unitCandidate = blockEnemy || targetUnit;
+  if (unitCandidate){
+    const need = (u.type==='melee'
+      ? (u.radius + (unitCandidate.radius||12) + cfg.PATH_BLOCK_PAD)
+      : u.range);
+    if (dist(u,unitCandidate) <= need) victim = unitCandidate;
   }
 
   // else structure if in range
@@ -390,13 +397,13 @@ function unitUpdate(state, u, dt){
 // ---------- Paths & Placement Nav ----------
 function buildPaths(state){
   const { W,H, lanesX, riverY, riverH } = state.config;
-  const yB0 = H - 260;                    // bottom approach
-  const yB1 = riverY + riverH/2 - 22;     // pre-bridge bottom
-  const yT1 = riverY - riverH/2 + 22;     // post-bridge top
-  const yT0 = 260;                        // top approach
+  const yB0 = H - 260;
+  const yB1 = riverY + riverH/2 - 22;
+  const yT1 = riverY - riverH/2 + 22;
+  const yT0 = 260;
 
   const OFFS = [-24, 0, 24];
-  const paths = [[],[]]; // 2 lanes × 3 polylines
+  const paths = [[],[]];
 
   for (let lane=0; lane<2; lane++){
     const lx = lanesX[lane];
@@ -415,7 +422,7 @@ function buildPaths(state){
 function projectToNearestPath(state, laneIndex, p){
   const polys = state.paths[laneIndex];
   let best=0, idx=0, q=polys[0][0], bdist=1e9;
-  for (let w=0; w<polys.length; w++){
+  for (let w=0; w<w=polys.length; w++){
     const poly = polys[w];
     for (let i=0;i<poly.length-1;i++){
       const qi = nearestPointOnSegment(p, poly[i], poly[i+1]);
@@ -436,7 +443,6 @@ function buildNav(state){
   for (let cy=0; cy<rows; cy++){
     for (let cx=0; cx<cols; cx++){
       const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
-      // block river except near bridges
       if (y>=top && y<=bot){
         const near = nearestLaneX(lanesX, x);
         const half = bridgeW*0.45;
@@ -445,7 +451,6 @@ function buildNav(state){
     }
   }
 
-  // block a small ring around towers (no placing on top)
   for (const t of state.towers){
     const rad=t.r+(t.type==='xbow'?8:14);
     for (let cy=0; cy<rows; cy++){
