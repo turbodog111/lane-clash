@@ -8,17 +8,23 @@ export function createGameState(canvas){
     bridgeW: 120, bridgeH: 118,
     tile: 40,
 
+    // economy
     ELIXIR_MAX: 10,
     ELIXIR_PER_SEC: 0.5, // 1 per 2s
 
     // path/aggro tuning
-    AGGRO_RADIUS: 40,
-    LANE_TOLERANCE: 80,
-    CORRIDOR_W: 90,     // cheaper-cost corridor half-width
-    REPTHROTTLE: 0.35,  // repath throttle seconds
-    SEP_DIST: 18,       // friendly separation radius
-    SEP_PUSH: 12,       // how strong the separation nudges
-    kingThreatRadius: 240,
+    AGGRO_RADIUS: 140,         // enter aggro
+    AGGRO_EXIT_RADIUS: 180,    // leave aggro (hysteresis)
+    TARGET_LOCK_TIME: 1.0,     // seconds to keep a target
+    GOAL_EPS: 8,               // waypoint reach tolerance (px)
+    BRIDGE_BUFFER_Y: 8,        // buffer past river before switching phase
+    REPATH_TIME: 0.35,         // min seconds between repaths
+    REPATH_MOVE_DST: 10,       // repath if moved this far since last path
+    LANE_TOLERANCE: 80,        // same-lane check half-width
+    CORRIDOR_W: 90,            // lane corridor half-width (cheaper A*)
+    SEP_DIST: 18,              // friendly separation radius
+    SEP_PUSH: 12,              // strength of separation push
+    kingThreatRadius: 240,     // (available for future king-defense logic)
   };
 
   const state = {
@@ -30,9 +36,9 @@ export function createGameState(canvas){
     winner: null,
 
     cards: [
-      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged' },
-      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
+      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:45, radius:15, type:'melee' },
     ],
     deckOrder: shuffle([0,1,2]),
     hand: [],
@@ -88,7 +94,7 @@ export function update(state, dt){
   try { aiUpdate(state, dt); } catch(e){ console.error(e); window.__LC_DIAG?.error(e.message||'AI failed'); }
 
   for (const t of state.towers) towerAI(state, t, dt);
-  for (const u of state.units) unitUpdate(state, u, dt);
+  for (const u of state.units)  unitUpdate(state, u, dt);
   for (let i=state.units.length-1;i>=0;i--) if (state.units[i].hp<=0) state.units.splice(i,1);
 
   updateProjectiles(state, dt);
@@ -151,13 +157,18 @@ function spawnUnits(state, side, card, cx, cy, x, y){
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
     const u={
-      side,x:x+off,y, cx,cy, homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
-      hp:card.hp,maxHp:card.hp,dmg:card.dmg,atk:card.atk,cd:0,range:card.range,speed:card.speed,radius:card.radius,
-      kind:card.id,type:card.type, phase:'toBridge', path:[], wp:0, repathCD:0, goal:null
+      side,x:x+off,y, cx,cy,
+      homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
+      hp:card.hp,maxHp:card.hp,dmg:card.dmg,atk:card.atk,cd:0,range:card.range,
+      speed:card.speed,radius:card.radius, kind:card.id,type:card.type,
+      phase:'toBridge', path:[], wp:0, repathCD:0, goal:null,
+      // stabilization fields
+      lockId:null, lockTimer:0,
+      lastPathX:x+off, lastPathY:y,
     };
     // first goal: bridge entry on own side
     const pt = bridgeEntryPoint(state,u.side,u.homeLaneIndex);
-    u.goal=pt; u.path=findPathWorld(state,{x:u.x,y:u.y},pt); u.wp=0; u.repathCD=state.config.REPTHROTTLE;
+    u.goal=pt; u.path=findPathWorld(state,{x:u.x,y:u.y},pt); u.wp=0; u.repathCD=state.config.REPATH_TIME;
     state.units.push(u);
   }
 }
@@ -182,57 +193,94 @@ function towerAI(state, t, dt){
 }
 function unitUpdate(state,u,dt){
   if (u.hp<=0) return;
+  const cfg = state.config;
 
-  // phase transitions across river
-  const { riverY, riverH, AGGRO_RADIUS, REPTHROTTLE, SEP_DIST, SEP_PUSH } = state.config;
+  // ---- phase transitions across river (robust)
+  const { riverY, riverH, BRIDGE_BUFFER_Y } = cfg;
   const riverTop = riverY - riverH/2, riverBot = riverY + riverH/2;
-  const crossed = (u.side==='blue') ? (u.y<riverTop) : (u.y>riverBot);
-  if (u.phase==='toBridge' && crossed){ u.phase='crossBridge'; u.goal = bridgeExitPoint(state,u.side,u.homeLaneIndex); u.repathCD=0; }
-  if (u.phase==='crossBridge' && ((u.side==='blue' && u.y<riverTop-6) || (u.side==='red' && u.y>riverBot+6))){
-    u.phase='attack'; u.repathCD=0;
+
+  // enter cross-bridge once you cross the river line
+  if (u.phase==='toBridge' && ((u.side==='blue' && u.y < riverTop) || (u.side==='red' && u.y > riverBot))) {
+    u.phase='crossBridge';
+    u.goal = bridgeExitPoint(state,u.side,u.homeLaneIndex);
+    u.repathCD = 0;
+  }
+  // enter attack once you've moved past a small buffer
+  if (u.phase==='crossBridge' && ((u.side==='blue' && u.y < riverTop - BRIDGE_BUFFER_Y) ||
+                                  (u.side==='red'  && u.y > riverBot + BRIDGE_BUFFER_Y))) {
+    u.phase='attack';
+    u.repathCD = 0;
   }
 
-  // choose target: enemy in aggro radius (same side & lane) else lane structure
+  // ---- choose target: hysteresis + short lock
+  const ENTER = cfg.AGGRO_RADIUS, EXIT = cfg.AGGRO_EXIT_RADIUS;
+  const sameSide = (e)=> ((u.side==='blue' && e.y>riverY) || (u.side==='red' && e.y<riverY));
+
+  // Keep lock if still valid
   let targetUnit = null;
-  {
-    const sameSide = (e)=> ((u.side==='blue' && e.y>riverY) || (u.side==='red' && e.y<riverY));
-    const foes = enemyUnits(state,u.side)
-      .filter(e=> e.hp>0 && sameSide(e) && inSameLane(state,u,e.x) && dist(u,e)<=AGGRO_RADIUS);
-    let best=null,bd=1e9; for (const e of foes){ const d=dist(u,e); if (d<bd){bd=d; best=e;} }
-    targetUnit = best;
+  u.lockTimer = Math.max(0, u.lockTimer - dt);
+  if (u.lockId != null){
+    const tgt = state.units.find(x=>x===u.lockId) || state.towers.find(x=>x===u.lockId);
+    if (tgt && tgt.hp>0 && dist(u,tgt) <= EXIT && inSameLane(state,u,tgt.x) && sameSide(tgt)){
+      targetUnit = tgt;
+    } else {
+      u.lockId = null;
+    }
   }
+  // Acquire new target if no lock (closest within ENTER, same side & lane)
+  if (!targetUnit && u.lockTimer<=0){
+    let best=null, bd=1e9;
+    for (const e of enemyUnits(state,u.side)){
+      if (e.hp<=0) continue;
+      if (!sameSide(e)) continue;
+      if (!inSameLane(state,u,e.x)) continue;
+      const d=dist(u,e); if (d<bd){bd=d; best=e;}
+    }
+    if (best && bd<=ENTER){ targetUnit = best; u.lockId = best; u.lockTimer = cfg.TARGET_LOCK_TIME; }
+  }
+
   const struct = laneStructureTarget(state,u);
 
-  // desired waypoint based on phase/target
+  // ---- desired goal based on phase/target
   let desired = null;
-  if      (u.phase==='toBridge')   desired = bridgeEntryPoint(state,u.side,u.homeLaneIndex);
-  else if (u.phase==='crossBridge')desired = bridgeExitPoint(state,u.side,u.homeLaneIndex);
-  else                             desired = targetUnit ? {x:targetUnit.x,y:targetUnit.y}
-                                                        : (struct ? {x:struct.x,y:struct.y} : {x:u.x,y:u.y});
+  if      (u.phase==='toBridge')    desired = bridgeEntryPoint(state,u.side,u.homeLaneIndex);
+  else if (u.phase==='crossBridge') desired = bridgeExitPoint(state,u.side,u.homeLaneIndex);
+  else                               desired = targetUnit ? {x:targetUnit.x,y:targetUnit.y}
+                                                           : (struct ? {x:struct.x,y:struct.y} : {x:u.x,y:u.y});
 
-  // repath
+  // ---- repath throttled (time + movement + goal change)
   u.repathCD -= dt;
-  if (!u.path || u.wp>=u.path.length || u.repathCD<=0 || changedGoal(u.goal,desired)){
-    u.goal=desired; u.path=findPathWorld(state,{x:u.x,y:u.y},desired); u.wp=0; u.repathCD=REPTROTTLE_SAFE(REPTHROTTLE);
+  const moved = Math.hypot(u.x - u.lastPathX, u.y - u.lastPathY);
+  const needRepath =
+    !u.path || u.wp>=u.path.length ||
+    changedGoal(u.goal, desired, cfg.GOAL_EPS) ||
+    (u.repathCD<=0 && moved >= cfg.REPATH_MOVE_DST);
+
+  if (needRepath) {
+    u.goal = desired;
+    u.path = findPathWorld(state, {x:u.x,y:u.y}, desired);
+    u.wp = 0;
+    u.repathCD = cfg.REPATH_TIME;
+    u.lastPathX = u.x; u.lastPathY = u.y;
   }
 
-  // movement along path + tiny separation push
+  // ---- move along path + gentle separation
   let vx=0, vy=0;
   const step = u.speed*dt;
   if (u.path && u.wp<u.path.length){
     const pt=u.path[u.wp]; const dx=pt.x-u.x, dy=pt.y-u.y; const d=Math.hypot(dx,dy);
-    if (d <= Math.max(1, step*1.25)){ u.x=pt.x; u.y=pt.y; u.wp++; }
+    const EPS = cfg.GOAL_EPS;
+    if (d <= Math.max(EPS, step*1.25)){ u.x=pt.x; u.y=pt.y; u.wp++; }
     else { vx += dx/d*step; vy += dy/d*step; }
   }
-  // separation from friendlies (local nudge)
   for (const f of state.units){
     if (f===u || f.side!==u.side || f.hp<=0) continue;
     const dx=u.x-f.x, dy=u.y-f.y; const d=Math.hypot(dx,dy);
-    if (d>0 && d<SEP_DIST){ const push=(1 - d/SEP_DIST)* (SEP_PUSH*dt); vx += (dx/d)*push; vy += (dy/d)*push; }
+    if (d>0 && d<cfg.SEP_DIST){ const push=(1 - d/cfg.SEP_DIST)*(cfg.SEP_PUSH*dt); vx += (dx/d)*push; vy += (dy/d)*push; }
   }
   u.x += vx; u.y += vy;
 
-  // attack
+  // ---- attack
   let victim = targetUnit;
   if (!victim && struct){
     const need = (u.type==='melee' ? ((struct.r||20)+u.radius+2) : u.range);
@@ -247,7 +295,6 @@ function unitUpdate(state,u,dt){
   u.cd -= dt;
   if (victim && u.cd<=0){ dealDamage(state, victim, u.dmg); u.cd=u.atk; }
 }
-function REPTHROTTLE_SAFE(x){ return Math.max(0.2, Math.min(0.6, x)); }
 
 // ---------- Projectiles, Damage, FX ----------
 function spawnBolt(state,from,target,dmg,spd){
@@ -390,7 +437,7 @@ function enemySide(s){ return s==='blue'?'red':'blue'; }
 function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
 function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 function randRange(a,b){ return a + Math.random()*(b-a); }
-function changedGoal(a,b){ if(!a||!b) return true; return Math.abs(a.x-b.x)>0.5 || Math.abs(a.y-b.y)>0.5; }
+function changedGoal(a,b,eps=6){ if(!a||!b) return true; return Math.abs(a.x-b.x)>eps || Math.abs(a.y-b.y)>eps; }
 function inSameLane(state, u, x){ const laneX = state.config.lanesX[u.homeLaneIndex]; return Math.abs(x - laneX) <= state.config.LANE_TOLERANCE; }
 function laneStructureTarget(state, u){ const foe=enemySide(u.side); const lx=state.config.lanesX[u.homeLaneIndex]; return aliveXbow(state,foe,lx) || kingOf(state,foe); }
 function randomRedSpawnCell(state){
