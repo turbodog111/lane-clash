@@ -29,9 +29,12 @@
     }
     .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
 
-    /* Encyclopedia styles (unchanged) */
+    /* Encyclopedia styles */
     .entries{ display:grid; gap:16px; }
-    .entry{ display:grid; grid-template-columns:min(360px,45%) 1fr; gap:18px; align-items:center; background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px; }
+    .entry{
+      display:grid; grid-template-columns:min(360px,45%) 1fr; gap:18px; align-items:center;
+      background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px;
+    }
     @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
     .cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px; min-height:220px; }
     .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
@@ -88,18 +91,22 @@
       </div>
 
       <canvas id="game" width="960" height="560" aria-label="Battlefield"></canvas>
-      <p class="muted" style="margin-top:10px;">Towers now target & shoot. River + two bridges added; we’ll path units over bridges later.</p>
+      <p class="muted" style="margin-top:10px;">Towers target & shoot. River + two bridges added; we’ll path units over bridges later.</p>
     </section>
 
-    <!-- ENCYCLOPEDIA (same as before; Knight shown) -->
+    <!-- ENCYCLOPEDIA -->
     <section id="ency" class="panel hidden" aria-labelledby="encyTitle">
       <div class="toolbar">
         <h2 id="encyTitle" style="margin:0;">Encyclopedia</h2>
         <button id="backBtn" class="btn">Back</button>
       </div>
       <div class="entries">
+        <!-- KNIGHT -->
         <article class="entry" role="article" aria-labelledby="knightTitle">
-          <div class="cardFrame"><img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;"></div>
+          <div class="cardFrame">
+            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)"
+                 onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+          </div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
             <div class="grid" aria-label="Knight stats">
@@ -112,12 +119,49 @@
             <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.</p>
           </div>
         </article>
+
+        <!-- ARCHERS -->
+        <article class="entry" role="article" aria-labelledby="archersTitle">
+          <div class="cardFrame" style="border:1px dashed #27305a;">
+            <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"
+                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
+          </div>
+          <div class="details">
+            <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
+            <div class="grid" aria-label="Archers stats">
+              <div class="label">Elixir Cost</div><div>2</div>
+              <div class="label">HP</div><div>60</div>
+              <div class="label">DMG</div><div>15 / 0.5s</div>
+              <div class="label">Speed</div><div>1.5</div>
+              <div class="label">Unit Count</div><div>2</div>
+            </div>
+            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
+          </div>
+        </article>
+
+        <!-- MINI-MEGA -->
+        <article class="entry" role="article" aria-labelledby="miniMegaTitle">
+          <div class="cardFrame" style="border:1px dashed #27305a;">
+            <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"
+                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Mini-MEGA card art coming soon',className:'muted'}));">
+          </div>
+          <div class="details">
+            <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
+            <div class="grid" aria-label="Mini-MEGA stats">
+              <div class="label">Elixir Cost</div><div>3</div>
+              <div class="label">DMG</div><div>80 / 1.5s</div>
+              <div class="label">Speed</div><div>0.75</div>
+              <div class="label">Unit Count</div><div>1</div>
+            </div>
+            <p class="desc">A compact but tanky robot with surprising punch power. Slow stride, heavy hit.</p>
+          </div>
+        </article>
       </div>
     </section>
   </main>
 
   <script>
-    // --- Scene switching ---
+    // ===== Scene switching =====
     const menu = document.getElementById('menu');
     const play = document.getElementById('play');
     const ency = document.getElementById('ency');
@@ -125,18 +169,36 @@
     const backFromPlay = document.getElementById('backFromPlay');
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
-    function show(el){ menu.classList.add('hidden'); play.classList.add('hidden'); ency.classList.add('hidden'); el.classList.remove('hidden'); window.scrollTo(0,0); }
+
+    function show(el){
+      menu.classList.add('hidden');
+      play.classList.add('hidden');
+      ency.classList.add('hidden');
+      el.classList.remove('hidden');
+      window.scrollTo(0,0);
+    }
     playBtn.onclick = () => show(play);
     backFromPlay.onclick = () => show(menu);
     openEncy.onclick = () => show(ency);
     backBtn.onclick = () => show(menu);
 
-    // --- PLAY: flipped arena + river/bridges + towers + projectiles + elixir ---
+    // ===== PLAY: flipped arena + river/bridges + towers + projectiles + elixir =====
     const W = 960, H = 560;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
 
-    // Layout: river horizontal through center; two vertical lanes/bridges (left/right)
+    // HUD refs (declare ONCE to avoid duplicate-const errors)
+    const blueFill = document.getElementById('blueFill');
+    const redFill  = document.getElementById('redFill');
+    const blueText = document.getElementById('blueText');
+    const redText  = document.getElementById('redText');
+
+    // Elixir model
+    const ELIXIR_MAX = 10;
+    const ELIXIR_PER_SEC = 0.5; // 1 every 2 seconds
+    const elixir = { blue: 5, red: 5 };
+
+    // Battlefield layout: horizontal river; two vertical bridges (lanes) left/right
     const riverY = H/2, riverH = 82;
     const lanesX = [ W*0.33, W*0.67 ];
     const bridgeW = 120, bridgeH = riverH + 16;
@@ -145,7 +207,7 @@
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle = '#0b1026'; ctx.fillRect(0,0,W,H);
 
-      // Side ground color bands
+      // Ground halves
       ctx.fillStyle = '#0c1431'; ctx.fillRect(0, 0, W, riverY - riverH/2);
       ctx.fillRect(0, riverY + riverH/2, W, H - (riverY + riverH/2));
 
@@ -156,7 +218,7 @@
       ctx.fillStyle = grad;
       ctx.fillRect(0, riverY - riverH/2, W, riverH);
 
-      // Bridges (left & right)
+      // Bridges
       ctx.fillStyle = getCSS('--bridge');
       for (const x of lanesX){
         roundedRect(x - bridgeW/2, riverY - bridgeH/2, bridgeW, bridgeH, 10);
@@ -173,7 +235,7 @@
         }
       }
 
-      // Lanes (visual guides) as vertical strips along bridges
+      // Lane guide lines (vertical)
       for (const x of lanesX){
         ctx.strokeStyle = getCSS('--lane'); ctx.lineWidth = 22;
         ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, H-40); ctx.stroke();
@@ -198,18 +260,11 @@
     ];
 
     // Projectiles
-    const projectiles = []; // {x,y,vx,vy,spd, dmg, targetRef}
+    const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
     function spawnBolt(from, target, dmg=30, spd=360){
       const ang = Math.atan2(target.y - from.y, target.x - from.x);
       projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
     }
-
-    // Elixir (still running in background)
-    const ELIXIR_MAX = 10;
-    const ELIXIR_PER_SEC = 0.5; // 1 / 2s
-    const elixir = { blue: 5, red: 5 };
-    const blueFill = document.getElementById('blueFill'), redFill = document.getElementById('redFill');
-    const blueText = document.getElementById('blueText'), redText = document.getElementById('redText');
 
     // Helpers
     function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
@@ -229,7 +284,7 @@
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
 
       if (t.type === 'king'){
-        // pedestal shadow
+        // shadow
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath(); ctx.ellipse(t.x, t.y+28, 36, 12, 0, 0, Math.PI*2); ctx.fill();
 
@@ -240,7 +295,7 @@
         // crown
         ctx.fillStyle = getCSS('--gold'); ctx.strokeStyle = '#7a5a00';
         ctx.beginPath();
-        const cw=30; 
+        const cw=30;
         ctx.moveTo(t.x - cw/2, t.y - 40);
         ctx.lineTo(t.x - cw/6, t.y - 28);
         ctx.lineTo(t.x,        t.y - 38);
@@ -248,7 +303,7 @@
         ctx.lineTo(t.x + cw/2, t.y - 40);
         ctx.closePath(); ctx.fill(); ctx.stroke();
       } else {
-        // crossbow tower
+        // crossbow
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath(); ctx.ellipse(t.x, t.y+18, 26, 9, 0, 0, Math.PI*2); ctx.fill();
 
@@ -310,22 +365,20 @@
       }
     }
 
-    // Game loop
-    const blueFill = document.getElementById('blueFill'), redFill = document.getElementById('redFill');
-    const blueText = document.getElementById('blueText'), redText = document.getElementById('redText');
-    let last = performance.now();
+    // Main loop
     function loop(now){
-      const dt = Math.min(0.033, (now-last)/1000); last = now;
+      const dt = Math.min(0.033, ((loop._last ?? now) - (loop._last ?? now) + (loop._last=now, 0))/1000) || 0.0167;
+      // ^ small trick to get dt without extra globals
 
       // elixir regen (1 per 2s)
-      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + 0.5*dt);
-      elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + 0.5*dt);
+      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
+      elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + ELIXIR_PER_SEC*dt);
       blueFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
       redFill.style.transform  = `scaleX(${elixir.red/ELIXIR_MAX})`;
       blueText.textContent = Math.floor(elixir.blue);
       redText.textContent  = Math.floor(elixir.red);
 
-      // AI for towers (both sides)
+      // Towers think + fire
       for (const t of towers) towerAI(t, dt);
 
       // Projectiles
