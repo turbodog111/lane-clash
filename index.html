@@ -11,6 +11,7 @@
       --blue:#58a6ff; --red:#ff6b6b; --gold:#ffd166;
       --river:#0e3a69; --riverHi:#13518f; --bridge:#6d5538;
       --lane:#1e2a5c; --laneCtr:#28377a;
+      --ok:#6bff95; --warn:#ffd166; --bad:#ff7b7b;
     }
     *{ box-sizing:border-box; }
     html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
@@ -29,13 +30,12 @@
     }
     .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
 
-    /* Fancy title on the main menu */
+    /* Fancy title */
     .brand{
       font-weight:900; font-size:44px; line-height:1;
       background: linear-gradient(90deg, #70d6ff, #6bff95, #ffd166);
-      -webkit-background-clip:text; background-clip:text;
-      color: transparent; letter-spacing: .6px;
-      text-shadow: 0 2px 20px rgba(112,214,255,.15);
+      -webkit-background-clip:text; background-clip:text; color: transparent;
+      letter-spacing: .6px; text-shadow: 0 2px 20px rgba(112,214,255,.15);
     }
     .subtitle{ color:#9fb4ff; margin-top:-6px; }
 
@@ -54,19 +54,44 @@
     .label{ color:#9fb4ff; }
     .desc{ color:#cfe1ff; }
 
-    /* HUD bars */
-    .hud{ display:flex; align-items:center; gap:16px; padding:8px 12px; background:#0f1530; border:1px solid #27305a; border-radius:12px; margin-bottom:12px; }
-    .badge{ padding:2px 10px; border-radius:999px; font-size:12px; border:1px solid #20306a; }
-    .blue{ background:rgba(88,166,255,.12); color:var(--blue); }
-    .red{ background:rgba(255,107,107,.12); color:var(--red); }
-    .bar{ position:relative; width:220px; height:14px; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden; }
-    .fill{ position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff); }
-    .fill.red{ background:linear-gradient(90deg,#ff7b7b,#ffb3a3); }
-    .barlabel{ font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
-
-    /* Canvas (taller) */
+    /* Play canvas */
     canvas{ width:100%; height:720px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
     .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+
+    /* Card HUD (bottom of Play) */
+    .cardhud{
+      margin-top:12px;
+      background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:10px;
+    }
+    .elixirRow{
+      display:flex; align-items:center; gap:12px; margin-bottom:8px;
+    }
+    .elixirBar{
+      position:relative; height:14px; flex:1; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden;
+    }
+    .elixirFill{
+      position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff);
+      transform:scaleX(0);
+    }
+    .elixirText{ font-variant-numeric: tabular-nums; min-width:2ch; text-align:right; color:#cfe1ff; }
+    .cards{
+      display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;
+    }
+    .cardBtn{
+      display:flex; gap:10px; align-items:center; padding:8px; border-radius:12px; cursor:pointer;
+      border:1px solid #27305a; background:linear-gradient(180deg,#152045,#111a3a);
+      transition: transform .08s ease, box-shadow .12s ease, filter .12s ease, border-color .12s ease;
+    }
+    .cardBtn:hover{ transform: translateY(-1px); filter: brightness(1.05); box-shadow:0 8px 20px rgba(112,214,255,.12); }
+    .cardBtn.selected{ outline:2px solid #70d6ff; border-color:#70d6ff; }
+    .thumb{
+      width:56px; height:72px; border-radius:10px; background:#0b1433; border:1px solid #20306a; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .thumb img{ width:100%; height:auto; display:block; }
+    .meta{ display:flex; flex-direction:column; gap:3px; }
+    .name{ font-weight:700; }
+    .cost{ font-size:12px; color:#b9c8ff; }
+    .disabled{ opacity:.45; filter:grayscale(35%); cursor:not-allowed; }
   </style>
 </head>
 <body>
@@ -91,18 +116,18 @@
         <button id="backFromPlay" class="btn">Back</button>
       </div>
 
-      <div class="hud" role="group" aria-label="Elixir HUD">
-        <span class="badge blue">Blue (You)</span>
-        <div class="bar" aria-label="Blue Elixir"><div id="blueFill" class="fill"></div></div>
-        <span id="blueText" class="barlabel">0</span>
-        <span class="badge red" style="margin-left:18px;">Red (AI)</span>
-        <div class="bar" aria-label="Red Elixir"><div id="redFill" class="fill red"></div></div>
-        <span id="redText" class="barlabel">0</span>
-        <span class="muted" style="margin-left:auto;">Regen: 1 / 2s (max 10)</span>
-      </div>
-
       <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
-      <p class="muted" style="margin-top:10px;">Crossbows are positioned farther from the river and target only on their own half. Numeric HP shown above bars.</p>
+
+      <!-- CARD HUD with Elixir bar above cards -->
+      <div class="cardhud" aria-label="Card and Elixir HUD">
+        <div class="elixirRow">
+          <span style="color:#9fb4ff;">Elixir</span>
+          <div class="elixirBar"><div id="elixirFill" class="elixirFill"></div></div>
+          <span id="elixirText" class="elixirText">0</span>
+        </div>
+        <div id="cards" class="cards"></div>
+        <p class="muted" style="margin:6px 2px 0;">Click a card, then click your half of the arena to deploy. Hand shows 2 rotating cards out of 3.</p>
+      </div>
     </section>
 
     <!-- ENCYCLOPEDIA -->
@@ -194,26 +219,122 @@
     openEncy.addEventListener('click', () => show(ency));
     backBtn.addEventListener('click', () => show(menu));
 
-    // ===== PLAY: taller map + river/bridges + towers + projectiles + elixir =====
+    // ===== PLAY: Battlefield + Towers + Projectiles + Units + Cards =====
     const W = 960, H = 720;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
-
-    // HUD refs
-    const blueFill = document.getElementById('blueFill');
-    const redFill  = document.getElementById('redFill');
-    const blueText = document.getElementById('blueText');
-    const redText  = document.getElementById('redText');
-
-    // Elixir
-    const ELIXIR_MAX = 10;
-    const ELIXIR_PER_SEC = 0.5; // 1 every 2 sec
-    const elixir = { blue: 5, red: 5 };
 
     // Battlefield layout
     const riverY = H/2, riverH = 100; // river top/bot: 310..410
     const lanesX = [ W*0.33, W*0.67 ];
     const bridgeW = 120, bridgeH = riverH + 18;
+
+    // Elixir (player only visible)
+    const ELIXIR_MAX = 10;
+    const ELIXIR_PER_SEC = 0.5; // 1 per 2s
+    const elixir = { blue: 5, red: 5 };
+    const elixirFill = document.getElementById('elixirFill');
+    const elixirText = document.getElementById('elixirText');
+
+    // Card deck (2-card hand rotation from 3)
+    const allCards = [
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',
+        count:1, hp:100, dmg:20, atk:1.0, range:22, speed:60, radius:12, type:'melee' },
+      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',
+        count:2, hp:60,  dmg:15, atk:0.5, range:200, speed:90, radius:10, type:'ranged' },
+      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png',
+        count:1, hp:300, dmg:80, atk:1.5, range:26, speed:45, radius:14, type:'melee' },
+    ];
+    let deckOrder = shuffle([0,1,2]);          // queue of indices
+    let hand = [ deckOrder[0], deckOrder[1] ]; // show 2
+    let selectedHandSlot = null;               // 0 or 1 when selected
+
+    // DOM: render cards
+    const cardsRoot = document.getElementById('cards');
+    function renderCardBar(){
+      cardsRoot.innerHTML = '';
+      hand.forEach((idx, slot)=>{
+        const c = allCards[idx];
+        const canAfford = elixir.blue >= c.cost;
+        const btn = document.createElement('button');
+        btn.className = 'cardBtn' + (selectedHandSlot===slot?' selected':'') + (canAfford?'':' disabled');
+        btn.type='button';
+        btn.title = `${c.name} — Cost ${c.cost}`;
+        btn.addEventListener('click', ()=>{
+          if (!canAfford) return;
+          selectedHandSlot = (selectedHandSlot===slot? null : slot);
+          renderCardBar();
+        });
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        const img = document.createElement('img');
+        img.src = c.img;
+        img.alt = `${c.name} card`;
+        img.onerror = () => { thumb.textContent = c.name[0]; };
+        thumb.appendChild(img);
+
+        const meta = document.createElement('div');
+        meta.className='meta';
+        const name = document.createElement('div'); name.className='name'; name.textContent=c.name;
+        const cost = document.createElement('div'); cost.className='cost'; cost.textContent=`Cost: ${c.cost}`;
+        meta.appendChild(name); meta.appendChild(cost);
+
+        btn.appendChild(thumb); btn.appendChild(meta);
+        cardsRoot.appendChild(btn);
+      });
+
+      // elixir UI update
+      elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
+      elixirText.textContent = Math.floor(elixir.blue);
+    }
+
+    // Rotation: after playing one card, refill with next from deck
+    function rotateAfterPlay(playedIdx, slot){
+      // Move played card to end of deckOrder
+      deckOrder = deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
+      // Fill that slot with the first deck item not already in hand
+      const next = deckOrder.find(i => !hand.includes(i));
+      if (next !== undefined) hand[slot] = next;
+    }
+
+    // Towers
+    function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:1200, rof:1.6, range:260, cd:0}; }
+    function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16, hp:600,  rof:1.1, range:300, cd:0}; }
+    const towers = [
+      // BLUE (bottom)
+      tKing('blue', W/2, H-100),
+      tXbow('blue', lanesX[0], H-180),
+      tXbow('blue', lanesX[1], H-180),
+      // RED (top)
+      tKing('red',  W/2, 100),
+      tXbow('red',  lanesX[0], 180),
+      tXbow('red',  lanesX[1], 180),
+    ];
+
+    // Units
+    const units = []; // {side:'blue'|'red', x,y,laneX, hp,maxHp, dmg, atk, cd, range, speed, radius, kind:'knight'...}
+    function spawnUnits(card, laneX, y){
+      for (let i=0;i<card.count;i++){
+        const off = (card.count>1? (i===0?-12:12) : 0);
+        units.push({
+          side:'blue', x: laneX + off, y, laneX, hp: card.hp, maxHp: card.hp,
+          dmg: card.dmg, atk: card.atk, cd:0, range: card.range, speed: card.speed,
+          radius: card.radius, kind: card.id, type: card.type
+        });
+      }
+    }
+
+    // Projectiles (towers only for now)
+    const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
+    function spawnBolt(from, target, dmg=30, spd=360){
+      const ang = Math.atan2(target.y - from.y, target.x - from.x);
+      projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
+    }
+
+    // Helpers
+    function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j= (Math.random()* (i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+    function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
 
     function drawBattlefield(){
       ctx.clearRect(0,0,W,H);
@@ -256,31 +377,6 @@
       }
     }
 
-    // Towers (bottom = blue human, top = red AI)
-    function tKing(side, x, y){ return {type:'king', side, x, y, r:26, hp:1200, rof:1.6, range:260, cd:0}; }
-    function tXbow(side, x, y){ return {type:'xbow', side, x, y, r:16, hp:600,  rof:1.1, range:300, cd:0}; }
-
-    const towers = [
-      // BLUE (bottom)
-      tKing('blue', W/2, H-100),     // y=620
-      tXbow('blue', lanesX[0], H-180), // y=540 (farther from river, closer to king)
-      tXbow('blue', lanesX[1], H-180),
-      // RED (top)
-      tKing('red',  W/2, 100),       // y=100
-      tXbow('red',  lanesX[0], 180), // y=180 (farther from river, closer to king)
-      tXbow('red',  lanesX[1], 180),
-    ];
-
-    // Projectiles
-    const projectiles = []; // {x,y,vx,vy,spd,dmg,target}
-    function spawnBolt(from, target, dmg=30, spd=360){
-      const ang = Math.atan2(target.y - from.y, target.x - from.x);
-      projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
-    }
-
-    // Helpers
-    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
-    function enemiesOf(side){ return towers.filter(t => t.side !== side && t.hp > 0); }
     function roundedRect(x,y,w,h,r){
       ctx.beginPath();
       ctx.moveTo(x+r, y);
@@ -290,9 +386,8 @@
       ctx.arcTo(x,   y,   x+w, y,   r);
       ctx.closePath();
     }
-    function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
 
-    // Crossbow vertical bands: only their half (from their side of river to their king)
+    // Crossbow half-bands (towers only)
     function xbowBandFor(t){
       if (t.side === 'blue'){
         return { yMin: riverY + riverH/2, yMax: H }; // bottom half
@@ -301,6 +396,7 @@
       }
     }
 
+    // Towers draw (with numeric HP)
     function drawTower(t){
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
 
@@ -344,33 +440,62 @@
       ctx.fillStyle='#6bff95'; ctx.fillRect(bx,by,w*pct,h);
       ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
 
-      // numeric HP
       ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = '#dfe7ff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#dfe7ff';
       ctx.fillText(Math.max(0, Math.ceil(t.hp)), t.x, by-2);
     }
 
+    // Units draw (simple circles + small HP bar)
+    function drawUnit(u){
+      // body
+      ctx.fillStyle = '#9dd1ff';
+      ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
+      // HP bar
+      const w=36, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
+      const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
+      ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
+      ctx.fillStyle= pct>0.5 ? '#6bff95' : (pct>0.25? '#ffd166' : '#ff7b7b');
+      ctx.fillRect(bx,by,w*pct,h);
+      ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
+      // number
+      ctx.font='11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillStyle='#dfe7ff';
+      ctx.fillText(Math.max(0, Math.ceil(u.hp)), u.x, by-2);
+    }
+
+    // Targeting helpers
+    function enemyUnits(side){ return units.filter(u => u.side !== side && u.hp>0); }
+    function enemyTowers(side){ return towers.filter(t => t.side !== side && t.hp>0); }
+
+    // Tower AI: prefer units, then towers; crossbows limited to their half
     function towerAI(t, dt){
       if (t.hp <= 0) return;
       t.cd -= dt; if (t.cd > 0) return;
 
-      // choose enemies in range
-      const enemies = enemiesOf(t.side);
-      let best=null, bestD=1e9;
+      let candidates = enemyUnits(t.side);
+      // crossbow half-limit on units
+      if (t.type==='xbow'){
+        const band = xbowBandFor(t);
+        candidates = candidates.filter(e => e.y >= band.yMin && e.y <= band.yMax);
+      }
+      // in range
+      candidates = candidates.filter(e => dist(t,e) < t.range);
 
-      for (const e of enemies){
-        // base distance check
-        const d = dist(t,e);
-        if (d >= t.range) continue;
-
-        // crossbows: clamp to their own vertical half only
-        if (t.type === 'xbow'){
+      // fallback to towers if no units
+      if (candidates.length === 0){
+        let ets = enemyTowers(t.side);
+        if (t.type==='xbow'){
           const band = xbowBandFor(t);
-          if (e.y < band.yMin || e.y > band.yMax) continue;
+          ets = ets.filter(e => e.y >= band.yMin && e.y <= band.yMax);
         }
-        // pick nearest valid
+        ets = ets.filter(e => dist(t,e) < t.range);
+        candidates = ets;
+      }
+
+      // nearest
+      let best=null, bestD=1e9;
+      for (const e of candidates){
+        const d = dist(t,e);
         if (d < bestD){ best=e; bestD=d; }
       }
 
@@ -380,6 +505,42 @@
       }
     }
 
+    // Unit update: move up along lane, attack enemies in range
+    function unitUpdate(u, dt){
+      if (u.hp<=0) return;
+      // move toward enemy side (upwards)
+      u.y -= u.speed * dt;
+
+      // stop drifting off lane
+      u.x += (u.laneX - u.x) * Math.min(1, dt*6);
+
+      // choose target: prefer enemy units, then towers
+      let candidates = enemyUnits(u.side);
+      // in range
+      candidates = candidates.filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
+
+      if (candidates.length === 0){
+        let ets = enemyTowers(u.side).filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.r + 2) : u.range));
+        candidates = ets;
+      }
+
+      let best=null, bestD=1e9;
+      for (const e of candidates){
+        const d = dist(u,e);
+        if (d < bestD){ best=e; bestD=d; }
+      }
+
+      u.cd -= dt;
+      if (best && u.cd<=0){
+        // apply damage (instant for now)
+        if ('hp' in best){
+          best.hp -= u.dmg;
+        }
+        u.cd = u.atk;
+      }
+    }
+
+    // Projectiles update/draw (towers)
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -390,7 +551,8 @@
         p.x += p.vx * p.spd * dt;
         p.y += p.vy * p.spd * dt;
         // hit check
-        if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (tgt.r+6)){
+        const rT = ('r' in tgt) ? tgt.r : tgt.radius;
+        if (Math.hypot(tgt.x - p.x, tgt.y - p.y) <= (rT+6)){
           tgt.hp -= p.dmg;
           p.dead = true;
         }
@@ -398,7 +560,6 @@
       // prune
       for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
     }
-
     function drawProjectiles(){
       ctx.fillStyle = '#ffd166';
       for (const p of projectiles){
@@ -406,35 +567,74 @@
       }
     }
 
-    function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
+    // Draw loop helpers
+    function drawAll(){
+      drawBattlefield();
+      for (const t of towers) drawTower(t);
+      for (const u of units)  drawUnit(u);
+      drawProjectiles();
+    }
 
     // Main loop
     let last = performance.now();
     function gameLoop(now){
       const dt = Math.min(0.033, (now - last) / 1000); last = now;
 
-      // elixir regen (1 per 2s)
+      // elixir regen (player)
       elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
-      elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + ELIXIR_PER_SEC*dt);
-      blueFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
-      redFill .style.transform = `scaleX(${elixir.red /ELIXIR_MAX})`;
-      blueText.textContent = Math.floor(elixir.blue);
-      redText .textContent = Math.floor(elixir.red);
+      elixirFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
+      elixirText.textContent = Math.floor(elixir.blue);
 
-      // Towers think + fire
+      // towers
       for (const t of towers) towerAI(t, dt);
 
-      // Projectiles
+      // units
+      for (const u of units) unitUpdate(u, dt);
+
+      // projectiles
       updateProjectiles(dt);
 
-      // Draw
-      drawBattlefield();
-      for (const t of towers) drawTower(t);
-      drawProjectiles();
+      // remove dead units
+      for (let i=units.length-1;i>=0;i--) if (units[i].hp<=0) units.splice(i,1);
+
+      // draw
+      drawAll();
 
       requestAnimationFrame(gameLoop);
     }
     requestAnimationFrame(gameLoop);
+
+    // ===== Deployment: card click then canvas click on player's half =====
+    canv.addEventListener('click', (ev)=>{
+      if (selectedHandSlot===null) return; // no card selected
+      const rect = canv.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) * (W / rect.width);
+      const my = (ev.clientY - rect.top)  * (H / rect.height);
+
+      // Only player's half
+      const halfMin = riverY + riverH/2 + 20;
+      const halfMax = H - 40;
+      if (my < halfMin || my > halfMax) return;
+
+      // Snap to nearest lane
+      const laneX = Math.abs(mx - lanesX[0]) < Math.abs(mx - lanesX[1]) ? lanesX[0] : lanesX[1];
+      const spawnY = Math.max(halfMin+10, Math.min(halfMax, my));
+
+      const idx = hand[selectedHandSlot];
+      const card = allCards[idx];
+      if (elixir.blue < card.cost) return;
+
+      // Spend elixir, spawn, rotate hand
+      elixir.blue -= card.cost;
+      spawnUnits(card, laneX, spawnY);
+      rotateAfterPlay(idx, selectedHandSlot);
+      selectedHandSlot = null;
+      renderCardBar();
+    });
+
+    // Initial render of hand
+    renderCardBar();
+
   </script>
 </body>
 </html>
