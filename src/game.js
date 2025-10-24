@@ -31,7 +31,9 @@ export function initGame() {
       btn.type='button';
       btn.title = `${c.name} — Cost ${c.cost}`;
       btn.addEventListener('click', () => {
+        // toggle selection + show placement tiles while selected
         state.selectedHandSlot = (state.selectedHandSlot===slot? null : slot);
+        state.showPlacementOverlay = (state.selectedHandSlot !== null);
         refreshElixirUI();
       });
 
@@ -62,7 +64,10 @@ export function initGame() {
   }
   canvas.addEventListener('click', (ev) => {
     const { x, y } = canvasPoint(ev);
-    if (tryDeployAt(state, x, y)) refreshElixirUI();
+    if (tryDeployAt(state, x, y)) {
+      state.showPlacementOverlay = false; // hide after successful deploy
+      refreshElixirUI();
+    }
   });
 
   // ---------- Main Loop ----------
