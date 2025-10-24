@@ -57,6 +57,7 @@ export function setupRenderer(ctx, state) {
       ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
     }
 
+    // HP bar + number
     const pct = Math.max(0, Math.min(1, t.hp/t.maxHp));
     const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -69,14 +70,30 @@ export function setupRenderer(ctx, state) {
 
   function drawUnit(u){
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
-    ctx.fillStyle = '#eaf4ff'; ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    ctx.lineWidth = 2; ctx.strokeStyle = '#0a1a3d'; ctx.stroke();
+    // colored ring + soft glow by side
+    const ring = (u.side === 'blue') ? CSS('--blue') : CSS('--red');
+    ctx.shadowColor = (u.side === 'blue') ? 'rgba(88,166,255,0.35)' : 'rgba(255,107,107,0.35)';
+    ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
 
+    // soft colored halo
+    ctx.fillStyle = (u.side === 'blue') ? 'rgba(88,166,255,0.22)' : 'rgba(255,107,107,0.22)';
+    ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 4, 0, Math.PI*2); ctx.fill();
+
+    // inner dot
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.fillStyle = '#eaf4ff';
+    ctx.beginPath(); ctx.arc(u.x, u.y, u.radius, 0, Math.PI*2); ctx.fill();
+
+    // side-colored ring
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = ring;
+    ctx.beginPath(); ctx.arc(u.x, u.y, u.radius + 1.2, 0, Math.PI*2); ctx.stroke();
+
+    // label
     ctx.font = 'bold 11px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#0b1433';
     ctx.fillText(labelFor(u.kind), u.x, u.y);
 
+    // HP bar + number
     const w=38, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
     const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -109,12 +126,29 @@ export function setupRenderer(ctx, state) {
     ctx.restore();
   }
 
+  function drawVictory(state){
+    if (!state.winner) return;
+    ctx.save();
+    ctx.globalAlpha = 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H); ctx.globalAlpha = 1;
+
+    const msg = state.winner === 'blue' ? 'BLUE VICTORY!' : 'RED VICTORY!';
+    const col = state.winner === 'blue' ? CSS('--blue') : CSS('--red');
+
+    ctx.font = 'bold 56px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = col; ctx.strokeStyle = '#0b0f18'; ctx.lineWidth = 6;
+    ctx.strokeText(msg, W/2, H/2);
+    ctx.fillText(msg, W/2, H/2);
+    ctx.restore();
+  }
+
   function drawAll(state){
     drawBattlefield();
     for (const t of state.towers) drawTower(t);
     for (const u of state.units)  drawUnit(u);
     drawProjectiles(state.projectiles);
     drawFX(state);
+    drawVictory(state);
   }
 
   return { drawAll };
