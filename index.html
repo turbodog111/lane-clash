@@ -14,11 +14,11 @@
     }
     *{ box-sizing:border-box; }
     html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-    header{ padding:12px; background:#11162b; border-bottom:1px solid --line; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+    header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
     .title{ font-weight:750; letter-spacing:.2px; }
     main{ max-width:1024px; margin:24px auto; padding:0 12px; }
     .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
-    .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; text-align:center; }
+    .center{ display:flex; flex-direction:column; align-items:center; gap:18px; margin-top:8vh; text-align:center; }
     .muted{ color:var(--muted); }
     .hidden{ display:none; }
 
@@ -28,6 +28,16 @@
       transition:transform .08s ease, filter .12s ease, box-shadow .12s ease;
     }
     .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+
+    /* Fancy title on the main menu */
+    .brand{
+      font-weight:900; font-size:44px; line-height:1;
+      background: linear-gradient(90deg, #70d6ff, #6bff95, #ffd166);
+      -webkit-background-clip:text; background-clip:text;
+      color: transparent; letter-spacing: .6px;
+      text-shadow: 0 2px 20px rgba(112,214,255,.15);
+    }
+    .subtitle{ color:#9fb4ff; margin-top:-6px; }
 
     /* Encyclopedia styles */
     .entries{ display:grid; gap:16px; }
@@ -65,12 +75,13 @@
   <main>
     <!-- MAIN MENU -->
     <section id="menu" class="panel center" aria-labelledby="menuTitle">
-      <h1 id="menuTitle" style="position:absolute;left:-9999px;">Main Menu</h1>
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <h1 id="menuTitle" class="brand">Lane Clash</h1>
+      <div class="subtitle">A tiny lane strategy prototype</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;">
         <button id="playBtn" class="btn">Play</button>
         <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
       </div>
-      <p class="muted">Start a match (towers only) or browse unit cards.</p>
+      <p class="muted">Blue (you) at the bottom. Red (AI) at the top.</p>
     </section>
 
     <!-- PLAY -->
@@ -91,7 +102,7 @@
       </div>
 
       <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
-      <p class="muted" style="margin-top:10px;">Crossbows repositioned farther from the river; they only target on their own half. Numeric HP shown above bars.</p>
+      <p class="muted" style="margin-top:10px;">Crossbows are positioned farther from the river and target only on their own half. Numeric HP shown above bars.</p>
     </section>
 
     <!-- ENCYCLOPEDIA -->
@@ -178,10 +189,10 @@
       el.classList.remove('hidden');
       window.scrollTo(0,0);
     }
-    playBtn.onclick = () => show(play);
-    backFromPlay.onclick = () => show(menu);
-    openEncy.onclick = () => show(ency);
-    backBtn.onclick = () => show(menu);
+    playBtn.addEventListener('click', () => show(play));
+    backFromPlay.addEventListener('click', () => show(menu));
+    openEncy.addEventListener('click', () => show(ency));
+    backBtn.addEventListener('click', () => show(menu));
 
     // ===== PLAY: taller map + river/bridges + towers + projectiles + elixir =====
     const W = 960, H = 720;
@@ -200,7 +211,7 @@
     const elixir = { blue: 5, red: 5 };
 
     // Battlefield layout
-    const riverY = H/2, riverH = 100; // river spans [riverY - riverH/2, riverY + riverH/2] => [310..410]
+    const riverY = H/2, riverH = 100; // river top/bot: 310..410
     const lanesX = [ W*0.33, W*0.67 ];
     const bridgeW = 120, bridgeH = riverH + 18;
 
@@ -251,13 +262,13 @@
 
     const towers = [
       // BLUE (bottom)
-      tKing('blue', W/2, H-100),
-      tXbow('blue', lanesX[0], H-200),  // moved farther from river (closer to king at 620)
-      tXbow('blue', lanesX[1], H-200),
+      tKing('blue', W/2, H-100),     // y=620
+      tXbow('blue', lanesX[0], H-180), // y=540 (farther from river, closer to king)
+      tXbow('blue', lanesX[1], H-180),
       // RED (top)
-      tKing('red',  W/2, 100),
-      tXbow('red',  lanesX[0], 200),    // moved farther from river (closer to king at 100)
-      tXbow('red',  lanesX[1], 200),
+      tKing('red',  W/2, 100),       // y=100
+      tXbow('red',  lanesX[0], 180), // y=180 (farther from river, closer to king)
+      tXbow('red',  lanesX[1], 180),
     ];
 
     // Projectiles
@@ -369,8 +380,6 @@
       }
     }
 
-    // Projectiles
-    const projectiles = [];
     function updateProjectiles(dt){
       for (const p of projectiles){
         const tgt = p.target;
@@ -389,6 +398,7 @@
       // prune
       for (let i=projectiles.length-1;i>=0;i--) if (projectiles[i].dead) projectiles.splice(i,1);
     }
+
     function drawProjectiles(){
       ctx.fillStyle = '#ffd166';
       for (const p of projectiles){
@@ -400,7 +410,7 @@
 
     // Main loop
     let last = performance.now();
-    function loop(now){
+    function gameLoop(now){
       const dt = Math.min(0.033, (now - last) / 1000); last = now;
 
       // elixir regen (1 per 2s)
@@ -422,9 +432,9 @@
       for (const t of towers) drawTower(t);
       drawProjectiles();
 
-      requestAnimationFrame(loop);
+      requestAnimationFrame(gameLoop);
     }
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
