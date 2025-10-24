@@ -10,23 +10,20 @@ try {
   diag.step(`boot: loading ui.js & game.js (v=${VER})`);
   const [{ initUI }, { initGame }] = await Promise.all([
     import(`./ui.js?v=${VER}`),
-    import(`./game.js?v=${VER}`) // NOTE: game.js will version-load logic/render too
+    import(`./game.js?v=${VER}`)
   ]);
-  diag.ok('modules loaded');
 
-  // init UI + Game
   const ui = initUI();
-  const game = await initGame(diag); // async; returns {start, stop, getState}
+  const game = await initGame(diag); // returns { start, stop, getState }
 
-  // helpers keep gameplay paused unless Play is visible
+  // wire buttons
+  const $ = (id)=>document.getElementById(id);
+  const bind = (id, fn) => { const b=$(id); if(!b){ diag.warn(`missing #${id}`); return; } b.onclick = (e)=>{ e.preventDefault(); fn(); }; };
+
   function goPlay(){ ui.showPlay(); game.start(); }
   function goMenu(){ ui.showMenu(); game.stop(); }
   function goEncy(){ ui.showEncy(); game.stop(); }
   function goLog(){ ui.showLog(); game.stop(); }
-
-  // wire buttons (guarded)
-  const $ = (id)=>document.getElementById(id);
-  const bind = (id, fn) => { const b=$(id); if(!b){ diag.warn(`missing #${id}`); return; } b.addEventListener('click', (e)=>{ e.preventDefault(); fn(); }); };
 
   bind('playBtn', goPlay);
   bind('openEncy', goEncy);
@@ -35,16 +32,9 @@ try {
   bind('backFromPlay', goMenu);
   bind('backFromLog', goMenu);
 
+  diag.ok('modules loaded');
   diag.ok('buttons wired');
-
-  // initial state: Menu (paused)
   goMenu();
-
-  // simple health ping so you can see it’s running
-  let ticks = 0;
-  setInterval(()=> { try { const s = game.getState(); if (s) ticks++; } catch{} }, 1000);
-  diag.step('health: ready');
-
 } catch (e) {
   console.error(e);
   diag.error(e?.message || 'boot failed');
