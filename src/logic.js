@@ -334,6 +334,29 @@ function heur(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
 function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 function randRange(a,b){ return a + Math.random()*(b-a); }
 function changedGoal(a,b){ if(!a||!b) return true; return Math.abs(a.x-b.x)>0.5 || Math.abs(a.y-b.y)>0.5; }
+// Pick a random, walkable cell on RED's side (top half) for AI spawns
+function randomRedSpawnCell(state){
+  const { riverY, riverH } = state.config;
+  const { cols, rows, walk } = state.nav;
+  const redMaxY = riverY - riverH / 2 - 20; // stay well above the river
+  // Try random cells first
+  for (let tries = 0; tries < 200; tries++){
+    const cx = (Math.random() * cols) | 0;
+    const cy = (Math.random() * rows) | 0;
+    const { x, y } = cellCenter(state, cx, cy);
+    if (y > redMaxY) continue;       // must be in RED territory (top)
+    if (walk[cy][cx] !== 1) continue; // must be walkable
+    return { cx, cy };
+  }
+  // Fallback: nearest walkable just above each bridge lane
+  const cands = [];
+  for (const laneX of state.config.lanesX){
+    const n = nearestWalkable(state, laneX, redMaxY);
+    if (n) cands.push(n);
+  }
+  return cands.length ? cands[(Math.random()*cands.length)|0] : null;
+}
+
 
 // Label helper used by renderer
 export const labelFor = (k)=> (k==='knight'?'K':k==='archers'?'Ar':'MM');
