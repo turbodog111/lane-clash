@@ -32,7 +32,8 @@
         <button id="backFromPlay" class="btn" type="button">Back</button>
       </div>
 
-      <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
+      <!-- Expanded vertically to 900 -->
+      <canvas id="game" width="960" height="900" aria-label="Battlefield"></canvas>
 
       <div class="cardhud" aria-label="Card and Elixir HUD">
         <div class="elixirRow">
@@ -45,16 +46,58 @@
       </div>
     </section>
 
-    <!-- ENCYCLOPEDIA (unchanged content) -->
+    <!-- ENCYCLOPEDIA -->
     <section id="ency" class="panel hidden" aria-labelledby="encyTitle">
       <div class="toolbar">
         <h2 id="encyTitle" class="toolbar-title">Encyclopedia</h2>
         <button id="backBtn" class="btn" type="button">Back</button>
       </div>
       <div class="entries">
-        <article class="entry"><div class="cardFrame"><img src="assets/Knight.png" alt="Knight"></div><div class="details"><h2>Knight <span class="pill">Common</span></h2><div class="grid"><div class="label">Elixir Cost</div><div>2</div><div class="label">HP</div><div>100</div><div class="label">DMG</div><div>20 / 1s</div><div class="label">Speed</div><div>1</div><div class="label">Unit Count</div><div>1</div></div><p class="desc">A brave melee fighter with balanced stats.</p></div></article>
-        <article class="entry"><div class="cardFrame"><img src="assets/Archers.png" alt="Archers"></div><div class="details"><h2>Archers <span class="pill">Common</span></h2><div class="grid"><div class="label">Elixir Cost</div><div>2</div><div class="label">HP</div><div>60</div><div class="label">DMG</div><div>10 / 0.75s</div><div class="label">Range</div><div>120</div><div class="label">Speed</div><div>1.5</div><div class="label">Unit Count</div><div>2</div></div><p class="desc">Paired ranged attackers.</p></div></article>
-        <article class="entry"><div class="cardFrame"><img src="assets/Mini-MEGA.png" alt="Mini-MEGA"></div><div class="details"><h2>Mini-MEGA <span class="pill">Common</span></h2><div class="grid"><div class="label">Elixir Cost</div><div>3</div><div class="label">HP</div><div>300</div><div class="label">DMG</div><div>80 / 1.5s</div><div class="label">Speed</div><div>0.75</div><div class="label">Unit Count</div><div>1</div></div><p class="desc">Compact and tanky robot with a heavy punch.</p></div></article>
+        <article class="entry" aria-labelledby="knightTitle">
+          <div class="cardFrame"><img src="assets/Knight.png" alt="Knight card (Common, Cost 2)"></div>
+          <div class="details">
+            <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
+            <div class="grid">
+              <div class="label">Elixir Cost</div><div>2</div>
+              <div class="label">HP</div><div>100</div>
+              <div class="label">DMG</div><div>20 / 1s</div>
+              <div class="label">Speed</div><div>1</div>
+              <div class="label">Unit Count</div><div>1</div>
+            </div>
+            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable.</p>
+          </div>
+        </article>
+
+        <article class="entry" aria-labelledby="archersTitle">
+          <div class="cardFrame"><img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"></div>
+          <div class="details">
+            <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
+            <div class="grid">
+              <div class="label">Elixir Cost</div><div>2</div>
+              <div class="label">HP</div><div>60</div>
+              <div class="label">DMG</div><div>10 / 0.75s</div>
+              <div class="label">Range</div><div>120</div>
+              <div class="label">Speed</div><div>1.5</div>
+              <div class="label">Unit Count</div><div>2</div>
+            </div>
+            <p class="desc">Paired ranged attackers that pepper targets from a safe distance.</p>
+          </div>
+        </article>
+
+        <article class="entry" aria-labelledby="miniMegaTitle">
+          <div class="cardFrame"><img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"></div>
+          <div class="details">
+            <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
+            <div class="grid">
+              <div class="label">Elixir Cost</div><div>3</div>
+              <div class="label">HP</div><div>300</div>
+              <div class="label">DMG</div><div>80 / 1.5s</div>
+              <div class="label">Speed</div><div>0.75</div>
+              <div class="label">Unit Count</div><div>1</div>
+            </div>
+            <p class="desc">A compact, tanky robot with surprising punch power. Slow stride, heavy hit.</p>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -68,17 +111,16 @@
         <h3>v0.1.4</h3>
         <h4>Gameplay / Pathing</h4>
         <ul>
-          <li>Three-phase movement: <em>toBridge → crossBridge → attack</em>.</li>
-          <li>Lane-biased A* (corridor cells are cheaper); no cross-river aggro.</li>
-          <li>Aggro to nearby enemies only if same side & same lane.</li>
-          <li>Light separation steering to reduce bunching at bridge exits.</li>
+          <li>Expanded battlefield height to 900 for more lane space.</li>
+          <li>Lane-specific priorities: (1) King if lane xbow destroyed, (2) lane xbow, (3) nearby enemy units (60px, same lane) only for attacks; troops keep marching to structure.</li>
         </ul>
       </article>
-      <!-- keep prior entries -->
     </section>
   </main>
 
-
+  <!-- Keep same version string -->
+  <script>window.__LC_DEF_VER = '0.1.4';</script>
+  <script type="module" src="src/main.js?v=0.1.4"></script>
   <noscript>Please enable JavaScript to run this game.</noscript>
 </body>
 </html>
