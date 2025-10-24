@@ -26,16 +26,15 @@ export function createGameState(canvas) {
     ],
     deckOrder: shuffle([0,1,2]),
     hand: [], selectedHandSlot: null,
-    // UI hooks (set later by game.js)
+
     onElixirChange: () => {},
     rebuildCardBar: () => {},
   };
   state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
 
-  // Tower factories
+  // Towers
   const k = (side,x,y)=>({type:'king', side, x, y, r:26, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false});
   const x = (side,x,y)=>({type:'xbow', side, x, y, r:16,  hp:1000, maxHp:1000, rof:1.0, range:300, cd:0});
-
   state.towers.push(
     k('blue', W/2, H-100),
     x('blue', config.lanesX[0], H-190),
@@ -50,19 +49,14 @@ export function createGameState(canvas) {
 
 /* ----------------- Update Loop ----------------- */
 export function update(state, dt) {
-  // Elixir (player)
   const { ELIXIR_MAX, ELIXIR_PER_SEC } = state.config;
   state.elixir.blue = Math.min(ELIXIR_MAX, state.elixir.blue + ELIXIR_PER_SEC * dt);
   state.onElixirChange();
 
-  // Towers
   for (const t of state.towers) towerAI(state, t, dt);
-
-  // Units
   for (const u of state.units) unitUpdate(state, u, dt);
   for (let i = state.units.length - 1; i >= 0; i--) if (state.units[i].hp <= 0) state.units.splice(i, 1);
 
-  // Projectiles + FX
   updateProjectiles(state, dt);
   updateFX(state, dt);
 }
@@ -102,7 +96,7 @@ function spawnUnits(state, card, laneX, y) {
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
     state.units.push({
-      side:'blue', x: laneX + off, y, laneX,
+      side:'blue', x: laneX + off, y, laneX, // laneX is dynamic; can drift toward king later
       hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
       range: card.range, speed: card.speed, radius: card.radius,
       kind: card.id, type: card.type
@@ -149,8 +143,23 @@ function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
   const foe = enemySideOf(u.side);
-  let struct = aliveCrossbowOn(state, foe, u.laneX) || kingOf(state, foe);
+  const laneCrossbow = aliveCrossbowOn(state, foe, u.laneX);
+  let struct = laneCrossbow || kingOf(state, foe);
 
+  // ----- PATHING FIX -----
+  // When targeting the king (or once we've crossed the river), gently shift the unit's laneX toward the king,
+  // so melee units can actually reach the king instead of freezing along a vertical lane.
+  const { riverY, riverH } = state.config;
+  const crossed = (u.side==='blue') ? (u.y < riverY - riverH/2) : (u.y > riverY + riverH/2);
+  let desiredLaneX = u.laneX;
+  if ((!laneCrossbow && struct?.type==='king') || (struct?.type==='king' && crossed)) {
+    desiredLaneX = struct.x; // pull toward the king once in enemy territory or no xbows remain
+  }
+  // Smooth lane drift
+  u.laneX += (desiredLaneX - u.laneX) * Math.min(1, dt * 2.5);
+  // ------------------------
+
+  // Acquire targets
   let close = enemyUnits(state, u.side)
     .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
   if (!close.length && struct){
@@ -174,13 +183,13 @@ function unitUpdate(state, u, dt) {
       u.x += nx * s; u.y += ny * s;
     }
   } else {
-    u.y -= u.speed * dt;
+    u.y -= u.speed * dt; // drift up lane
   }
 
-  // keep on lane X
+  // Keep near desired lane (after possible drift toward king)
   u.x += (u.laneX - u.x) * Math.min(1, dt*6);
 
-  // attack
+  // Attack
   u.cd -= dt;
   if (best && u.cd<=0){ dealDamage(state, best, u.dmg); u.cd = u.atk; }
   else if (!best && struct && u.cd<=0){
