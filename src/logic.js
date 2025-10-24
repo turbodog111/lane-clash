@@ -4,17 +4,14 @@ export function createGameState(canvas) {
   const W = canvas.width, H = canvas.height;
   const config = {
     W, H,
-    // world layout
     riverY: H / 2, riverH: 100,
     lanesX: [W * 0.33, W * 0.67],
     bridgeW: 120, bridgeH: 118,
-    // gameplay
     ELIXIR_MAX: 10,
     ELIXIR_PER_SEC: 0.5, // 1 per 2s
-    // nav / pathing
     tile: 40,
     riverMargin: 2,
-    bridgeCorridorFactor: 0.45, // portion of bridge that is walkable
+    bridgeCorridorFactor: 0.45,
     defendCorridor: 40,
     kingThreatRadius: 240,
   };
@@ -29,23 +26,19 @@ export function createGameState(canvas) {
     elixir: { blue: 5, red: 5 },
     winner: null,
 
-    // Cards (Archers nerfed)
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0, range:22,  speed:60, radius:13, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged' },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5, range:26,  speed:45, radius:15, type:'melee' },
     ],
 
-    // Player hand (2 from 3)
     deckOrder: shuffle([0,1,2]),
     hand: [], selectedHandSlot: null,
 
-    // UI hooks
     onElixirChange: () => {},
     rebuildCardBar: () => {},
     showPlacementOverlay: false,
 
-    // AI (2-card rotation)
     ai: {
       enabled: true,
       timer: 2.5,
@@ -56,10 +49,7 @@ export function createGameState(canvas) {
       hand: [],
     },
 
-    // nav grid will be built after towers are placed
     nav: null,
-
-    // placement helper
     canPlaceCell: () => false,
   };
 
@@ -78,13 +68,12 @@ export function createGameState(canvas) {
     x('red',  config.lanesX[1], 190),
   );
 
-  // --- Build navigation grid (blocked river except bridge corridors, towers as obstacles) ---
   buildNav(state);
 
-  // placement mask: blue half only, must be walkable
+  // blue half only & walkable
   state.canPlaceCell = (cx, cy) => {
     if (!inBounds(state, cx, cy)) return false;
-    const { tile, riverY, riverH } = state.config;
+    const { riverY, riverH } = state.config;
     const { y } = cellCenter(state, cx, cy);
     const blueMin = riverY + riverH/2 + 20;
     const blueMax = state.config.H - 40;
@@ -148,7 +137,7 @@ export function rotateAfterPlay(state, playedIdx, slot) {
   state.rebuildCardBar();
 }
 
-/* ----------------- AI (Red) with 2-card rotation + tile spawn ----------------- */
+/* ----------------- AI (Red) ----------------- */
 function aiUpdate(state, dt){
   const ai = state.ai; if (!ai.enabled) return;
   ai.timer -= dt * ai.aggression;
@@ -164,7 +153,6 @@ function aiUpdate(state, dt){
   affordable.sort((a,b)=>(b.card.cost+Math.random()*0.25)-(a.card.cost+Math.random()*0.25+blueUnits*0.01));
   const choice = affordable[0];
 
-  // pick a valid tile on red half
   const spot = randomRedSpawnCell(state);
   if (!spot){ ai.timer = 1.0; return; }
 
@@ -176,7 +164,6 @@ function aiUpdate(state, dt){
 
   ai.timer = randRange(ai.minInterval, ai.maxInterval);
 }
-
 function aiRotateAfterPlay(state, playedIdx, slot){
   const ai = state.ai;
   ai.deckOrder = ai.deckOrder.filter(i => i !== playedIdx).concat([playedIdx]);
@@ -186,27 +173,31 @@ function aiRotateAfterPlay(state, playedIdx, slot){
 
 /* ----------------- Mechanics ----------------- */
 function spawnUnits(state, side, card, cx, cy, x, y) {
-  const laneIndex = getLaneIndex(state, x); // keep notion of home lane for defend logic
+  const laneIndex = getLaneIndex(state, x);
   for (let i=0;i<card.count;i++){
     const off=(card.count>1?(i===0?-12:12):0);
-    const ux = x + off, uy = y;
     const unit = {
-      side, x: ux, y: uy,
+      side, x: x + off, y,
       cx, cy,
       homeLaneX: state.config.lanesX[laneIndex], homeLaneIndex: laneIndex,
       hp: card.hp, maxHp: card.hp, dmg: card.dmg, atk: card.atk, cd:0,
       range: card.range, speed: card.speed, radius: card.radius,
       kind: card.id, type: card.type,
 
-      // pathing
+      // pathing state
+      phase: 'toBridge',       // 'toBridge' -> 'attack' after crossing
       goalKind: null, goalRef: null,
       path: [], wp: 0, repathCD: 0.0
     };
-    chooseGoalAndPath(state, unit); // initial path
+    // initial path: to bridge exit
+    const pt = bridgeExitPoint(state, unit.side, unit.homeLaneIndex);
+    unit.goalKind = 'bridge'; unit.goalRef = {x:pt.x,y:pt.y};
+    unit.path = findPathWorld(state, {x:unit.x,y:unit.y}, pt);
+    unit.wp = 0; unit.repathCD = 0.6;
+
     state.units.push(unit);
   }
 }
-
 function spawnBolt(state, from, target, dmg=30, spd=360) {
   const ang = Math.atan2(target.y - from.y, target.x - from.x);
   state.projectiles.push({ x: from.x, y: from.y, vx: Math.cos(ang), vy: Math.sin(ang), spd, dmg, target });
@@ -243,69 +234,80 @@ function towerAI(state, t, dt) {
   }
 }
 
-/* -------- PATHING: A* with lane-local defend + river/bridges constraints -------- */
+/* -------- PATHING: bridge phases + limited repath -------- */
 function unitUpdate(state, u, dt) {
   if (u.hp <= 0) return;
 
-  // pick target + (re)path occasionally or if target changed
-  u.repathCD -= dt;
-  const prevGoal = u.goalRef;
+  const { riverY, riverH } = state.config;
+  const riverTop = riverY - riverH/2;
+  const riverBot = riverY + riverH/2;
+  const onOwnSide = (u.side==='blue') ? (u.y >= riverBot) : (u.y <= riverTop);
+  const crossed   = (u.side==='blue') ? (u.y < riverTop) : (u.y > riverBot);
 
-  // compute desired goal
+  // Promote phase once we are clearly across
+  if (u.phase === 'toBridge' && crossed){
+    u.phase = 'attack';
+    u.repathCD = 0; // force replan to structure
+  }
+
+  // Decide current desired goal
   const foe = enemySideOf(u.side);
   const laneCrossbow = aliveCrossbowOn(state, foe, u.homeLaneX);
   const struct = laneCrossbow || kingOf(state, foe);
 
-  const threat = getThreatenedLanes(state, u.side); // {awake, lanes:Set}
-  const defendThisLane = threat.awake && threat.lanes.has(u.homeLaneIndex);
+  const threat = getThreatenedLanes(state, u.side);
+  const defendThisLane = onOwnSide && threat.awake && threat.lanes.has(u.homeLaneIndex); // ignore defending once across
 
-  // Primary goal: defend (unit near king on this lane) OR attack structure
-  let newGoalKind = 'struct', newGoalRef = struct;
-  if (defendThisLane){
-    const k = kingOf(state, u.side);
-    const R = state.config.kingThreatRadius;
-    let enemy = enemyUnits(state, u.side).filter(x => dist(x,k) < R);
-    // prefer the one closest to this unit, to avoid pulling whole army to one guy
-    enemy.sort((a,b) => dist(u,a) - dist(u,b));
-    if (enemy[0]) { newGoalKind = 'unit'; newGoalRef = enemy[0]; }
+  let desiredKind = u.goalKind, desiredRef = u.goalRef;
+  if (u.phase === 'toBridge') {
+    // Normally: go to the bridge exit on your lane
+    const pt = bridgeExitPoint(state, u.side, u.homeLaneIndex);
+    desiredKind = 'bridge'; desiredRef = { x: pt.x, y: pt.y };
+
+    // If we must defend THIS lane (king awake & threatened), chase the closest threat near king
+    if (defendThisLane){
+      const k = kingOf(state, u.side), R = state.config.kingThreatRadius;
+      const enemy = enemyUnits(state, u.side).filter(x => dist(x,k) < R)
+        .sort((a,b)=>dist(u,a)-dist(u,b))[0];
+      if (enemy){ desiredKind='unit'; desiredRef=enemy; }
+    }
+  } else { // 'attack' (enemy side)
+    desiredKind = 'struct'; desiredRef = struct;
   }
 
-  if (newGoalRef !== prevGoal || u.repathCD <= 0 || u.path.length === 0 || u.wp >= u.path.length){
-    u.goalKind = newGoalKind; u.goalRef = newGoalRef;
-    const tgt = targetPointFor(state, newGoalRef);
+  // Repath throttled
+  u.repathCD -= dt;
+  const goalChanged = (desiredKind !== u.goalKind) || (desiredRef !== u.goalRef);
+  if (goalChanged || u.repathCD <= 0 || u.path.length === 0 || u.wp >= u.path.length){
+    u.goalKind = desiredKind; u.goalRef = desiredRef;
+    const tgt = targetPointFor(state, desiredRef);
     u.path = findPathWorld(state, {x:u.x,y:u.y}, tgt);
     u.wp = 0;
-    u.repathCD = 0.45; // modest repath to follow moving defenders/attackers
+    u.repathCD = 0.6;
   }
 
-  // move along path
-  const speed = u.speed * dt;
+  // Move along path
+  const step = u.speed * dt;
   if (u.path.length && u.wp < u.path.length){
     const pt = u.path[u.wp];
     const dx = pt.x - u.x, dy = pt.y - u.y;
     const d = Math.hypot(dx,dy);
-    if (d <= Math.max(1, speed*1.25)) { u.x = pt.x; u.y = pt.y; u.wp++; }
-    else { u.x += (dx/d) * speed; u.y += (dy/d) * speed; }
+    if (d <= Math.max(1, step*1.25)) { u.x = pt.x; u.y = pt.y; u.wp++; }
+    else { u.x += (dx/d) * step; u.y += (dy/d) * step; }
   }
 
-  // acquire target in range (units first)
-  let close = enemyUnits(state, u.side)
+  // Acquire a target to hit
+  let inRange = enemyUnits(state, u.side)
     .filter(e => dist(u,e) <= (u.type==='melee' ? (u.radius + e.radius + 2) : u.range));
   let best=null, bestD=1e9;
-  for (const e of close){ const dd=dist(u,e); if (dd<bestD){ best=e; bestD=dd; } }
-
-  // else structures if in range
-  if (!best && newGoalRef){
-    const need = (u.type==='melee' ? (('r' in newGoalRef)? newGoalRef.r : newGoalRef.radius) + u.radius + 2 : u.range);
-    if (dist(u,newGoalRef) <= need) best = newGoalRef;
+  for (const e of inRange){ const dd=dist(u,e); if (dd<bestD){ best=e; bestD=dd; } }
+  if (!best && desiredRef){
+    const need = (u.type==='melee' ? (('r' in desiredRef)? desiredRef.r : desiredRef.radius) + u.radius + 2 : u.range);
+    if (dist(u,desiredRef) <= need) best = desiredRef;
   }
 
-  // attack
   u.cd -= dt;
-  if (best && u.cd <= 0){
-    dealDamage(state, best, u.dmg);
-    u.cd = u.atk;
-  }
+  if (best && u.cd <= 0){ dealDamage(state, best, u.dmg); u.cd = u.atk; }
 }
 
 /* ----------------- A* PATHFINDING ----------------- */
@@ -313,8 +315,6 @@ function buildNav(state){
   const { W, H, tile, riverY, riverH, lanesX, bridgeW, bridgeCorridorFactor } = state.config;
   const cols = Math.floor(W / tile);
   const rows = Math.floor(H / tile);
-
-  // init walk grid to 1 (walkable)
   const walk = Array.from({length: rows}, () => Array(cols).fill(1));
 
   // river rows blocked except bridge corridors
@@ -331,7 +331,7 @@ function buildNav(state){
     }
   }
 
-  // towers as obstacles (always blocked to prevent standing inside)
+  // towers as obstacles
   for (const t of state.towers){
     const rad = t.r + 10;
     const minC = Math.max(0, Math.floor((t.x - rad) / tile));
@@ -361,128 +361,78 @@ function aStar(state, sx, sy, gx, gy){
   const { cols, rows, walk } = state.nav;
   const key = (x,y)=> (y<<16)|x;
   const open = new MinHeap((a,b)=>a.f-b.f);
-  const gScore = new Map();
-  const fScore = new Map();
-  const came  = new Map();
+  const gScore = new Map(); const fScore = new Map(); const came = new Map();
 
   const startK = key(sx,sy), goalK = key(gx,gy);
-  gScore.set(startK, 0);
-  fScore.set(startK, heuristic8(sx,sy,gx,gy));
+  gScore.set(startK, 0); fScore.set(startK, heuristic8(sx,sy,gx,gy));
   open.push({ cx:sx, cy:sy, f:fScore.get(startK), k:startK });
 
-  const dirs = [
-    [1,0],[ -1,0],[0,1],[0,-1],
-    [1,1],[1,-1],[-1,1],[-1,-1],
-  ];
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
   while(!open.empty()){
     const cur = open.pop();
     if (cur.k === goalK) return reconstruct(came, cur);
-
     const { cx, cy } = cur;
+
     for (const [dx,dy] of dirs){
       const nx = cx+dx, ny = cy+dy;
       if (nx<0||ny<0||nx>=cols||ny>=rows) continue;
       if (walk[ny][nx] !== 1) continue;
-
-      // diagonal corner-cut prevention
-      if (dx && dy){
-        if (walk[cy][nx] !== 1 || walk[ny][cx] !== 1) continue;
-      }
+      if (dx && dy){ if (walk[cy][nx] !== 1 || walk[ny][cx] !== 1) continue; } // no diagonal corner-cut
 
       const nk = key(nx,ny);
       const candG = (gScore.get(cur.k) ?? Infinity) + ((dx && dy)? 1.4142 : 1);
       if (candG < (gScore.get(nk) ?? Infinity)){
-        came.set(nk, cur);
-        gScore.set(nk, candG);
+        came.set(nk, cur); gScore.set(nk, candG);
         const f = candG + heuristic8(nx,ny,gx,gy);
-        fScore.set(nk, f);
-        open.push({ cx:nx, cy:ny, f, k:nk });
+        fScore.set(nk, f); open.push({ cx:nx, cy:ny, f, k:nk });
       }
     }
   }
   return [];
 }
-
 function reconstruct(came, cur){
-  const out = [{ cx: cur.cx, cy: cur.cy }];
-  let node = cur;
-  while (came.has(node.k)){
-    node = came.get(node.k);
-    out.push({ cx: node.cx, cy: node.cy });
-  }
-  out.reverse();
-  return out;
+  const out = [{ cx: cur.cx, cy: cur.cy }]; let node = cur;
+  while (came.has(node.k)){ node = came.get(node.k); out.push({ cx: node.cx, cy: node.cy }); }
+  out.reverse(); return out;
 }
-
-function heuristic8(x1,y1,x2,y2){
-  // octile
-  const dx = Math.abs(x1-x2), dy = Math.abs(y1-y2);
-  const dmin = Math.min(dx,dy), dmax = Math.max(dx,dy);
-  return dmax - dmin + 1.4142 * dmin;
-}
+function heuristic8(x1,y1,x2,y2){ const dx=Math.abs(x1-x2), dy=Math.abs(y1-y2); const mn=Math.min(dx,dy), mx=Math.max(dx,dy); return mx - mn + 1.4142*mn; }
 
 /* ----------------- Target helpers ----------------- */
-function chooseGoalAndPath(state, u){
-  const foe = enemySideOf(u.side);
-  const laneCrossbow = aliveCrossbowOn(state, foe, u.homeLaneX);
-  const struct = laneCrossbow || kingOf(state, foe);
-
-  const threat = getThreatenedLanes(state, u.side);
-  const defendThisLane = threat.awake && threat.lanes.has(u.homeLaneIndex);
-
-  let goalRef = struct, goalKind = 'struct';
-  if (defendThisLane){
-    const k = kingOf(state, u.side);
-    const R = state.config.kingThreatRadius;
-    const enemy = enemyUnits(state, u.side).filter(x => dist(x,k) < R)
-      .sort((a,b)=>dist(u,a)-dist(u,b))[0];
-    if (enemy){ goalRef = enemy; goalKind = 'unit'; }
-  }
-
-  u.goalKind = goalKind; u.goalRef = goalRef;
-  const tgt = targetPointFor(state, goalRef);
-  u.path = findPathWorld(state, {x:u.x,y:u.y}, tgt);
-  u.wp = 0; u.repathCD = 0.45;
-}
-
 function targetPointFor(state, ref){
   if (!ref) return { x: state.config.W/2, y: state.config.H/2 };
-  // If target is a tower, aim at nearest walkable cell near its edge
   if ('r' in ref){
     const near = nearestWalkableCell(state, ref.x, ref.y);
     if (near) return cellCenter(state, near.cx, near.cy);
   }
   return { x: ref.x, y: ref.y };
 }
+function bridgeExitPoint(state, side, laneIndex){
+  const { lanesX, riverY, riverH } = state.config;
+  const laneX = lanesX[laneIndex];
+  const yGuess = (side === 'blue') ? (riverY - riverH/2 + 12) : (riverY + riverH/2 - 12);
+  const c = nearestWalkableCell(state, laneX, yGuess);
+  return c ? cellCenter(state, c.cx, c.cy) : { x: laneX, y: yGuess };
+}
 
-/* ----------------- Rendering helpers for placement ----------------- */
+/* ----------------- Placement / Grid helpers ----------------- */
 function cellFromWorld(state, x, y){
   const { tile } = state.config;
-  const cx = Math.floor(x / tile);
-  const cy = Math.floor(y / tile);
-  if (!inBounds(state, cx, cy)) return null;
-  return { cx, cy };
+  const cx = Math.floor(x / tile), cy = Math.floor(y / tile);
+  if (!inBounds(state, cx, cy)) return null; return { cx, cy };
 }
 function cellCenter(state, cx, cy){
-  const { tile } = state.config;
-  return { x: cx*tile + tile/2, y: cy*tile + tile/2 };
+  const { tile } = state.config; return { x: cx*tile + tile/2, y: cy*tile + tile/2 };
 }
 function inBounds(state, cx, cy){
-  const { cols, rows } = state.nav;
-  return cx>=0 && cy>=0 && cx<cols && cy<rows;
+  const { cols, rows } = state.nav; return cx>=0 && cy>=0 && cx<cols && cy<rows;
 }
 function nearestWalkableCell(state, x, y){
-  const c = cellFromWorld(state, x, y);
-  if (!c) return null;
+  const c = cellFromWorld(state, x, y); if (!c) return null;
   if (state.nav.walk[c.cy][c.cx]===1) return c;
-
-  // BFS ring search
   const { cols, rows } = state.nav;
-  const visited = new Set();
-  const q = [c];
-  const key = (a)=> (a.cy<<16)|a.cx;
-  visited.add(key(c));
+  const visited = new Set(); const q = [c];
+  const key = (a)=> (a.cy<<16)|a.cx; visited.add(key(c));
   const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   while(q.length){
     const cur = q.shift();
@@ -497,7 +447,6 @@ function nearestWalkableCell(state, x, y){
   }
   return null;
 }
-
 function randomRedSpawnCell(state){
   const cells = [];
   const { rows, cols, walk } = state.nav;
@@ -528,7 +477,6 @@ function updateProjectiles(state, dt){
   }
   for (let i=list.length-1;i>=0;i--) if (list[i].dead) list.splice(i,1);
 }
-
 function dealDamage(state, target, amount){
   if (!target || target.hp<=0) return;
   target.hp -= amount;
@@ -558,7 +506,6 @@ function getLaneIndex(state, x){
   const { lanesX } = state.config;
   return (Math.abs(x - lanesX[0]) <= Math.abs(x - lanesX[1])) ? 0 : 1;
 }
-
 function getThreatenedLanes(state, side){
   const k = kingOf(state, side);
   const res = { awake: !!(k && k.awake), lanes: new Set() };
