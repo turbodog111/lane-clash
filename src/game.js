@@ -13,6 +13,7 @@ export async function initGame(diag){
 
   const state = createGameState(canvas);
 
+  // HUD
   state.onElixirChange = () => {
     const pct = Math.min(1, state.elixir.blue/state.config.ELIXIR_MAX);
     elixirFill.style.width = `${pct*100}%`;
@@ -38,6 +39,7 @@ export async function initGame(diag){
 
   const { drawAll } = setupRenderer(canvas);
 
+  // Input (grid-snapped placement)
   canvas.addEventListener('click', (e) => {
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) * (canvas.width / r.width);
@@ -45,6 +47,7 @@ export async function initGame(diag){
     tryDeployAt(state, x, y);
   });
 
+  // Loop
   let raf=0,last=0,running=false;
   function frame(ts){ if(!running) return; const dt=Math.min(0.05,(ts-last)/1000)||0.016; last=ts; update(state,dt); drawAll(state); raf=requestAnimationFrame(frame); }
   function start(){ if(running) return; running=true; last=performance.now(); raf=requestAnimationFrame(frame); }
