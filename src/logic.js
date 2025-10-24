@@ -7,8 +7,11 @@ export function createGameState(canvas){
     riverY: H/2, riverH: 100,
     bridgeW: 120, bridgeH: 118,
     tile: 40,
-    AGGRO_RADIUS: 140,
-    LANE_TOLERANCE: 80,
+    AGGRO_RADIUS: 140,        // enemy radius to peel from push
+    AGGRO_LOCK: 0.9,          // seconds to stay on target once acquired
+    LANE_TOLERANCE: 80,       // half-width for “same lane” checks
+    BRIDGE_CORRIDOR_MIN: 1.3, // min half-corridor (tiles) across river
+
     ELIXIR_MAX: 10, ELIXIR_PER_SEC: 0.5,  // 1 per 2s
     kingThreatRadius: 240,
   };
