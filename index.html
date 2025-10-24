@@ -2,76 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Lane Clash — Main Menu & Encyclopedia</title>
+  <title>Lane Clash — Menu, Play, Encyclopedia</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
       --bg:#0e1220; --panel:#161b2e; --ink:#e9f1ff; --muted:#a9b7ff;
       --line:#24315c; --accent:#70d6ff;
+      --blue:#58a6ff; --red:#ff6b6b; --gold:#ffd166;
     }
     *{ box-sizing:border-box; }
     html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-
     header{ padding:12px; background:#11162b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
     .title{ font-weight:750; letter-spacing:.2px; }
 
     main{ max-width:1024px; margin:24px auto; padding:0 12px; }
+    .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+    .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; text-align:center; }
+    .muted{ color:var(--muted); }
+    .hidden{ display:none; }
 
-    /* Buttons */
     .btn{
       appearance:none; border:1px solid var(--line); background:linear-gradient(180deg,#203061,#18244b);
       color:var(--ink); padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer;
       transition:transform .08s ease, filter .12s ease, box-shadow .12s ease;
-      box-shadow:0 0 0 0 rgba(112,214,255,0);
     }
-    .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); box-shadow:0 6px 18px rgba(112,214,255,.18); }
-    .btn:focus-visible{ outline:none; box-shadow:0 0 0 3px rgba(112,214,255,.35); }
+    .btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
 
-    /* Panels */
-    .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
-
-    /* Main menu */
-    .center{ display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:10vh; text-align:center; }
-    .muted{ color:var(--muted); }
-
-    /* Encyclopedia */
-    .hidden{ display:none; }
-    .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    /* Encyclopedia cards layout (same as before) */
     .entries{ display:grid; gap:16px; }
-
     .entry{
       display:grid; grid-template-columns: min(360px, 45%) 1fr; gap:18px; align-items:center;
       background:#0f1530; border:1px solid #27305a; border-radius:14px; padding:14px;
     }
-    @media (max-width: 720px){
-      .entry{ grid-template-columns: 1fr; }
-    }
-    .cardFrame{
-      display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px;
-      min-height: 220px;
-    }
+    @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
+    .cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px; min-height:220px; }
     .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
-
     .details h2{ margin:0 0 8px; font-size:22px; display:flex; align-items:center; gap:8px; }
     .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#0b1433; border:1px solid #20306a; font-size:12px; }
-    .grid{ display:grid; grid-template-columns: 120px 1fr; gap:8px 12px; margin:8px 0 10px; }
+    .grid{ display:grid; grid-template-columns:120px 1fr; gap:8px 12px; margin:8px 0 10px; }
     .label{ color:#9fb4ff; }
     .desc{ color:#cfe1ff; }
+
+    /* PLAY scene */
+    .hud{
+      display:flex; align-items:center; gap:16px;
+      padding:8px 12px; background:#0f1530; border:1px solid #27305a; border-radius:12px; margin-bottom:12px;
+    }
+    .badge{ padding:2px 10px; border-radius:999px; font-size:12px; border:1px solid #20306a; }
+    .blue{ background:rgba(88,166,255,.12); color:var(--blue); }
+    .red{ background:rgba(255,107,107,.12); color:var(--red); }
+
+    .bar{ position:relative; width:220px; height:14px; border:1px solid #2c355c; border-radius:999px; background:#0b0f1c; overflow:hidden; }
+    .fill{ position:absolute; inset:0; transform-origin:left center; background:linear-gradient(90deg,#2b68ff,#70d6ff); }
+    .fill.red{ background:linear-gradient(90deg,#ff7b7b,#ffb3a3); }
+    .barlabel{ font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
+
+    canvas{ width:100%; height:560px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
+    .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 
     footer{ text-align:center; color:#8ea1c9; padding:16px 0; font-size:12px; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="title">Lane Clash — Prototype</div>
-  </header>
+  <header><div class="title">Lane Clash — Prototype</div></header>
 
   <main>
     <!-- MAIN MENU -->
     <section id="menu" class="panel center" aria-labelledby="menuTitle">
       <h1 id="menuTitle" style="position:absolute;left:-9999px;">Main Menu</h1>
-      <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
-      <p class="muted">Browse unit cards and their stats.</p>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <button id="playBtn" class="btn">Play</button>
+        <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
+      </div>
+      <p class="muted">Start a match (static towers for now) or browse unit cards.</p>
+    </section>
+
+    <!-- PLAY -->
+    <section id="play" class="panel hidden" aria-labelledby="playTitle">
+      <div class="toolbar">
+        <h2 id="playTitle" style="margin:0;">Play — Blue (You) vs Red (AI)</h2>
+        <button id="backFromPlay" class="btn">Back</button>
+      </div>
+
+      <div class="hud" role="group" aria-label="Elixir HUD">
+        <span class="badge blue">Blue (You)</span>
+        <div class="bar" aria-label="Blue Elixir"><div id="blueFill" class="fill"></div></div>
+        <span id="blueText" class="barlabel">0</span>
+        <span class="badge red" style="margin-left:18px;">Red (AI)</span>
+        <div class="bar" aria-label="Red Elixir"><div id="redFill" class="fill red"></div></div>
+        <span id="redText" class="barlabel">0</span>
+        <span class="muted" style="margin-left:auto;">Regen: 1 elixir / 2s (max 10)</span>
+      </div>
+
+      <canvas id="game" width="960" height="560" aria-label="Battlefield"></canvas>
+      <p class="muted" style="margin-top:10px;">Towers are placeholders; we’ll add targeting, projectiles, and deployment next.</p>
     </section>
 
     <!-- ENCYCLOPEDIA -->
@@ -85,10 +109,7 @@
         <!-- KNIGHT -->
         <article class="entry" role="article" aria-labelledby="knightTitle">
           <div class="cardFrame">
-            <!-- Now pointing to assets/Knight.png -->
-            <img src="assets/Knight.png"
-                 alt="Knight card (Common, Cost 2)"
-                 onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
           </div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
@@ -99,17 +120,14 @@
               <div class="label">Speed</div><div>1</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">
-              A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.
-            </p>
+            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable on the battlefield.</p>
           </div>
         </article>
 
         <!-- ARCHERS -->
         <article class="entry" role="article" aria-labelledby="archersTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
-            <img src="assets/Archers.png"
-                 alt="Archers card (Common, Cost 2)"
+            <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"
                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
           </div>
           <div class="details">
@@ -121,69 +139,178 @@
               <div class="label">Speed</div><div>1.5</div>
               <div class="label">Unit Count</div><div>2</div>
             </div>
-            <p class="desc">
-              Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.
-            </p>
+            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
           </div>
         </article>
 
-        <!-- MINI-MEGA -->
-<article class="entry" role="article" aria-labelledby="miniMegaTitle">
-  <div class="cardFrame">
-    <!-- Make sure this file is placed at assets/Mini-MEGA.png -->
-    <img src="assets/Mini-MEGA.png"
-         alt="Mini-MEGA card (Common, Cost 3)"
-         onerror="this.alt='Mini-MEGA card image not found'; this.style.opacity=.6;">
-  </div>
-  <div class="details">
-    <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
-    <div class="grid" aria-label="Mini-MEGA stats">
-      <div class="label">Elixir Cost</div><div>3</div>
-      <div class="label">HP</div><div>—</div>
-      <div class="label">DMG</div><div>80 / 1.5s</div>
-      <div class="label">Speed</div><div>0.75</div>
-      <div class="label">Unit Count</div><div>1</div>
-    </div>
-    <p class="desc">
-      A compact but tanky little robot with surprising punch power and glowing blue optics. 
-      Not fast — but it hits like a hammer.
-    </p>
-  </div>
-</article>
-
+        <!-- MINI-MEGA (card art optional for now) -->
+        <article class="entry" role="article" aria-labelledby="miniMegaTitle">
+          <div class="cardFrame" style="border:1px dashed #27305a;">
+            <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"
+                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Mini-MEGA card art coming soon',className:'muted'}));">
+          </div>
+          <div class="details">
+            <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
+            <div class="grid" aria-label="Mini-MEGA stats">
+              <div class="label">Elixir Cost</div><div>3</div>
+              <div class="label">DMG</div><div>80 / 1.5s</div>
+              <div class="label">Speed</div><div>0.75</div>
+              <div class="label">Unit Count</div><div>1</div>
+            </div>
+            <p class="desc">A compact but tanky robot with surprising punch power. Slow stride, heavy hit.</p>
+          </div>
+        </article>
       </div>
     </section>
   </main>
 
-  <footer>
-    Tip: Make sure your image is located at <code>assets/Knight.png</code>.<br>
-    You can enable GitHub Pages (Settings → Pages → Branch: <strong>main</strong>, Folder: <strong>/ (root)</strong>) and open your site.
-  </footer>
+  <footer>Tip: Enable GitHub Pages (Settings → Pages → Branch: <b>main</b>, Folder: <b>/ (root)</b>) to run this live.</footer>
 
   <script>
+    // --- Scene switching ---
     const menu = document.getElementById('menu');
+    const play = document.getElementById('play');
     const ency = document.getElementById('ency');
+    const playBtn = document.getElementById('playBtn');
+    const backFromPlay = document.getElementById('backFromPlay');
     const openEncy = document.getElementById('openEncy');
     const backBtn = document.getElementById('backBtn');
 
-    function openPanel(){
-      menu.classList.add('hidden');
-      ency.classList.remove('hidden');
-      openEncy.setAttribute('aria-expanded','true');
-      window.scrollTo(0,0);
-    }
-    function closePanel(){
-      ency.classList.add('hidden');
-      menu.classList.remove('hidden');
-      openEncy.setAttribute('aria-expanded','false');
-      window.scrollTo(0,0);
-      openEncy.focus();
+    function show(el){ menu.classList.add('hidden'); play.classList.add('hidden'); ency.classList.add('hidden'); el.classList.remove('hidden'); window.scrollTo(0,0); }
+    playBtn.onclick = () => show(play);
+    backFromPlay.onclick = () => show(menu);
+    openEncy.onclick = () => show(ency);
+    backBtn.onclick = () => show(menu);
+
+    // --- PLAY: basic battlefield + towers + elixir ---
+    const W = 960, H = 560;
+    const canv = document.getElementById('game');
+    const ctx = canv.getContext('2d');
+
+    // Elixir model
+    const ELIXIR_MAX = 10;
+    const ELIXIR_PER_SEC = 0.5; // 1 every 2 seconds
+    const elixir = { blue: 5, red: 5 };
+    const blueFill = document.getElementById('blueFill');
+    const redFill  = document.getElementById('redFill');
+    const blueText = document.getElementById('blueText');
+    const redText  = document.getElementById('redText');
+
+    // Simple map + tower positions
+    function laneY(i, n){ return H * ((i+1)/(n+1)); }
+    const lanes = [ laneY(0,2), laneY(1,2) ];
+
+    const towers = [
+      // BLUE side (human)
+      { type:'king', side:'blue', x:120, y:H/2, r:26, hp:1200 },
+      { type:'xbow', side:'blue', x:240, y:lanes[0], r:16, hp:600 },
+      { type:'xbow', side:'blue', x:240, y:lanes[1], r:16, hp:600 },
+      // RED side (AI)
+      { type:'king', side:'red',  x:W-120, y:H/2, r:26, hp:1200 },
+      { type:'xbow', side:'red',  x:W-240, y:lanes[0], r:16, hp:600 },
+      { type:'xbow', side:'red',  x:W-240, y:lanes[1], r:16, hp:600 },
+    ];
+
+    function draw(){
+      // Background
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle = '#0b1026'; ctx.fillRect(0,0,W,H);
+
+      // Lanes
+      for (const y of lanes){
+        ctx.strokeStyle = '#1e2a5c'; ctx.lineWidth = 22; ctx.beginPath(); ctx.moveTo(160,y); ctx.lineTo(W-160,y); ctx.stroke();
+        ctx.strokeStyle = '#28377a'; ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(160,y); ctx.lineTo(W-160,y); ctx.stroke(); ctx.setLineDash([]);
+      }
+
+      // Mid divider
+      ctx.strokeStyle = '#15224a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W/2,60); ctx.lineTo(W/2,H-60); ctx.stroke();
+
+      // Towers
+      for (const t of towers){
+        drawTower(t);
+      }
     }
 
-    openEncy.addEventListener('click', openPanel);
-    openEncy.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openPanel(); }});
-    backBtn.addEventListener('click', closePanel);
-    document.addEventListener('keydown', (e)=>{ if(!ency.classList.contains('hidden') && e.key==='Escape'){ closePanel(); }});
+    function drawTower(t){
+      const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
+
+      if (t.type === 'king'){
+        // pedestal
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.beginPath(); ctx.ellipse(t.x, t.y+28, 36, 12, 0, 0, Math.PI*2); ctx.fill();
+
+        // body
+        ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3;
+        roundedRect(t.x-28, t.y-36, 56, 72, 10); ctx.fill(); ctx.stroke();
+
+        // crown
+        ctx.fillStyle = getCSS('--gold'); ctx.strokeStyle = '#7a5a00';
+        ctx.beginPath();
+        const cw = 30, ch = 12;
+        ctx.moveTo(t.x - cw/2, t.y - 40);
+        ctx.lineTo(t.x - cw/6, t.y - 28);
+        ctx.lineTo(t.x,        t.y - 38);
+        ctx.lineTo(t.x + cw/6, t.y - 28);
+        ctx.lineTo(t.x + cw/2, t.y - 40);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      } else {
+        // Crossbow tower: base + arm
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.beginPath(); ctx.ellipse(t.x, t.y+18, 26, 9, 0, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = col; ctx.strokeStyle = '#0a0f25'; ctx.lineWidth = 3;
+        roundedRect(t.x-18, t.y-22, 36, 44, 8); ctx.fill(); ctx.stroke();
+
+        // bow arm
+        ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
+        // string
+        ctx.strokeStyle = '#98a0b5'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
+      }
+
+      // HP bar (placeholder)
+      const pct = Math.max(0, Math.min(1, t.hp / (t.type==='king'?1200:600)));
+      const w = 60, h = 6; const bx = t.x - w/2, by = t.y - (t.type==='king'?52:38);
+      ctx.fillStyle = '#0a1129'; ctx.fillRect(bx, by, w, h);
+      ctx.fillStyle = '#6bff95'; ctx.fillRect(bx, by, w*pct, h);
+      ctx.strokeStyle = '#0a0f25'; ctx.strokeRect(bx, by, w, h);
+    }
+
+    function roundedRect(x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.arcTo(x+w, y,   x+w, y+h, r);
+      ctx.arcTo(x+w, y+h, x,   y+h, r);
+      ctx.arcTo(x,   y+h, x,   y,   r);
+      ctx.arcTo(x,   y,   x+w, y,   r);
+      ctx.closePath();
+    }
+    function getCSS(varName){
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#fff';
+    }
+
+    // Game loop + elixir regen
+    let last = performance.now();
+    function loop(now){
+      const dt = Math.min(0.033, (now - last)/1000);
+      last = now;
+
+      // elixir regen (1 every 2s => 0.5/sec)
+      elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
+      elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + ELIXIR_PER_SEC*dt);
+
+      // HUD update
+      blueFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
+      redFill.style.transform  = `scaleX(${elixir.red/ELIXIR_MAX})`;
+      blueText.textContent = Math.floor(elixir.blue);
+      redText.textContent  = Math.floor(elixir.red);
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
