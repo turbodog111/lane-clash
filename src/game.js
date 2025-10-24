@@ -1,3 +1,19 @@
+// src/game.js
+const VER = window.__LC_VER || 'dev';
+
+// load both with the same version to avoid cache mismatch
+const [{ createGameState, update, tryDeployAt, rotateAfterPlay, labelFor },
+       { setupRenderer }] = await Promise.all([
+  import(`./logic.js?v=${VER}`),
+  import(`./render.js?v=${VER}`)
+]);
+
+export async function initGame(diag) {
+  // ... your existing initGame, but now using the imports above ...
+  // make sure you return { start, stop, getState } as before
+}
+
+
 import { createGameState, update, tryDeployAt } from './logic.js';
 import { setupRenderer } from './render.js';
 
