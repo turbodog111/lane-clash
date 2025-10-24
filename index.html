@@ -37,7 +37,7 @@
     }
     @media (max-width: 720px){ .entry{ grid-template-columns:1fr; } }
     .cardFrame{ display:flex; align-items:center; justify-content:center; padding:8px; background:transparent; border-radius:12px; min-height:220px; }
-    .cardFrame img{ width:100%; height:auto; display:block; image-rendering:auto; }
+    .cardFrame img{ width:100%; height:auto; display:block; }
     .details h2{ margin:0 0 8px; font-size:22px; display:flex; align-items:center; gap:8px; }
     .pill{ display:inline-block; padding:2px 10px; border-radius:999px; background:#0b1433; border:1px solid #20306a; font-size:12px; }
     .grid{ display:grid; grid-template-columns:120px 1fr; gap:8px 12px; margin:8px 0 10px; }
@@ -54,8 +54,8 @@
     .fill.red{ background:linear-gradient(90deg,#ff7b7b,#ffb3a3); }
     .barlabel{ font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
 
-    /* Canvas */
-    canvas{ width:100%; height:560px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
+    /* Canvas (taller now) */
+    canvas{ width:100%; height:720px; display:block; border-radius:12px; background:#0b1026; border:1px solid #27305a; }
     .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
   </style>
 </head>
@@ -90,8 +90,8 @@
         <span class="muted" style="margin-left:auto;">Regen: 1 / 2s (max 10)</span>
       </div>
 
-      <canvas id="game" width="960" height="560" aria-label="Battlefield"></canvas>
-      <p class="muted" style="margin-top:10px;">Towers target & shoot. River + two bridges added; we’ll path units over bridges later.</p>
+      <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
+      <p class="muted" style="margin-top:10px;">Crossbows are placed further from the river; they only target on their own half. Numeric HP shown above bars.</p>
     </section>
 
     <!-- ENCYCLOPEDIA -->
@@ -149,6 +149,7 @@
             <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
             <div class="grid" aria-label="Mini-MEGA stats">
               <div class="label">Elixir Cost</div><div>3</div>
+              <div class="label">HP</div><div>300</div>
               <div class="label">DMG</div><div>80 / 1.5s</div>
               <div class="label">Speed</div><div>0.75</div>
               <div class="label">Unit Count</div><div>1</div>
@@ -182,26 +183,26 @@
     openEncy.onclick = () => show(ency);
     backBtn.onclick = () => show(menu);
 
-    // ===== PLAY: flipped arena + river/bridges + towers + projectiles + elixir =====
-    const W = 960, H = 560;
+    // ===== PLAY: flipped arena + taller map + river/bridges + towers + projectiles + elixir =====
+    const W = 960, H = 720;
     const canv = document.getElementById('game');
     const ctx = canv.getContext('2d');
 
-    // HUD refs (declare ONCE to avoid duplicate-const errors)
+    // HUD refs
     const blueFill = document.getElementById('blueFill');
     const redFill  = document.getElementById('redFill');
     const blueText = document.getElementById('blueText');
     const redText  = document.getElementById('redText');
 
-    // Elixir model
+    // Elixir
     const ELIXIR_MAX = 10;
-    const ELIXIR_PER_SEC = 0.5; // 1 every 2 seconds
+    const ELIXIR_PER_SEC = 0.5; // 1 every 2 sec
     const elixir = { blue: 5, red: 5 };
 
-    // Battlefield layout: horizontal river; two vertical bridges (lanes) left/right
-    const riverY = H/2, riverH = 82;
+    // Battlefield layout (taller)
+    const riverY = H/2, riverH = 100;
     const lanesX = [ W*0.33, W*0.67 ];
-    const bridgeW = 120, bridgeH = riverH + 16;
+    const bridgeW = 120, bridgeH = riverH + 18;
 
     function drawBattlefield(){
       ctx.clearRect(0,0,W,H);
@@ -250,13 +251,13 @@
 
     const towers = [
       // BLUE (bottom)
-      tKing('blue', W/2, H-90),
-      tXbow('blue', lanesX[0], H-200),
-      tXbow('blue', lanesX[1], H-200),
+      tKing('blue', W/2, H-100),
+      tXbow('blue', lanesX[0], H-280),  // further from river
+      tXbow('blue', lanesX[1], H-280),
       // RED (top)
-      tKing('red',  W/2, 90),
-      tXbow('red',  lanesX[0], 200),
-      tXbow('red',  lanesX[1], 200),
+      tKing('red',  W/2, 100),
+      tXbow('red',  lanesX[0], 280),    // further from river
+      tXbow('red',  lanesX[1], 280),
     ];
 
     // Projectiles
@@ -279,6 +280,15 @@
       ctx.closePath();
     }
     function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
+
+    // Crossbow vertical bands: only their half (from their side of river to their king)
+    function xbowBandFor(t){
+      if (t.side === 'blue'){
+        return { yMin: riverY + riverH/2, yMax: H }; // bottom half
+      } else {
+        return { yMin: 0, yMax: riverY - riverH/2 }; // top half
+      }
+    }
 
     function drawTower(t){
       const col = t.side === 'blue' ? getCSS('--blue') : getCSS('--red');
@@ -315,24 +325,44 @@
         ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
       }
 
-      // HP bar
+      // HP UI (bar + numeric label)
       const maxHP = (t.type==='king')?1200:600;
       const pct = Math.max(0, Math.min(1, t.hp/maxHP));
       const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
       ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
       ctx.fillStyle='#6bff95'; ctx.fillRect(bx,by,w*pct,h);
       ctx.strokeStyle='#0a0f25'; ctx.strokeRect(bx,by,w,h);
+
+      // numeric HP
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = '#dfe7ff';
+      ctx.fillText(Math.max(0, Math.ceil(t.hp)), t.x, by-2);
     }
 
     function towerAI(t, dt){
       if (t.hp <= 0) return;
       t.cd -= dt; if (t.cd > 0) return;
-      // pick nearest enemy tower in range
+
+      // choose enemies in range
+      const enemies = enemiesOf(t.side);
       let best=null, bestD=1e9;
-      for (const e of enemiesOf(t.side)){
+
+      for (const e of enemies){
+        // base distance check
         const d = dist(t,e);
-        if (d < t.range && d < bestD){ best=e; bestD=d; }
+        if (d >= t.range) continue;
+
+        // crossbows: clamp to their own vertical half only
+        if (t.type === 'xbow'){
+          const band = xbowBandFor(t);
+          if (e.y < band.yMin || e.y > band.yMax) continue;
+        }
+        // pick nearest valid
+        if (d < bestD){ best=e; bestD=d; }
       }
+
       if (best){
         spawnBolt(t, best, (t.type==='king'?40:30), (t.type==='king'?340:380));
         t.cd = t.rof;
@@ -365,18 +395,20 @@
       }
     }
 
+    function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#fff'; }
+
     // Main loop
+    let last = performance.now();
     function loop(now){
-      const dt = Math.min(0.033, ((loop._last ?? now) - (loop._last ?? now) + (loop._last=now, 0))/1000) || 0.0167;
-      // ^ small trick to get dt without extra globals
+      const dt = Math.min(0.033, (now - last) / 1000); last = now;
 
       // elixir regen (1 per 2s)
       elixir.blue = Math.min(ELIXIR_MAX, elixir.blue + ELIXIR_PER_SEC*dt);
       elixir.red  = Math.min(ELIXIR_MAX, elixir.red  + ELIXIR_PER_SEC*dt);
       blueFill.style.transform = `scaleX(${elixir.blue/ELIXIR_MAX})`;
-      redFill.style.transform  = `scaleX(${elixir.red/ELIXIR_MAX})`;
+      redFill .style.transform = `scaleX(${elixir.red /ELIXIR_MAX})`;
       blueText.textContent = Math.floor(elixir.blue);
-      redText.textContent  = Math.floor(elixir.red);
+      redText .textContent = Math.floor(elixir.red);
 
       // Towers think + fire
       for (const t of towers) towerAI(t, dt);
