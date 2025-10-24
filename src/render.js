@@ -57,7 +57,6 @@ export function setupRenderer(ctx, state) {
       ctx.strokeStyle = '#c9cedd'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(t.x-20, t.y-4); ctx.lineTo(t.x+20, t.y-4); ctx.stroke();
     }
 
-    // HP bar + number
     const pct = Math.max(0, Math.min(1, t.hp/t.maxHp));
     const w = 60, h=6, bx=t.x-w/2, by=t.y-(t.type==='king'?52:38);
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
@@ -75,11 +74,9 @@ export function setupRenderer(ctx, state) {
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.lineWidth = 2; ctx.strokeStyle = '#0a1a3d'; ctx.stroke();
 
-    // label
     ctx.font = 'bold 11px system-ui, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#0b1433';
     ctx.fillText(labelFor(u.kind), u.x, u.y);
 
-    // HP bar + number
     const w=38, h=5, bx=u.x-w/2, by=u.y - (u.radius+10);
     const pct = Math.max(0, Math.min(1, u.hp/u.maxHp));
     ctx.fillStyle='#0a1129'; ctx.fillRect(bx,by,w,h);
