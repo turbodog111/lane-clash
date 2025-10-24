@@ -7,34 +7,25 @@
   <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-  <header>
-  <div class="title">Lane Clash — Prototype</div>
-  <!-- If your site is built by GitHub Pages/Jekyll (default), these Liquid tags
-       resolve to the commit + build time. If not, main.js falls back to version.json -->
-  <div id="version" class="version"
-       data-commit="{{ site.github.build_revision | slice: 0,7 }}"
-       data-built="{{ site.time | date: '%Y-%m-%d %H:%M %Z' }}">
-    dev
-  </div>
-</header>
-
+  <header><div class="title">Lane Clash — Prototype</div></header>
 
   <main>
-    <!-- MAIN MENU (only navigation; Encyclopedia is its own page/section) -->
+    <!-- MAIN MENU -->
     <section id="menu" class="panel center" aria-labelledby="menuTitle">
       <h1 id="menuTitle" class="brand">Lane Clash</h1>
       <div class="subtitle">A tiny lane strategy prototype</div>
       <div class="menu-buttons">
         <button id="playBtn" class="btn">Play</button>
-        <button id="openEncy" class="btn" aria-controls="ency" aria-expanded="false">Encyclopedia</button>
+        <button id="openEncy" class="btn">Encyclopedia</button>
+        <button id="openLog" class="btn">Update Log (v0.1.1)</button>
       </div>
       <p class="muted">Blue (you) at the bottom. Red (AI) at the top.</p>
     </section>
 
-    <!-- PLAY (game only) -->
+    <!-- PLAY -->
     <section id="play" class="panel hidden" aria-labelledby="playTitle">
       <div class="toolbar">
-        <h2 id="playTitle" class="toolbar-title">Play — Blue (You) at Bottom vs Red (AI) at Top</h2>
+        <h2 id="playTitle" class="toolbar-title">Play — Blue (You) vs Red (AI)</h2>
         <button id="backFromPlay" class="btn">Back</button>
       </div>
 
@@ -47,12 +38,11 @@
           <span id="elixirText" class="elixirText">0</span>
         </div>
         <div id="cards" class="cards"></div>
-        <p class="muted small">Click a card, then click your half of the arena to deploy. Hand shows 2 rotating cards out of 3.</p>
-        <p class="muted small">Tower stats — King: 2000 HP, 50 / 1s (wakes after first damage). Crossbow: 1000 HP, 30 / 1s.</p>
+        <p class="muted small">Click a card, then click your half to deploy. Tiles will highlight valid spots.</p>
       </div>
     </section>
 
-    <!-- ENCYCLOPEDIA (separate scene) -->
+    <!-- ENCYCLOPEDIA -->
     <section id="ency" class="panel hidden" aria-labelledby="encyTitle">
       <div class="toolbar">
         <h2 id="encyTitle" class="toolbar-title">Encyclopedia</h2>
@@ -63,8 +53,7 @@
         <!-- KNIGHT -->
         <article class="entry" aria-labelledby="knightTitle">
           <div class="cardFrame">
-            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)"
-                 onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)">
           </div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
@@ -79,30 +68,29 @@
           </div>
         </article>
 
-        <!-- ARCHERS -->
+        <!-- ARCHERS (nerfed) -->
         <article class="entry" aria-labelledby="archersTitle">
           <div class="cardFrame">
-            <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"
-                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
+            <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)">
           </div>
           <div class="details">
             <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
             <div class="grid">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>60</div>
-              <div class="label">DMG</div><div>15 / 0.5s</div>
+              <div class="label">DMG</div><div>10 / 0.75s</div>
+              <div class="label">Range</div><div>120</div>
               <div class="label">Speed</div><div>1.5</div>
               <div class="label">Unit Count</div><div>2</div>
             </div>
-            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
+            <p class="desc">Paired ranged attackers that pepper targets—lighter arrows now, but steadier cadence.</p>
           </div>
         </article>
 
         <!-- MINI-MEGA -->
         <article class="entry" aria-labelledby="miniMegaTitle">
           <div class="cardFrame">
-            <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"
-                 onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Mini-MEGA card art coming soon',className:'muted'}));">
+            <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)">
           </div>
           <div class="details">
             <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
@@ -117,6 +105,35 @@
           </div>
         </article>
       </div>
+    </section>
+
+    <!-- UPDATE LOG -->
+    <section id="log" class="panel hidden" aria-labelledby="logTitle">
+      <div class="toolbar">
+        <h2 id="logTitle" class="toolbar-title">Update Log — v0.1.1</h2>
+        <button id="backFromLog" class="btn">Back</button>
+      </div>
+
+      <article class="changelog">
+        <h3>Balance</h3>
+        <ul>
+          <li><strong>Archers:</strong> damage & cadence changed from <code>15 / 0.5s</code> → <code>10 / 0.75s</code>. Range remains <code>120</code>.</li>
+        </ul>
+
+        <h3>Bug Fixes</h3>
+        <ul>
+          <li>Units no longer drift toward center when the king isn’t activated; lane-local defense only after activation.</li>
+          <li>River is a strict no-go (clamped to bridge corridors); no clipping while defending near king towers.</li>
+          <li>AI obeys bridge rules and uses a 2-card rotation like the player.</li>
+        </ul>
+
+        <h3>Misc</h3>
+        <ul>
+          <li>Added placement tiles (green = valid, red = invalid) visible when a card is selected.</li>
+          <li>Elixir bar is now segmented into 10 ticks for clearer refills.</li>
+          <li>Added this Update Log screen to the main menu.</li>
+        </ul>
+      </article>
     </section>
   </main>
 
