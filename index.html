@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Lane Clash — Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="preload" href="assets/Knight.png" as="image">
-  <link rel="stylesheet" href="css/styles.css" />
+  <title>Lane Clash</title>
+  <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
   <header><div class="title">Lane Clash — Prototype</div></header>
 
   <main>
-    <!-- MENU -->
+    <!-- MAIN MENU -->
     <section id="menu" class="panel center" aria-labelledby="menuTitle">
       <h1 id="menuTitle" class="brand">Lane Clash</h1>
       <div class="subtitle">A tiny lane strategy prototype</div>
@@ -31,6 +30,7 @@
 
       <canvas id="game" width="960" height="720" aria-label="Battlefield"></canvas>
 
+      <!-- CARD HUD with Elixir bar above cards -->
       <div class="cardhud" aria-label="Card and Elixir HUD">
         <div class="elixirRow">
           <span style="color:#9fb4ff;">Elixir</span>
@@ -39,7 +39,9 @@
         </div>
         <div id="cards" class="cards"></div>
         <p class="muted" style="margin:6px 2px 0;">Click a card, then click your half of the arena to deploy. Hand shows 2 rotating cards out of 3.</p>
-        <p class="muted" style="margin:6px 2px 0;">Tower stats — King: 2000 HP, 50 / 1s (wakes after first damage). Crossbow: 1000 HP, 30 / 1s.</p>
+        <p class="muted" style="margin:6px 2px 0;">
+          Tower stats — King: 2000 HP, 50 / 1s (wakes after first damage). Crossbow: 1000 HP, 30 / 1s.
+        </p>
       </div>
     </section>
 
@@ -49,67 +51,68 @@
         <h2 id="encyTitle" style="margin:0;">Encyclopedia</h2>
         <button id="backBtn" class="btn">Back</button>
       </div>
-
       <div class="entries">
-        <!-- Knight -->
-        <article class="entry" aria-labelledby="knightTitle">
+        <!-- KNIGHT -->
+        <article class="entry" role="article" aria-labelledby="knightTitle">
           <div class="cardFrame">
-            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)" onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
+            <img src="assets/Knight.png" alt="Knight card (Common, Cost 2)"
+                 onerror="this.alt='Knight card image not found'; this.style.opacity=.6;">
           </div>
           <div class="details">
             <h2 id="knightTitle">Knight <span class="pill">Common</span></h2>
-            <div class="grid">
+            <div class="grid" aria-label="Knight stats">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>100</div>
               <div class="label">DMG</div><div>20 / 1s</div>
               <div class="label">Speed</div><div>1</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">A brave melee fighter with balanced stats—reliable on the field.</p>
+            <p class="desc">A brave melee fighter with balanced stats and solid defense—trusty and reliable.</p>
           </div>
         </article>
 
-        <!-- Archers -->
-        <article class="entry" aria-labelledby="archersTitle">
+        <!-- ARCHERS -->
+        <article class="entry" role="article" aria-labelledby="archersTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
             <img src="assets/Archers.png" alt="Archers card (Common, Cost 2)"
                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Archers card art coming soon',className:'muted'}));">
           </div>
           <div class="details">
             <h2 id="archersTitle">Archers <span class="pill">Common</span></h2>
-            <div class="grid">
+            <div class="grid" aria-label="Archers stats">
               <div class="label">Elixir Cost</div><div>2</div>
               <div class="label">HP</div><div>60</div>
               <div class="label">DMG</div><div>15 / 0.5s</div>
               <div class="label">Speed</div><div>1.5</div>
               <div class="label">Unit Count</div><div>2</div>
             </div>
-            <p class="desc">Ranged pair that pepper foes from afar—fragile but efficient.</p>
+            <p class="desc">Paired ranged attackers that pepper targets from a safe distance—light armor, high utility.</p>
           </div>
         </article>
 
-        <!-- Mini-MEGA -->
-        <article class="entry" aria-labelledby="miniMegaTitle">
+        <!-- MINI-MEGA -->
+        <article class="entry" role="article" aria-labelledby="miniMegaTitle">
           <div class="cardFrame" style="border:1px dashed #27305a;">
             <img src="assets/Mini-MEGA.png" alt="Mini-MEGA card (Common, Cost 3)"
                  onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Mini-MEGA card art coming soon',className:'muted'}));">
           </div>
           <div class="details">
             <h2 id="miniMegaTitle">Mini-MEGA <span class="pill">Common</span></h2>
-            <div class="grid">
+            <div class="grid" aria-label="Mini-MEGA stats">
               <div class="label">Elixir Cost</div><div>3</div>
               <div class="label">HP</div><div>300</div>
               <div class="label">DMG</div><div>80 / 1.5s</div>
               <div class="label">Speed</div><div>0.75</div>
               <div class="label">Unit Count</div><div>1</div>
             </div>
-            <p class="desc">Compact robot with a heavy punch. Slow stride, high impact.</p>
+            <p class="desc">A compact but tanky robot with surprising punch power. Slow stride, heavy hit.</p>
           </div>
         </article>
       </div>
     </section>
   </main>
 
-  <script type="module" src="js/game.js"></script>
+  <!-- Entry point (ES Modules) -->
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
