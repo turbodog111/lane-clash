@@ -13,7 +13,7 @@ export function initDiag({ version='dev' }={}){
     document.body.appendChild(box);
   }
   const rows = box.querySelector('.rows');
-  function row(cls,msg){ const d=document.createElement('div'); d.className=`row ${cls}`; d.textContent=msg; rows.appendChild(d); rows.scrollTop=rows.scrollHeight; }
+  function row(cls,msg){ const d=document.createElement('div'); d.className=\`row \${cls}\`; d.textContent=msg; rows.appendChild(d); rows.scrollTop=rows.scrollHeight; }
   const api = {
     step:(m)=>row('ok',`· ${m}`),
     ok:(m)=>row('ok',`✔ ${m}`),
