@@ -38,6 +38,10 @@ export function createGameState(canvas){
     SEP_PUSH: 12,
     GOAL_EPS: 8,
     WORLD_PAD: 8,
+
+    // new: when two enemies meet on the SAME PATH
+    PATH_BLOCK_PAD: 6,     // extra standoff beyond radii
+    PATH_BLOCK_DETECT: 18, // extra detection beyond standoff
   };
 
   const state = {
@@ -48,7 +52,7 @@ export function createGameState(canvas){
     elixir: { blue: 5, red: 5 },
     winner: null,
 
-    // Cards (note Archers nerfed to 10 / 0.75)
+    // Cards (Archers nerfed to 10 / 0.75)
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee' },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged' },
@@ -70,7 +74,7 @@ export function createGameState(canvas){
   state.hand     = [ state.deckOrder[0], state.deckOrder[1] ];
   state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
-  // Towers (bigger radii per your feedback)
+  // Towers (bigger radii)
   const K = (side,x,y)=>({type:'king', side,x,y, r:34, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false});
   const X = (side,x,y)=>({type:'xbow', side,x,y, r:22, hp:1000, maxHp:1000, rof:1.0, range:300, cd:0});
 
@@ -83,8 +87,8 @@ export function createGameState(canvas){
     X('red',  config.lanesX[1], 250),
   );
 
-  buildNav(state);    // placement grid (blocks river except bridges, and near towers)
-  buildPaths(state);  // movement polylines (3 per lane)
+  buildNav(state);    // placement grid
+  buildPaths(state);  // movement polylines
 
   // placement: player bottom half only, walkable cell
   state.canPlaceCell = (cx,cy)=>{
@@ -140,7 +144,6 @@ export function tryDeployAt(state, mx, my){
   state.onElixirChange();
   return true;
 }
-
 function rotateAfterPlay(state, playedIdx, slot){
   state.deckOrder = state.deckOrder.filter(i=>i!==playedIdx).concat([playedIdx]);
   const next = state.deckOrder.find(i => !state.hand.includes(i));
@@ -159,10 +162,9 @@ function aiUpdate(state, dt){
 
   if (!choices.length){ ai.timer = 0.8; return; }
 
-  // prefer pricier card slightly (adds variety)
+  // prefer pricier card slightly
   const pick = choices.sort((a,b)=>(b.card.cost+Math.random())-(a.card.cost+Math.random()))[0];
 
-  // find spawn cell on red (top) half; fallback to top approach of a lane
   let cell = randomRedSpawnCell(state);
   if (!cell){
     const lane = (Math.random()<0.5?0:1);
@@ -177,7 +179,6 @@ function aiUpdate(state, dt){
   state.elixir.red -= pick.card.cost;
   spawnUnits(state,'red',pick.card,cx,cy,x,y);
 
-  // rotate AI hand
   ai.deckOrder = ai.deckOrder.filter(i=>i!==pick.idx).concat([pick.idx]);
   const next = ai.deckOrder.find(i => !ai.hand.includes(i));
   if (next!==undefined) ai.hand[pick.slot]=next;
@@ -202,6 +203,23 @@ function spawnUnits(state, side, card, cx, cy, x, y){
       pathI: proj.segIndex, onPath:true,
     });
   }
+}
+
+// NEW: find a blocking enemy on the SAME PATH (lane + which)
+function findPathBlockEnemy(state, u){
+  const { PATH_BLOCK_PAD, PATH_BLOCK_DETECT } = state.config;
+  let best=null, bd=1e9;
+  for (const e of enemyUnits(state, u.side)){
+    if (e.hp<=0) continue;
+    if (e.pathLane!==u.pathLane || e.pathWhich!==u.pathWhich) continue; // must be same path
+    const d = dist(u,e);
+    // engage window: standoff + small detection margin
+    const standoff = u.radius + (e.radius||12) + PATH_BLOCK_PAD;
+    if (d <= standoff + PATH_BLOCK_DETECT && d < bd){
+      bd = d; best = e;
+    }
+  }
+  return best;
 }
 
 function towerAI(state, t, dt){
@@ -255,6 +273,10 @@ function unitUpdate(state, u, dt){
     targetUnit = best;
   }
 
+  // NEW: path-block enemy takes priority if present
+  const blockEnemy = findPathBlockEnemy(state, u);
+  if (blockEnemy) targetUnit = blockEnemy;
+
   // follow polyline; then approach structure but stop at standoff
   const poly = state.paths[u.pathLane][u.pathWhich];
   u.pathI = clamp(u.pathI, 0, poly.length-2);
@@ -267,38 +289,55 @@ function unitUpdate(state, u, dt){
   let vx=0, vy=0;
   const step = Math.max(0, u.speed*dt);
 
-  if (u.onPath){
-    let dx = B.x-u.x, dy = B.y-u.y; let d = Math.hypot(dx,dy);
-    const EPS = cfg.GOAL_EPS;
-
-    if (d <= Math.max(EPS, step*1.25)){ u.x=B.x; u.y=B.y; u.pathI += (forward?1:-1); }
-    else if (d>0){ vx += dx/d*step; vy += dy/d*step; }
-
-    // gentle recenter to segment
-    const q = nearestPointOnSegment({x:u.x,y:u.y}, A, B);
-    const px = q.x-u.x, py = q.y-u.y, L = Math.hypot(px,py)||1;
-    const attr = Math.min(cfg.PATH_ATTR*dt, L);
-    vx += (px/L)*attr; vy += (py/L)*attr;
-
-    // end-of-poly?
-    const endIdx = forward ? (poly.length-2) : 0;
-    const endPoint = forward ? poly[poly.length-1] : poly[0];
-    const closeToEnd = nearPoint(u, endPoint, cfg.GOAL_EPS+1.5);
-    if ((forward && u.pathI > endIdx) || (!forward && u.pathI < endIdx) || (u.pathI===endIdx && closeToEnd)){
-      u.onPath = false;
-    }
-  }
-
-  // off path → approach structure but stop at proper standoff (no clipping)
-  if (!u.onPath && structTarget){
+  // If we have a path-block enemy, override movement to engage it and avoid passing through
+  if (blockEnemy){
     const need = (u.type==='melee'
-      ? (structTarget.r + u.radius + 2)
-      : Math.max(u.range - 2, 8));
-    const dx=structTarget.x-u.x, dy=structTarget.y-u.y, d=Math.hypot(dx,dy)||1;
+      ? (u.radius + (blockEnemy.radius||12) + cfg.PATH_BLOCK_PAD)
+      : u.range); // ranged: stop at weapon range
+    const dx = blockEnemy.x - u.x, dy = blockEnemy.y - u.y, d = Math.hypot(dx,dy)||1;
     const remain = d - need;
     if (remain > 0){
       const m = Math.min(step, remain);
-      vx += dx/d*m; vy += dy/d*m;
+      vx += dx/d * m; vy += dy/d * m; // move just enough to reach standoff
+    } else {
+      // already at or inside standoff → hold position (don’t advance)
+      vx = 0; vy = 0;
+    }
+  } else {
+    // Normal movement
+    if (u.onPath){
+      let dx = B.x-u.x, dy = B.y-u.y; let d = Math.hypot(dx,dy);
+      const EPS = cfg.GOAL_EPS;
+
+      if (d <= Math.max(EPS, step*1.25)){ u.x=B.x; u.y=B.y; u.pathI += (forward?1:-1); }
+      else if (d>0){ vx += dx/d*step; vy += dy/d*step; }
+
+      // gentle recenter to segment
+      const q = nearestPointOnSegment({x:u.x,y:u.y}, A, B);
+      const px = q.x-u.x, py = q.y-u.y, L = Math.hypot(px,py)||1;
+      const attr = Math.min(cfg.PATH_ATTR*dt, L);
+      vx += (px/L)*attr; vy += (py/L)*attr;
+
+      // end-of-poly?
+      const endIdx = forward ? (poly.length-2) : 0;
+      const endPoint = forward ? poly[poly.length-1] : poly[0];
+      const closeToEnd = nearPoint(u, endPoint, cfg.GOAL_EPS+1.5);
+      if ((forward && u.pathI > endIdx) || (!forward && u.pathI < endIdx) || (u.pathI===endIdx && closeToEnd)){
+        u.onPath = false;
+      }
+    }
+
+    // off path → approach structure, but stop at standoff
+    if (!u.onPath && structTarget){
+      const need = (u.type==='melee'
+        ? (structTarget.r + u.radius + 2)
+        : Math.max(u.range - 2, 8));
+      const dx=structTarget.x-u.x, dy=structTarget.y-u.y, d=Math.hypot(dx,dy)||1;
+      const remain = d - need;
+      if (remain > 0){
+        const m = Math.min(step, remain);
+        vx += dx/d*m; vy += dy/d*m;
+      }
     }
   }
 
@@ -320,9 +359,9 @@ function unitUpdate(state, u, dt){
   // attack selection
   let victim = null;
 
-  // prefer unit if small-aggro target exists and is in weapon range
+  // prefer unit if small-aggro or path-block target exists and is in weapon range
   if (targetUnit){
-    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
+    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + cfg.PATH_BLOCK_PAD) : u.range);
     if (dist(u,targetUnit) <= need) victim = targetUnit;
   }
 
