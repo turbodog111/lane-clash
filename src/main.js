@@ -3,9 +3,8 @@ import { initGame } from './game.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const { showMenu, showPlay, showEncy } = initUI();
-  const game = initGame();               // sets up state, renderers, loop
+  const game = initGame();
 
-  // Buttons
   document.getElementById('playBtn').addEventListener('click', () => {
     showPlay();
     game.start();
