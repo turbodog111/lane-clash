@@ -91,3 +91,25 @@ kbd { background: #20345d; border-radius: 4px; padding: 1px 5px; border: 1px sol
 .deck-card-level-display { font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
 .deck-card-upgrade-cost { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
 .deck-card .btn { width: 100%; }
+
+/* Hero Card / Main Menu Enhancements */
+.hero-card { background: linear-gradient(135deg, #121d3b 0%, #0f1630 100%); border: 2px solid var(--accent); border-radius: 16px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 8px 32px rgba(96, 165, 250, 0.15); }
+.hero-content { text-align: center; margin-bottom: 32px; }
+.hero-icon { font-size: 64px; margin-bottom: 16px; animation: heroFloat 3s ease-in-out infinite; }
+.hero-title { margin: 0 0 12px; font-size: 28px; font-weight: 700; background: linear-gradient(135deg, var(--accent) 0%, #8ec5fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero-subtitle { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+.menu-grid { display: grid; gap: 12px; margin-bottom: 24px; }
+.menu-btn { display: flex; align-items: center; gap: 16px; background: #1a2748; color: var(--ink); border: 1px solid #2a3e6a; border-radius: 12px; padding: 16px 20px; cursor: pointer; transition: all 0.2s ease; text-align: left; }
+.menu-btn:hover { background: #21335e; border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2); }
+.menu-btn-primary { background: linear-gradient(135deg, var(--accent) 0%, #3d7bd7 100%); border-color: #3d7bd7; color: #081225; }
+.menu-btn-primary:hover { background: linear-gradient(135deg, #60a5fa 0%, #60a5fa 100%); box-shadow: 0 4px 16px rgba(96, 165, 250, 0.4); }
+.menu-btn-icon { font-size: 32px; flex-shrink: 0; }
+.menu-btn-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.menu-btn-text strong { font-size: 16px; font-weight: 600; }
+.menu-btn-text small { font-size: 12px; opacity: 0.8; }
+
+.hint-box { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background: rgba(96, 165, 250, 0.1); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 8px; color: var(--muted); font-size: 13px; }
+.hint-icon { font-size: 18px; }
+
+@keyframes heroFloat { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }

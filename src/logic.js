@@ -135,12 +135,13 @@ export function createGameState(canvas){
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:25, atk:1.0,  range:22,  speed:60, radius:13, type:'melee', rarity:'common', level:0 },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged', rarity:'common', level:0 },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:45, radius:15, type:'melee', rarity:'common', level:0 },
+      { id:'mega',     name:'MEGA',      cost:5, img:'assets/MEGA.png',      count:1, hp:800, dmg:150, atk:2.0, range:30,  speed:35, radius:18, type:'melee', rarity:'rare', level:0 },
     ],
-    deckOrder: shuffle([0,1,2]),
+    deckOrder: shuffle([0,1,2,3]),
     hand: [],
     selectedHandSlot: null,
 
-    ai: { enabled:true, timer:2.0, minInterval:2.2, maxInterval:4.0, deckOrder: shuffle([0,1,2]), hand: [] },
+    ai: { enabled:true, timer:2.0, minInterval:2.2, maxInterval:4.0, deckOrder: shuffle([0,1,2,3]), hand: [] },
 
     nav:null, showPlacementOverlay:false,
     paths: null, // 3 polylines per lane

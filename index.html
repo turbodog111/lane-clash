@@ -14,13 +14,41 @@
 
   <!-- Main Menu -->
   <section id="screenMenu" class="screen">
-    <div class="card">
-      <div class="btn-row">
-        <button id="btnPlay" class="btn primary">Play</button>
-        <button id="btnEncyclopedia" class="btn">Encyclopedia</button>
-        <button id="btnUpdateLog" class="btn">Update Log</button>
+    <div class="hero-card">
+      <div class="hero-content">
+        <div class="hero-icon">⚔️</div>
+        <h2 class="hero-title">Welcome to Lane Clash</h2>
+        <p class="hero-subtitle">Deploy your units, destroy enemy towers, and claim victory!</p>
       </div>
-      <p class="hint">Blue (you) at the bottom. Red (AI) at the top.</p>
+
+      <div class="menu-grid">
+        <button id="btnPlay" class="menu-btn menu-btn-primary">
+          <span class="menu-btn-icon">🎮</span>
+          <span class="menu-btn-text">
+            <strong>Play Game</strong>
+            <small>Battle against AI</small>
+          </span>
+        </button>
+        <button id="btnEncyclopedia" class="menu-btn">
+          <span class="menu-btn-icon">📚</span>
+          <span class="menu-btn-text">
+            <strong>Encyclopedia</strong>
+            <small>View cards & deck</small>
+          </span>
+        </button>
+        <button id="btnUpdateLog" class="menu-btn">
+          <span class="menu-btn-icon">📋</span>
+          <span class="menu-btn-text">
+            <strong>Update Log</strong>
+            <small>See what's new</small>
+          </span>
+        </button>
+      </div>
+
+      <div class="hint-box">
+        <span class="hint-icon">💡</span>
+        <span>Blue (you) at the bottom. Red (AI) at the top.</span>
+      </div>
     </div>
   </section>
 
@@ -156,6 +184,21 @@
           <p>A compact bot that trades speed for crushing punches.</p>
         </div>
       </article>
+
+      <article class="entry">
+        <img src="./assets/MEGA.png" alt="MEGA card" />
+        <div>
+          <h3>MEGA <span class="rar rar-rare">RARE</span></h3>
+          <ul class="stats">
+            <li>Elixir Cost: 5</li>
+            <li>HP: 800</li>
+            <li>DMG: 150 / 2.0s</li>
+            <li>Speed: 35 px/s</li>
+            <li>Unit Count: 1</li>
+          </ul>
+          <p>A massive war machine with devastating power. Slow but nearly unstoppable.</p>
+        </div>
+      </article>
     </div>
 
     <!-- Deck Tab Content -->
@@ -220,7 +263,7 @@
 
         <div class="progression-tier">
           <h5>Common Cards <span class="rar rar-common">COMMON</span></h5>
-          <p class="muted">Knight, Archers, Mini-MEGA</p>
+          <p class="muted">Knight, Archers, Mini-MEGA (3 cards)</p>
           <table class="upgrade-table">
             <thead>
               <tr>
@@ -241,7 +284,7 @@
 
         <div class="progression-tier">
           <h5>Rare Cards <span class="rar rar-rare">RARE</span></h5>
-          <p class="muted">Future rare cards</p>
+          <p class="muted">MEGA (1 card)</p>
           <table class="upgrade-table">
             <thead>
               <tr>
@@ -275,6 +318,13 @@
     </div>
 
     <div class="card">
+      <h3>v0.2.3 - MEGA Unit & UI Enhancements</h3>
+      <ul>
+        <li><strong>New Card:</strong> MEGA unit added - 5 elixir, 800 HP, 150 DMG / 2.0s (RARE)</li>
+        <li><strong>Main Menu:</strong> Redesigned with gradient hero card, animated icon, and enhanced button layout</li>
+        <li><strong>Visual Polish:</strong> Added hover effects, smooth transitions, and better typography to main menu</li>
+        <li><strong>Deck Expansion:</strong> Player and AI decks now include 4 cards instead of 3</li>
+      </ul>
       <h3>v0.2.2 - Persistence & Critical Fixes</h3>
       <ul>
         <li><strong>Persistent Storage:</strong> Coins and card levels now save automatically using localStorage</li>
@@ -332,6 +382,6 @@
   </section>
 
   <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.2.2"></script>
+  <script type="module" src="./src/main.js?v=0.2.3"></script>
 </body>
 </html>
