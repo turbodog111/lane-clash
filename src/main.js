@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -162,8 +162,8 @@ function draw(state){
     ctx.textAlign='center'; ctx.fillText(labelFor(u), u.x, u.y+4);
     drawHP(ctx, u.x, u.y - (u.radius + 18), u.hp, u.maxHp);
 
-    // Draw unit card next to unit (only if card found and image exists)
-    if (card && card.img) {
+    // Draw unit card next to unit (only if card found and image loaded)
+    if (card && imageCache[card.id]) {
       const cardX = u.x + u.radius + 25;
       const cardY = u.y - 20;
       const cardW = 40;
@@ -176,6 +176,13 @@ function draw(state){
       roundRect(ctx, cardX, cardY, cardW, cardH, 4);
       ctx.fill();
       ctx.stroke();
+
+      // Draw card image
+      const img = imageCache[card.id];
+      const imgSize = 32;
+      const imgX = cardX + (cardW - imgSize) / 2;
+      const imgY = cardY + 4;
+      ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
 
       // Card name at bottom
       ctx.fillStyle = '#b8d0ff';
@@ -204,6 +211,28 @@ function draw(state){
   }
   ctx.fillStyle='#b8d0ff'; ctx.font='12px ui-monospace, Consolas, monospace';
   ctx.textAlign='right'; ctx.fillText(`${state.elixir.blue.toFixed(1)} / 10`, x+width, y-6);
+}
+
+// ---------- Image Loading ----------
+const imageCache = {};
+
+function loadImages(cards) {
+  return Promise.all(
+    cards.map(card => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          imageCache[card.id] = img;
+          resolve();
+        };
+        img.onerror = () => {
+          console.warn(`Failed to load image: ${card.img}`);
+          resolve(); // Continue even if image fails
+        };
+        img.src = card.img;
+      });
+    })
+  );
 }
 
 // ---------- Start everything ----------
@@ -428,6 +457,10 @@ async function start(){
     const my = (ev.clientY - r.top)  * (canvas.height / r.height);
     tryDeployAt(state, mx, my);
   });
+
+  // Load card images before starting game loop
+  await loadImages(state.cards);
+  diag.ok('images loaded');
 
   // safe RAF loop (paused when not on play)
   let last = performance.now();

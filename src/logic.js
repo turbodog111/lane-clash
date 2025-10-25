@@ -130,12 +130,12 @@ export function createGameState(canvas){
     matchCoins: 0, // Coins earned this match
     damageDealt: 0, // Total damage dealt by player
 
-    // Cards (Knight buffed to 25 dmg)
+    // Cards (Speeds adjusted for balanced gameplay)
     cards: [
-      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:25, atk:1.0,  range:22,  speed:60, radius:13, type:'melee', rarity:'common', level:0 },
-      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged', rarity:'common', level:0 },
-      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:45, radius:15, type:'melee', rarity:'common', level:0 },
-      { id:'mega',     name:'MEGA',      cost:5, img:'assets/MEGA.png',      count:1, hp:800, dmg:150, atk:2.0, range:30,  speed:35, radius:18, type:'melee', rarity:'rare', level:0 },
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:25, atk:1.0,  range:22,  speed:30, radius:13, type:'melee', rarity:'common', level:0 },
+      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:35, radius:10, type:'ranged', rarity:'common', level:0 },
+      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:20, radius:15, type:'melee', rarity:'common', level:0 },
+      { id:'mega',     name:'MEGA',      cost:5, img:'assets/MEGA.png',      count:1, hp:800, dmg:150, atk:2.0, range:30,  speed:15, radius:18, type:'melee', rarity:'rare', level:0 },
     ],
     deckOrder: shuffle([0,1,2,3]),
     hand: [],
@@ -171,12 +171,26 @@ export function createGameState(canvas){
   buildPaths(state);  // movement polylines
 
   // placement: player bottom half only, walkable cell
+  // Also allow placing where destroyed enemy crossbow towers were
   state.canPlaceCell = (cx,cy)=>{
     if (!inBounds(state,cx,cy)) return false;
-    const { y } = cellCenter(state,cx,cy);
+    const cellPos = cellCenter(state,cx,cy);
+    const { y } = cellPos;
     const blueMin = config.riverY + config.riverH/2 + 20;
-    if (y < blueMin || y > H-40) return false;
-    return state.nav.walk[cy][cx] === 1;
+
+    // Normal placement: blue half, must be walkable
+    if (y >= blueMin && y <= H-40 && state.nav.walk[cy][cx] === 1) return true;
+
+    // Special: allow placement at destroyed enemy (red) crossbow tower locations
+    // even if above the river (in enemy territory)
+    const destroyedRedXbow = state.towers.find(t =>
+      t.type === 'xbow' &&
+      t.side === 'red' &&
+      t.hp <= 0 &&
+      Math.hypot(cellPos.x - t.x, cellPos.y - t.y) <= t.r + 20
+    );
+
+    return !!destroyedRedXbow;
   };
 
   // Load saved game data
@@ -675,11 +689,11 @@ function buildNav(state){
   for (let cy=0; cy<rows; cy++){
     for (let cx=0; cx<cols; cx++){
       const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
-      // Make bridge areas fully walkable (solid ground) for smooth pathfinding
-      // Everything else in the river is blocked
+      // Make bridge areas walkable (solid ground) for smooth pathfinding
+      // Everything else in the river is blocked (water)
       if (y>=top && y<=bot){
         const near = nearestLaneX(lanesX, x);
-        const half = bridgeW; // Full bridge width is now walkable solid ground
+        const half = bridgeW/2; // Half of bridge width on each side of lane center
         if (x < near-half || x > near+half){ walk[cy][cx]=0; continue; }
       }
     }
