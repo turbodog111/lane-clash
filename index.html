@@ -85,6 +85,32 @@
 
     <!-- Cards Tab Content -->
     <div id="tabContentCards" class="ency tab-content" style="display:block">
+      <article class="entry entry-tower">
+        <div class="tower-icon">👑</div>
+        <div>
+          <h3>King Tower</h3>
+          <ul class="stats">
+            <li>HP: 2000</li>
+            <li>DMG: 50 / 1.5s</li>
+            <li>Range: 260</li>
+          </ul>
+          <p>The heart of your defense. If destroyed, you lose the match.</p>
+        </div>
+      </article>
+
+      <article class="entry entry-tower">
+        <div class="tower-icon">🏹</div>
+        <div>
+          <h3>Crossbow Tower</h3>
+          <ul class="stats">
+            <li>HP: 1000</li>
+            <li>DMG: 30 / 1.0s</li>
+            <li>Range: 300</li>
+          </ul>
+          <p>Defensive structure protecting lanes. Destroyed towers count toward victory.</p>
+        </div>
+      </article>
+
       <article class="entry">
         <img src="./assets/Knight.png" alt="Knight card" />
         <div>
@@ -92,7 +118,7 @@
           <ul class="stats">
             <li>Elixir Cost: 2</li>
             <li>HP: 100</li>
-            <li>DMG: 20 / 1.0s</li>
+            <li>DMG: 25 / 1.0s</li>
             <li>Speed: 60 px/s</li>
             <li>Unit Count: 1</li>
           </ul>
@@ -249,6 +275,17 @@
     </div>
 
     <div class="card">
+      <h3>v0.2.2 - Persistence & Critical Fixes</h3>
+      <ul>
+        <li><strong>Persistent Storage:</strong> Coins and card levels now save automatically using localStorage</li>
+        <li><strong>Bug Fix:</strong> Archers now properly attack enemies after crossing the bridge</li>
+        <li><strong>Bug Fix:</strong> Melee units (especially Knights) now correctly damage King Towers</li>
+        <li><strong>Bug Fix:</strong> Bridge pathfinding improved - wider walkable area prevents unit glitching</li>
+        <li><strong>Bug Fix:</strong> Deck card images now display with proper aspect ratio</li>
+        <li><strong>Balance:</strong> King Tower damage nerfed to 50 / 1.5s (was 50 / 1.0s)</li>
+        <li><strong>Balance:</strong> Knight damage buffed to 25 / 1.0s (was 20 / 1.0s)</li>
+        <li><strong>Encyclopedia:</strong> Added King Tower and Crossbow Tower stats</li>
+      </ul>
       <h3>v0.2.1 - Card Upgrades & Bug Fixes</h3>
       <ul>
         <li><strong>Deck Tab:</strong> New Encyclopedia tab to view and upgrade all your cards</li>
@@ -295,6 +332,6 @@
   </section>
 
   <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.2.1"></script>
+  <script type="module" src="./src/main.js?v=0.2.2"></script>
 </body>
 </html>

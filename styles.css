@@ -35,7 +35,9 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4
 
 .ency { display: grid; gap: 16px; }
 .entry { display: grid; grid-template-columns: 140px 1fr; gap: 12px; background: var(--card); border: 1px solid #23325a; border-radius: 10px; padding: 10px; }
-.entry img { width: 100%; border-radius: 8px; }
+.entry img { width: 100%; height: auto; object-fit: cover; border-radius: 8px; }
+.entry-tower { grid-template-columns: 80px 1fr; }
+.tower-icon { font-size: 48px; display: flex; align-items: center; justify-content: center; }
 .stats { margin: 6px 0 10px; padding-left: 18px; }
 .rar { font-size: 12px; padding: 2px 8px; border-radius: 20px; border: 1px solid #3b4f7e; color: #b9ccff; }
 .rar-common { background: #162447; }
@@ -78,7 +80,7 @@ kbd { background: #20345d; border-radius: 4px; padding: 1px 5px; border: 1px sol
 
 .deck-cards { display: grid; gap: 16px; margin-top: 16px; }
 .deck-card { background: var(--card); border: 1px solid #23325a; border-radius: 10px; padding: 16px; display: grid; grid-template-columns: 100px 1fr auto; gap: 16px; align-items: center; }
-.deck-card img { width: 100px; height: 100px; border-radius: 8px; }
+.deck-card img { width: 100px; height: 100px; border-radius: 8px; object-fit: cover; }
 .deck-card-info { flex: 1; }
 .deck-card-info h4 { margin: 0 0 8px; font-size: 18px; }
 .deck-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 13px; color: var(--muted); }
