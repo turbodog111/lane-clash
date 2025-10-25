@@ -210,10 +210,10 @@ export function resetMatch(state){
     t.cd = 0;
   }
 
-  // Reset hand
-  state.deckOrder = shuffle([0,1,2]);
+  // Reset hand (4 cards now)
+  state.deckOrder = shuffle([0,1,2,3]);
   state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
-  state.ai.deckOrder = shuffle([0,1,2]);
+  state.ai.deckOrder = shuffle([0,1,2,3]);
   state.ai.hand = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
   state.ai.timer = 2.0;
 
@@ -338,22 +338,48 @@ function aiUpdate(state, dt){
 // ---------- Spawning & Updates ----------
 function spawnUnits(state, side, card, cx, cy, x, y){
   const laneIndex = laneForX(state, x);
-  const proj = projectToNearestPath(state, laneIndex, {x,y});
-  const px = proj.point?.x ?? x, py = proj.point?.y ?? y;
 
   // Apply level scaling to stats
   const scaledHp = getScaledStat(card.hp, card.level);
   const scaledDmg = getScaledStat(card.dmg, card.level);
 
+  // Find nearest enemy crossbow tower for pathfinding target
+  const enemySide = side === 'blue' ? 'red' : 'blue';
+  const enemyXbows = state.towers.filter(t => t.type === 'xbow' && t.side === enemySide && t.hp > 0);
+
+  let targetTower = null;
+  if (enemyXbows.length > 0) {
+    // Find nearest crossbow tower
+    let minDist = Infinity;
+    for (const tower of enemyXbows) {
+      const d = Math.hypot(tower.x - x, tower.y - y);
+      if (d < minDist) {
+        minDist = d;
+        targetTower = tower;
+      }
+    }
+  } else {
+    // Fallback to king tower if no crossbows
+    targetTower = kingOf(state, enemySide);
+  }
+
+  // Compute A* path to target tower
+  const startCell = cellFromWorld(state, x, y) || nearestWalkable(state, x, y);
+  const goalCell = targetTower ? (cellFromWorld(state, targetTower.x, targetTower.y) || nearestWalkable(state, targetTower.x, targetTower.y)) : null;
+
+  const computedPath = (startCell && goalCell) ? aStar(state, startCell, goalCell) : null;
+
   for (let i=0; i<card.count; i++){
     const off = (card.count>1 ? (i===0?-12:12) : 0);
     state.units.push({
-      side, x: px+off, y: py, cx, cy,
+      side, x: x+off, y: y, cx, cy,
       homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
       hp:scaledHp, maxHp:scaledHp, dmg:scaledDmg, atk:card.atk, cd:0, range:card.range,
       speed:card.speed, radius:card.radius, type:card.type, kind:card.id,
-      pathLane: laneIndex, pathWhich: proj.whichPath, pathDir: (side==='blue')?+1:-1,
-      pathI: proj.segIndex, onPath:true,
+      // New individual pathfinding
+      individualPath: computedPath ? [...computedPath] : null,
+      pathIndex: 0,
+      targetTower: targetTower,
     });
   }
 }
@@ -404,107 +430,89 @@ function unitUpdate(state, u, dt){
   if (u.hp<=0) return;
   const cfg = state.config;
 
-  // lane structure target (lane xbow → king if destroyed)
-  const foe = enemySide(u.side);
-  const laneX = cfg.lanesX[u.pathLane];
-  const laneXbow = aliveXbow(state,foe,laneX);
-  const structTarget = laneXbow || kingOf(state,foe);
-
-  // same-lane aggro candidate (no chasing; only affects attack selection)
-  // For ranged units, use weapon range; for melee use aggro radius
+  // Find enemies within aggro range (60px for melee, weapon range for ranged)
+  const aggroRange = (u.type === 'melee' ? 60 : u.range);
   let targetUnit = null;
   {
-    const detectionRange = (u.type === 'ranged' ? u.range : cfg.AGGRO_RADIUS);
     let best=null, bd=1e9;
     for (const e of enemyUnits(state,u.side)){
       if (e.hp<=0) continue;
-      // Ranged units can target across the whole field, melee only their half
-      if (u.type === 'melee') {
-        const sameHalf = (u.side==='blue' && e.y>cfg.riverY) || (u.side==='red' && e.y<cfg.riverY);
-        if (!sameHalf) continue;
-      }
-      if (!inSameLane(state,u,e.x)) continue;
       const d = dist(u,e);
-      if (d<bd && d<=detectionRange){ bd=d; best=e; }
+      if (d<bd && d<=aggroRange){ bd=d; best=e; }
     }
     targetUnit = best;
   }
 
-  // NEW: path-block enemy takes priority if present
-  const blockEnemy = findPathBlockEnemy(state, u);
-  if (blockEnemy) targetUnit = blockEnemy;
+  // Check if target tower still exists, otherwise find new one
+  const foe = enemySide(u.side);
+  if (!u.targetTower || u.targetTower.hp <= 0) {
+    const enemyXbows = state.towers.filter(t => t.type === 'xbow' && t.side === foe && t.hp > 0);
+    if (enemyXbows.length > 0) {
+      let minDist = Infinity;
+      for (const tower of enemyXbows) {
+        const d = Math.hypot(tower.x - u.x, tower.y - u.y);
+        if (d < minDist) {
+          minDist = d;
+          u.targetTower = tower;
+        }
+      }
+    } else {
+      u.targetTower = kingOf(state, foe);
+    }
 
-  // follow polyline; then approach structure but stop at standoff
-  const poly = state.paths[u.pathLane][u.pathWhich];
-  u.pathI = clamp(u.pathI, 0, poly.length-2);
-
-  const forward = (u.pathDir>0);
-  const iCurr = forward ? u.pathI     : u.pathI+1;
-  const iNext = forward ? u.pathI + 1 : u.pathI;
-  const A = poly[iCurr], B = poly[iNext];
+    // Recompute path to new target
+    const startCell = cellFromWorld(state, u.x, u.y) || nearestWalkable(state, u.x, u.y);
+    const goalCell = u.targetTower ? (cellFromWorld(state, u.targetTower.x, u.targetTower.y) || nearestWalkable(state, u.targetTower.x, u.targetTower.y)) : null;
+    u.individualPath = (startCell && goalCell) ? aStar(state, startCell, goalCell) : null;
+    u.pathIndex = 0;
+  }
 
   let vx=0, vy=0;
   const step = Math.max(0, u.speed*dt);
 
-  // If we have a path-block enemy, override movement to engage it and avoid passing through
-  if (blockEnemy){
-    const need = (u.type==='melee'
-      ? (u.radius + (blockEnemy.radius||12) + cfg.PATH_BLOCK_PAD)
-      : u.range); // ranged: stop at weapon range
-    const dx = blockEnemy.x - u.x, dy = blockEnemy.y - u.y, d = Math.hypot(dx,dy)||1;
+  // If we have an enemy in aggro range, stop and fight
+  if (targetUnit){
+    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
+    const dx = targetUnit.x - u.x, dy = targetUnit.y - u.y, d = Math.hypot(dx,dy)||1;
     const remain = d - need;
     if (remain > 0){
+      // Move toward enemy to engage
       const m = Math.min(step, remain);
-      vx += dx/d * m; vy += dy/d * m; // move just enough to reach standoff
-    } else {
-      // already at or inside standoff → hold position (don’t advance)
-      vx = 0; vy = 0;
+      vx += dx/d * m; vy += dy/d * m;
     }
+    // else: in range, hold position and fight
   } else {
-    // Normal movement
-    if (u.onPath){
-      // Check if ranged unit should hold position to shoot at target
-      const shouldHoldToShoot = (u.type === 'ranged' && targetUnit && dist(u, targetUnit) <= u.range);
+    // No enemy in aggro, follow individual path to tower
+    if (u.individualPath && u.pathIndex < u.individualPath.length) {
+      const waypoint = u.individualPath[u.pathIndex];
+      const dx = waypoint.x - u.x, dy = waypoint.y - u.y;
+      const d = Math.hypot(dx, dy);
 
-      if (!shouldHoldToShoot) {
-        // Forward movement along path
-        let dx = B.x-u.x, dy = B.y-u.y; let d = Math.hypot(dx,dy);
-        const EPS = cfg.GOAL_EPS;
-
-        if (d <= Math.max(EPS, step*1.25)){ u.x=B.x; u.y=B.y; u.pathI += (forward?1:-1); }
-        else if (d>0){ vx += dx/d*step; vy += dy/d*step; }
-      }
-
-      // gentle recenter to segment (always applies)
-      const q = nearestPointOnSegment({x:u.x,y:u.y}, A, B);
-      const px = q.x-u.x, py = q.y-u.y, L = Math.hypot(px,py)||1;
-      const attr = Math.min(cfg.PATH_ATTR*dt, L);
-      vx += (px/L)*attr; vy += (py/L)*attr;
-
-      // end-of-poly?
-      const endIdx = forward ? (poly.length-2) : 0;
-      const endPoint = forward ? poly[poly.length-1] : poly[0];
-      const closeToEnd = nearPoint(u, endPoint, cfg.GOAL_EPS+1.5);
-      if ((forward && u.pathI > endIdx) || (!forward && u.pathI < endIdx) || (u.pathI===endIdx && closeToEnd)){
-        u.onPath = false;
-      }
-    }
-
-    // off path → approach structure, but stop at standoff
-    if (!u.onPath && structTarget){
-      // Ranged units with a target in range should hold position instead of advancing
-      const shouldHoldToShoot = (u.type === 'ranged' && targetUnit && dist(u, targetUnit) <= u.range);
-
-      if (!shouldHoldToShoot) {
-        const need = (u.type==='melee'
-          ? (structTarget.r + u.radius + 2)
-          : Math.max(u.range - 2, 8));
-        const dx=structTarget.x-u.x, dy=structTarget.y-u.y, d=Math.hypot(dx,dy)||1;
-        const remain = d - need;
-        if (remain > 0){
-          const m = Math.min(step, remain);
-          vx += dx/d*m; vy += dy/d*m;
+      if (d <= cfg.GOAL_EPS || d <= step) {
+        // Reached waypoint, move to next
+        u.pathIndex++;
+        if (u.pathIndex < u.individualPath.length) {
+          const nextWp = u.individualPath[u.pathIndex];
+          const ndx = nextWp.x - u.x, ndy = nextWp.y - u.y;
+          const nd = Math.hypot(ndx, ndy);
+          if (nd > 0) {
+            vx += (ndx/nd) * step;
+            vy += (ndy/nd) * step;
+          }
         }
+      } else {
+        // Move toward current waypoint
+        vx += (dx/d) * step;
+        vy += (dy/d) * step;
+      }
+    } else if (u.targetTower) {
+      // Reached end of path or no path, move directly to tower
+      const need = (u.type==='melee' ? (u.targetTower.r + u.radius + 8) : u.range);
+      const dx=u.targetTower.x-u.x, dy=u.targetTower.y-u.y, d=Math.hypot(dx,dy)||1;
+      const remain = d - need;
+      if (remain > 0){
+        const m = Math.min(step, remain);
+        vx += dx/d*m; vy += dy/d*m;
       }
     }
   }
@@ -527,24 +535,16 @@ function unitUpdate(state, u, dt){
   // attack selection
   let victim = null;
 
-  // prefer unit if small-aggro or path-block target exists and is in weapon range
+  // Prefer enemy unit in range
   if (targetUnit){
-    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + cfg.PATH_BLOCK_PAD) : u.range);
+    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
     if (dist(u,targetUnit) <= need) victim = targetUnit;
   }
 
-  // else structure if in range
-  if (!victim && structTarget){
-    const need = (u.type==='melee' ? (structTarget.r + u.radius + 8) : u.range); // Increased from +2 to +8 for better attack range
-    if (dist(u,structTarget) <= need) victim = structTarget;
-  }
-
-  // fallback: nearest enemy in immediate range
-  if (!victim){
-    const meleeRange = (u.radius + 12 + 2);
-    const near = enemyUnits(state,u.side).filter(e => dist(u,e) <= (u.type==='melee'? meleeRange : u.range));
-    let best=null, bd=1e9; for (const e of near){ const dd=dist(u,e); if (dd<bd){ bd=dd; best=e; } }
-    if (best) victim = best;
+  // else target tower if in range
+  if (!victim && u.targetTower){
+    const need = (u.type==='melee' ? (u.targetTower.r + u.radius + 8) : u.range);
+    if (dist(u,u.targetTower) <= need) victim = u.targetTower;
   }
 
   // apply damage if we have a victim
@@ -553,6 +553,75 @@ function unitUpdate(state, u, dt){
     dealDamage(state, victim, u.dmg, u);
     u.cd = u.atk;
   }
+}
+
+// ---------- A* Pathfinding for Individual Units ----------
+function aStar(state, startCell, goalCell) {
+  const { nav } = state;
+  const { cols, rows, walk } = nav;
+
+  if (!startCell || !goalCell) return null;
+  if (!inBounds(state, startCell.cx, startCell.cy) || !inBounds(state, goalCell.cx, goalCell.cy)) return null;
+
+  const heuristic = (a, b) => Math.abs(a.cx - b.cx) + Math.abs(a.cy - b.cy);
+
+  const openSet = [startCell];
+  const cameFrom = new Map();
+  const gScore = new Map();
+  const fScore = new Map();
+
+  const key = (cell) => `${cell.cx},${cell.cy}`;
+
+  gScore.set(key(startCell), 0);
+  fScore.set(key(startCell), heuristic(startCell, goalCell));
+
+  const neighbors = (cell) => {
+    const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+    return dirs
+      .map(([dx, dy]) => ({ cx: cell.cx + dx, cy: cell.cy + dy }))
+      .filter(n => inBounds(state, n.cx, n.cy) && walk[n.cy][n.cx] === 1);
+  };
+
+  while (openSet.length > 0) {
+    // Find node with lowest fScore
+    let current = openSet[0];
+    let currentIdx = 0;
+    for (let i = 1; i < openSet.length; i++) {
+      if ((fScore.get(key(openSet[i])) || Infinity) < (fScore.get(key(current)) || Infinity)) {
+        current = openSet[i];
+        currentIdx = i;
+      }
+    }
+
+    if (current.cx === goalCell.cx && current.cy === goalCell.cy) {
+      // Reconstruct path
+      const path = [];
+      let curr = current;
+      while (cameFrom.has(key(curr))) {
+        path.unshift(cellCenter(state, curr.cx, curr.cy));
+        curr = cameFrom.get(key(curr));
+      }
+      return path;
+    }
+
+    openSet.splice(currentIdx, 1);
+
+    for (const neighbor of neighbors(current)) {
+      const tentativeGScore = (gScore.get(key(current)) || Infinity) + 1;
+
+      if (tentativeGScore < (gScore.get(key(neighbor)) || Infinity)) {
+        cameFrom.set(key(neighbor), current);
+        gScore.set(key(neighbor), tentativeGScore);
+        fScore.set(key(neighbor), tentativeGScore + heuristic(neighbor, goalCell));
+
+        if (!openSet.some(n => n.cx === neighbor.cx && n.cy === neighbor.cy)) {
+          openSet.push(neighbor);
+        }
+      }
+    }
+  }
+
+  return null; // No path found
 }
 
 // ---------- Paths & Placement Nav ----------
@@ -606,10 +675,11 @@ function buildNav(state){
   for (let cy=0; cy<rows; cy++){
     for (let cx=0; cx<cols; cx++){
       const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
-      // block river except near bridges (wider bridge area for better pathing)
+      // Make bridge areas fully walkable (solid ground) for smooth pathfinding
+      // Everything else in the river is blocked
       if (y>=top && y<=bot){
         const near = nearestLaneX(lanesX, x);
-        const half = bridgeW*0.6; // Increased from 0.45 for wider walkable bridge
+        const half = bridgeW; // Full bridge width is now walkable solid ground
         if (x < near-half || x > near+half){ walk[cy][cx]=0; continue; }
       }
     }
