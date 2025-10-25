@@ -13,6 +13,45 @@ const UPGRADE_COSTS = {
   rare: [200, 500, 1000, 2000, 5000]
 };
 
+// LocalStorage keys
+const STORAGE_KEYS = {
+  COINS: 'laneClash_coins',
+  CARD_LEVELS: 'laneClash_cardLevels'
+};
+
+// Save game data to localStorage
+export function saveGameData(state) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.COINS, state.coins.toString());
+    const levels = state.cards.map(card => card.level);
+    localStorage.setItem(STORAGE_KEYS.CARD_LEVELS, JSON.stringify(levels));
+  } catch (e) {
+    console.warn('Failed to save game data:', e);
+  }
+}
+
+// Load game data from localStorage
+export function loadGameData(state) {
+  try {
+    const savedCoins = localStorage.getItem(STORAGE_KEYS.COINS);
+    if (savedCoins !== null) {
+      state.coins = parseInt(savedCoins, 10) || 0;
+    }
+
+    const savedLevels = localStorage.getItem(STORAGE_KEYS.CARD_LEVELS);
+    if (savedLevels) {
+      const levels = JSON.parse(savedLevels);
+      levels.forEach((level, index) => {
+        if (state.cards[index]) {
+          state.cards[index].level = level;
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Failed to load game data:', e);
+  }
+}
+
 // Get upgrade cost for a card
 export function getUpgradeCost(card) {
   if (card.level >= 5) return null; // Max level
@@ -33,6 +72,7 @@ export function upgradeCard(state, cardIndex) {
 
   state.coins -= cost;
   card.level++;
+  saveGameData(state);
   return true;
 }
 
@@ -90,9 +130,9 @@ export function createGameState(canvas){
     matchCoins: 0, // Coins earned this match
     damageDealt: 0, // Total damage dealt by player
 
-    // Cards (Archers nerfed to 10 / 0.75)
+    // Cards (Knight buffed to 25 dmg)
     cards: [
-      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee', rarity:'common', level:0 },
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:25, atk:1.0,  range:22,  speed:60, radius:13, type:'melee', rarity:'common', level:0 },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged', rarity:'common', level:0 },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:45, radius:15, type:'melee', rarity:'common', level:0 },
     ],
@@ -113,9 +153,9 @@ export function createGameState(canvas){
   state.hand     = [ state.deckOrder[0], state.deckOrder[1] ];
   state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
-  // Towers (bigger radii)
-  const K = (side,x,y)=>({type:'king', side,x,y, r:34, hp:2000, maxHp:2000, rof:1.0, range:260, cd:0, awake:false});
-  const X = (side,x,y)=>({type:'xbow', side,x,y, r:22, hp:1000, maxHp:1000, rof:1.0, range:300, cd:0});
+  // Towers (bigger radii, King rof nerfed to 1.5s)
+  const K = (side,x,y)=>({type:'king', side,x,y, r:34, hp:2000, maxHp:2000, rof:1.5, range:260, cd:0, awake:false, dmg:50});
+  const X = (side,x,y)=>({type:'xbow', side,x,y, r:22, hp:1000, maxHp:1000, rof:1.0, range:300, cd:0, dmg:30});
 
   state.towers.push(
     K('blue', W/2, H-120),
@@ -137,6 +177,9 @@ export function createGameState(canvas){
     if (y < blueMin || y > H-40) return false;
     return state.nav.walk[cy][cx] === 1;
   };
+
+  // Load saved game data
+  loadGameData(state);
 
   return state;
 }
@@ -226,6 +269,7 @@ function endMatch(state) {
   // Calculate coins earned (0.1 coins per damage dealt by player)
   state.matchCoins = Math.round(state.damageDealt * 0.1);
   state.coins += state.matchCoins;
+  saveGameData(state);
   // Trigger UI update to show end game screen
   if (state.onTimerChange) state.onTimerChange();
 }
@@ -350,8 +394,7 @@ function towerAI(state, t, dt){
   for (const e of targets){ const d=dist(t,e); if (d<bd){ bd=d; best=e; } }
 
   if (best){
-    const dmg = (t.type==='king'?50:30);
-    spawnBolt(state, t, best, dmg, (t.type==='king'?340:380));
+    spawnBolt(state, t, best, t.dmg, (t.type==='king'?340:380));
     t.cd = t.rof;
   }
 }
@@ -370,12 +413,15 @@ function unitUpdate(state, u, dt){
   // For ranged units, use weapon range; for melee use aggro radius
   let targetUnit = null;
   {
-    const sameHalf = (e)=> ((u.side==='blue' && e.y>cfg.riverY) || (u.side==='red' && e.y<cfg.riverY));
     const detectionRange = (u.type === 'ranged' ? u.range : cfg.AGGRO_RADIUS);
     let best=null, bd=1e9;
     for (const e of enemyUnits(state,u.side)){
       if (e.hp<=0) continue;
-      if (!sameHalf(e)) continue;
+      // Ranged units can target across the whole field, melee only their half
+      if (u.type === 'melee') {
+        const sameHalf = (u.side==='blue' && e.y>cfg.riverY) || (u.side==='red' && e.y<cfg.riverY);
+        if (!sameHalf) continue;
+      }
       if (!inSameLane(state,u,e.x)) continue;
       const d = dist(u,e);
       if (d<bd && d<=detectionRange){ bd=d; best=e; }
@@ -488,7 +534,7 @@ function unitUpdate(state, u, dt){
 
   // else structure if in range
   if (!victim && structTarget){
-    const need = (u.type==='melee' ? (structTarget.r + u.radius + 2) : u.range);
+    const need = (u.type==='melee' ? (structTarget.r + u.radius + 8) : u.range); // Increased from +2 to +8 for better attack range
     if (dist(u,structTarget) <= need) victim = structTarget;
   }
 
@@ -559,10 +605,10 @@ function buildNav(state){
   for (let cy=0; cy<rows; cy++){
     for (let cx=0; cx<cols; cx++){
       const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
-      // block river except near bridges
+      // block river except near bridges (wider bridge area for better pathing)
       if (y>=top && y<=bot){
         const near = nearestLaneX(lanesX, x);
-        const half = bridgeW*0.45;
+        const half = bridgeW*0.6; // Increased from 0.45 for wider walkable bridge
         if (x < near-half || x > near+half){ walk[cy][cx]=0; continue; }
       }
     }
