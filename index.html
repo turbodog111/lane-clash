@@ -147,7 +147,7 @@
             <li>Elixir Cost: 2</li>
             <li>HP: 100</li>
             <li>DMG: 25 / 1.0s</li>
-            <li>Speed: 60 px/s</li>
+            <li>Speed: 30 px/s</li>
             <li>Unit Count: 1</li>
           </ul>
           <p>A brave melee fighter with steady stats and reliable defense.</p>
@@ -163,7 +163,7 @@
             <li>HP: 60</li>
             <li>DMG: 10 / 0.75s</li>
             <li>Range: 120</li>
-            <li>Speed: 90 px/s</li>
+            <li>Speed: 35 px/s</li>
             <li>Unit Count: 2</li>
           </ul>
           <p>Paired ranged attackers with precise volleys from a safe distance.</p>
@@ -178,7 +178,7 @@
             <li>Elixir Cost: 3</li>
             <li>HP: 300</li>
             <li>DMG: 80 / 1.5s</li>
-            <li>Speed: 45 px/s</li>
+            <li>Speed: 20 px/s</li>
             <li>Unit Count: 1</li>
           </ul>
           <p>A compact bot that trades speed for crushing punches.</p>
@@ -193,10 +193,25 @@
             <li>Elixir Cost: 5</li>
             <li>HP: 800</li>
             <li>DMG: 150 / 2.0s</li>
-            <li>Speed: 35 px/s</li>
+            <li>Speed: 15 px/s</li>
             <li>Unit Count: 1</li>
           </ul>
           <p>A massive war machine with devastating power. Slow but nearly unstoppable.</p>
+        </div>
+      </article>
+
+      <article class="entry">
+        <img src="./assets/Skeleton-Army.png" alt="Skeleton Army card" />
+        <div>
+          <h3>Skeleton Army <span class="rar rar-rare">RARE</span></h3>
+          <ul class="stats">
+            <li>Elixir Cost: 4</li>
+            <li>HP: 20 (per skeleton)</li>
+            <li>DMG: 25 / 1.0s (vs MEGA), 5 / 1.0s (vs others)</li>
+            <li>Speed: 30 px/s</li>
+            <li>Unit Count: 8</li>
+          </ul>
+          <p>A horde of skeletal warriors. Weak individually but overwhelms with numbers. Deals bonus damage to MEGA units.</p>
         </div>
       </article>
     </div>
@@ -284,7 +299,7 @@
 
         <div class="progression-tier">
           <h5>Rare Cards <span class="rar rar-rare">RARE</span></h5>
-          <p class="muted">MEGA (1 card)</p>
+          <p class="muted">MEGA, Skeleton Army (2 cards)</p>
           <table class="upgrade-table">
             <thead>
               <tr>
@@ -318,6 +333,16 @@
     </div>
 
     <div class="card">
+      <h3>v0.3.2 - Skeleton Army & Combat Visual Effects</h3>
+      <ul>
+        <li><strong>New Card:</strong> Skeleton Army (RARE) - 4 elixir, 8 units with 20 HP each</li>
+        <li><strong>Special Ability:</strong> Skeleton Army deals 25 DMG vs MEGA, 5 DMG vs all other units</li>
+        <li><strong>Visual Feedback:</strong> Archer attacks now spawn visible arrow projectiles</li>
+        <li><strong>Melee Pushback:</strong> Melee units push enemies back 3px on each hit for better combat feedback</li>
+        <li><strong>Balance:</strong> Towers cannot be pushed back by melee attacks</li>
+        <li><strong>Deck Expansion:</strong> 5 cards available (was 4)</li>
+        <li><strong>Encyclopedia:</strong> All unit speeds updated to current values</li>
+      </ul>
       <h3>v0.3.1 - Bug Fixes & Balance Updates</h3>
       <ul>
         <li><strong>Bug Fix:</strong> Units no longer walk on water - bridge pathfinding properly restricted to bridge width</li>
@@ -400,6 +425,6 @@
   </section>
 
   <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.3.1"></script>
+  <script type="module" src="./src/main.js?v=0.3.2"></script>
 </body>
 </html>

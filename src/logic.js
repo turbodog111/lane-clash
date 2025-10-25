@@ -136,12 +136,13 @@ export function createGameState(canvas){
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:35, radius:10, type:'ranged', rarity:'common', level:0 },
       { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:20, radius:15, type:'melee', rarity:'common', level:0 },
       { id:'mega',     name:'MEGA',      cost:5, img:'assets/MEGA.png',      count:1, hp:800, dmg:150, atk:2.0, range:30,  speed:15, radius:18, type:'melee', rarity:'rare', level:0 },
+      { id:'skeletonarmy', name:'Skeleton Army', cost:4, img:'assets/Skeleton-Army.png', count:8, hp:20, dmg:25, atk:1.0, range:22, speed:30, radius:8, type:'melee', rarity:'rare', level:0 },
     ],
-    deckOrder: shuffle([0,1,2,3]),
+    deckOrder: shuffle([0,1,2,3,4]),
     hand: [],
     selectedHandSlot: null,
 
-    ai: { enabled:true, timer:2.0, minInterval:2.2, maxInterval:4.0, deckOrder: shuffle([0,1,2,3]), hand: [] },
+    ai: { enabled:true, timer:2.0, minInterval:2.2, maxInterval:4.0, deckOrder: shuffle([0,1,2,3,4]), hand: [] },
 
     nav:null, showPlacementOverlay:false,
     paths: null, // 3 polylines per lane
@@ -224,10 +225,10 @@ export function resetMatch(state){
     t.cd = 0;
   }
 
-  // Reset hand (4 cards now)
-  state.deckOrder = shuffle([0,1,2,3]);
+  // Reset hand (5 cards now)
+  state.deckOrder = shuffle([0,1,2,3,4]);
   state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
-  state.ai.deckOrder = shuffle([0,1,2,3]);
+  state.ai.deckOrder = shuffle([0,1,2,3,4]);
   state.ai.hand = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
   state.ai.timer = 2.0;
 
@@ -564,8 +565,32 @@ function unitUpdate(state, u, dt){
   // apply damage if we have a victim
   u.cd -= dt;
   if (victim && u.cd<=0){
-    dealDamage(state, victim, u.dmg, u);
+    // Calculate damage (Skeleton Army does 25 vs MEGA, 5 vs others)
+    let damage = u.dmg;
+    if (u.kind === 'skeletonarmy' && victim.kind) {
+      damage = (victim.kind === 'mega') ? 25 : 5;
+    }
+
+    dealDamage(state, victim, damage, u);
     u.cd = u.atk;
+
+    // Melee pushback: push victim back slightly (not towers)
+    if (u.type === 'melee' && !victim.type) { // victim.type exists means it's a tower
+      const pushDist = 3;
+      const dx = victim.x - u.x;
+      const dy = victim.y - u.y;
+      const d = Math.hypot(dx, dy) || 1;
+      victim.x += (dx / d) * pushDist;
+      victim.y += (dy / d) * pushDist;
+      // Keep victim in bounds
+      victim.x = clamp(victim.x, cfg.WORLD_PAD, cfg.W - cfg.WORLD_PAD);
+      victim.y = clamp(victim.y, cfg.WORLD_PAD, cfg.H - cfg.WORLD_PAD);
+    }
+
+    // Ranged units: spawn visual projectile
+    if (u.type === 'ranged') {
+      spawnArrowProjectile(state, u, victim);
+    }
   }
 }
 
@@ -718,6 +743,11 @@ function spawnBolt(state, from, target, dmg, spd){
   const ang=Math.atan2(target.y-from.y, target.x-from.x);
   state.projectiles.push({x:from.x,y:from.y,vx:Math.cos(ang),vy:Math.sin(ang),spd:spd||360,dmg,target,source:from});
 }
+function spawnArrowProjectile(state, from, target){
+  // Visual-only projectile for ranged units (damage already applied)
+  const ang=Math.atan2(target.y-from.y, target.x-from.x);
+  state.projectiles.push({x:from.x,y:from.y,vx:Math.cos(ang),vy:Math.sin(ang),spd:200,dmg:0,target,source:from,visual:true});
+}
 function updateProjectiles(state, dt){
   const P=state.projectiles;
   for (const p of P){
@@ -725,7 +755,11 @@ function updateProjectiles(state, dt){
     const dx=t.x-p.x, dy=t.y-p.y, L=Math.hypot(dx,dy)||1; p.vx=dx/L; p.vy=dy/L;
     p.x += p.vx*p.spd*dt; p.y += p.vy*p.spd*dt;
     const tr=(t.r||t.radius||12)+6;
-    if (Math.hypot(t.x-p.x, t.y-p.y) <= tr){ dealDamage(state, t, p.dmg, p.source); p.dead=true; }
+    if (Math.hypot(t.x-p.x, t.y-p.y) <= tr){
+      // Only deal damage if not visual-only projectile
+      if (!p.visual) dealDamage(state, t, p.dmg, p.source);
+      p.dead=true;
+    }
   }
   for (let i=P.length-1;i>=0;i--) if (P[i].dead) P.splice(i,1);
 }
