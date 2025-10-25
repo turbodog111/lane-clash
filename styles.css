@@ -39,5 +39,23 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4
 .stats { margin: 6px 0 10px; padding-left: 18px; }
 .rar { font-size: 12px; padding: 2px 8px; border-radius: 20px; border: 1px solid #3b4f7e; color: #b9ccff; }
 .rar-common { background: #162447; }
+.rar-rare { background: #2a1f47; border-color: #4f3f7e; color: #d4c4ff; }
+
+.ency-tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid #23325a; }
+.ency-tab { background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent; padding: 10px 18px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+.ency-tab:hover { color: var(--ink); background: rgba(96, 165, 250, 0.05); }
+.ency-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.progression-tier { margin: 20px 0; }
+.progression-tier h5 { margin: 10px 0 4px; font-size: 16px; }
+.upgrade-table { width: 100%; max-width: 400px; border-collapse: collapse; margin: 10px 0; }
+.upgrade-table th, .upgrade-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #23325a; }
+.upgrade-table th { color: var(--accent); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; }
+.upgrade-table tbody tr:hover { background: rgba(96, 165, 250, 0.05); }
+.upgrade-table .total-row { border-top: 2px solid var(--accent); }
+.upgrade-table .total-row td { padding-top: 12px; color: var(--accent); }
 
 kbd { background: #20345d; border-radius: 4px; padding: 1px 5px; border: 1px solid #2f4679; }
