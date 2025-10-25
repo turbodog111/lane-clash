@@ -306,13 +306,19 @@ function unitUpdate(state, u, dt){
   } else {
     // Normal movement
     if (u.onPath){
-      let dx = B.x-u.x, dy = B.y-u.y; let d = Math.hypot(dx,dy);
-      const EPS = cfg.GOAL_EPS;
+      // Check if ranged unit should hold position to shoot at target
+      const shouldHoldToShoot = (u.type === 'ranged' && targetUnit && dist(u, targetUnit) <= u.range);
 
-      if (d <= Math.max(EPS, step*1.25)){ u.x=B.x; u.y=B.y; u.pathI += (forward?1:-1); }
-      else if (d>0){ vx += dx/d*step; vy += dy/d*step; }
+      if (!shouldHoldToShoot) {
+        // Forward movement along path
+        let dx = B.x-u.x, dy = B.y-u.y; let d = Math.hypot(dx,dy);
+        const EPS = cfg.GOAL_EPS;
 
-      // gentle recenter to segment
+        if (d <= Math.max(EPS, step*1.25)){ u.x=B.x; u.y=B.y; u.pathI += (forward?1:-1); }
+        else if (d>0){ vx += dx/d*step; vy += dy/d*step; }
+      }
+
+      // gentle recenter to segment (always applies)
       const q = nearestPointOnSegment({x:u.x,y:u.y}, A, B);
       const px = q.x-u.x, py = q.y-u.y, L = Math.hypot(px,py)||1;
       const attr = Math.min(cfg.PATH_ATTR*dt, L);
@@ -329,14 +335,19 @@ function unitUpdate(state, u, dt){
 
     // off path → approach structure, but stop at standoff
     if (!u.onPath && structTarget){
-      const need = (u.type==='melee'
-        ? (structTarget.r + u.radius + 2)
-        : Math.max(u.range - 2, 8));
-      const dx=structTarget.x-u.x, dy=structTarget.y-u.y, d=Math.hypot(dx,dy)||1;
-      const remain = d - need;
-      if (remain > 0){
-        const m = Math.min(step, remain);
-        vx += dx/d*m; vy += dy/d*m;
+      // Ranged units with a target in range should hold position instead of advancing
+      const shouldHoldToShoot = (u.type === 'ranged' && targetUnit && dist(u, targetUnit) <= u.range);
+
+      if (!shouldHoldToShoot) {
+        const need = (u.type==='melee'
+          ? (structTarget.r + u.radius + 2)
+          : Math.max(u.range - 2, 8));
+        const dx=structTarget.x-u.x, dy=structTarget.y-u.y, d=Math.hypot(dx,dy)||1;
+        const remain = d - need;
+        if (remain > 0){
+          const m = Math.min(step, remain);
+          vx += dx/d*m; vy += dy/d*m;
+        }
       }
     }
   }
