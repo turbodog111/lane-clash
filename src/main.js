@@ -1,8 +1,8 @@
  // src/main.js
 // Single module: diagnostics + UI + drawing + loop
-import { createGameState, update, tryDeployAt, resetMatch } from './logic.js';
+import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -208,21 +208,95 @@ async function start(){
   backL   && backL.addEventListener('click', showMenu);
 
   // encyclopedia tabs
-  const tabCards = $('tabCards'), tabProgression = $('tabProgression');
-  const tabContentCards = $('tabContentCards'), tabContentProgression = $('tabContentProgression');
+  const tabCards = $('tabCards'), tabDeck = $('tabDeck'), tabProgression = $('tabProgression');
+  const tabContentCards = $('tabContentCards'), tabContentDeck = $('tabContentDeck'), tabContentProgression = $('tabContentProgression');
 
   const switchTab = (activeTab, activeContent) => {
     // Remove active class from all tabs
-    [tabCards, tabProgression].forEach(tab => tab && tab.classList.remove('active'));
+    [tabCards, tabDeck, tabProgression].forEach(tab => tab && tab.classList.remove('active'));
     // Hide all tab contents
-    [tabContentCards, tabContentProgression].forEach(content => content && (content.style.display = 'none'));
+    [tabContentCards, tabContentDeck, tabContentProgression].forEach(content => content && (content.style.display = 'none'));
     // Activate selected tab and content
     if (activeTab) activeTab.classList.add('active');
     if (activeContent) activeContent.style.display = 'block';
   };
 
   tabCards && tabCards.addEventListener('click', () => switchTab(tabCards, tabContentCards));
+  tabDeck && tabDeck.addEventListener('click', () => { switchTab(tabDeck, tabContentDeck); renderDeck(); });
   tabProgression && tabProgression.addEventListener('click', () => switchTab(tabProgression, tabContentProgression));
+
+  // Deck rendering
+  const deckCardsContainer = $('deckCards');
+  const deckTotalCoinsEl = $('deckTotalCoins');
+
+  const renderDeck = () => {
+    if (!deckCardsContainer) return;
+
+    // Update coins display
+    if (deckTotalCoinsEl) deckTotalCoinsEl.textContent = state.coins.toLocaleString();
+
+    // Clear and rebuild deck
+    deckCardsContainer.innerHTML = '';
+
+    state.cards.forEach((card, index) => {
+      const scaledHp = getScaledStat(card.hp, card.level);
+      const scaledDmg = getScaledStat(card.dmg, card.level);
+      const upgradeCost = getUpgradeCost(card);
+      const isMaxLevel = card.level >= 5;
+      const canAfford = upgradeCost && state.coins >= upgradeCost;
+
+      const cardEl = document.createElement('div');
+      cardEl.className = 'deck-card';
+      cardEl.innerHTML = `
+        <img src="${card.img}" alt="${card.name}" />
+        <div class="deck-card-info">
+          <h4>${card.name} <span class="rar rar-${card.rarity}">${card.rarity.toUpperCase()}</span></h4>
+          <div class="deck-card-stats">
+            <div class="deck-card-stat">
+              <span class="deck-card-stat-label">HP:</span>
+              <span class="deck-card-stat-value">${scaledHp}</span>
+            </div>
+            <div class="deck-card-stat">
+              <span class="deck-card-stat-label">Damage:</span>
+              <span class="deck-card-stat-value">${scaledDmg}</span>
+            </div>
+            <div class="deck-card-stat">
+              <span class="deck-card-stat-label">Cost:</span>
+              <span class="deck-card-stat-value">${card.cost} Elixir</span>
+            </div>
+            <div class="deck-card-stat">
+              <span class="deck-card-stat-label">Type:</span>
+              <span class="deck-card-stat-value">${card.type}</span>
+            </div>
+          </div>
+        </div>
+        <div class="deck-card-level">
+          <div class="deck-card-level-display">Level ${card.level}</div>
+          <div class="deck-card-upgrade-cost">
+            ${isMaxLevel ? 'MAX LEVEL' : `Cost: ${upgradeCost?.toLocaleString() || 0} coins`}
+          </div>
+          <button class="btn ${canAfford ? 'primary' : ''}"
+                  id="upgradeBtn${index}"
+                  ${isMaxLevel || !canAfford ? 'disabled' : ''}>
+            ${isMaxLevel ? 'Max Level' : 'Upgrade'}
+          </button>
+        </div>
+      `;
+
+      deckCardsContainer.appendChild(cardEl);
+
+      // Add upgrade button handler
+      const upgradeBtn = $(`upgradeBtn${index}`);
+      if (upgradeBtn && !isMaxLevel) {
+        upgradeBtn.addEventListener('click', () => {
+          if (upgradeCard(state, index)) {
+            updateCoinsDisplay();
+            renderDeck();
+          }
+        });
+      }
+    });
+  };
 
   // canvas size
   function resize(){
