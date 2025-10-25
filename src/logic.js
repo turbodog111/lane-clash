@@ -130,11 +130,11 @@ export function createGameState(canvas){
     matchCoins: 0, // Coins earned this match
     damageDealt: 0, // Total damage dealt by player
 
-    // Cards (Speeds adjusted for balanced gameplay)
+    // Cards (Balanced stats)
     cards: [
-      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:25, atk:1.0,  range:22,  speed:30, radius:13, type:'melee', rarity:'common', level:0 },
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:200, dmg:25, atk:1.0,  range:22,  speed:30, radius:13, type:'melee', rarity:'common', level:0 },
       { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:35, radius:10, type:'ranged', rarity:'common', level:0 },
-      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:20, radius:15, type:'melee', rarity:'common', level:0 },
+      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:250, dmg:100, atk:1.5,  range:26,  speed:20, radius:15, type:'melee', rarity:'common', level:0 },
       { id:'mega',     name:'MEGA',      cost:5, img:'assets/MEGA.png',      count:1, hp:800, dmg:150, atk:2.0, range:30,  speed:15, radius:18, type:'melee', rarity:'rare', level:0 },
       { id:'skeletonarmy', name:'Skeleton Army', cost:4, img:'assets/Skeleton-Army.png', count:8, hp:20, dmg:25, atk:1.0, range:22, speed:30, radius:8, type:'melee', rarity:'rare', level:0 },
     ],
@@ -487,7 +487,7 @@ function unitUpdate(state, u, dt){
 
   // If we have an enemy in aggro range, stop and fight
   if (targetUnit){
-    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
+    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 8) : u.range);
     const dx = targetUnit.x - u.x, dy = targetUnit.y - u.y, d = Math.hypot(dx,dy)||1;
     const remain = d - need;
     if (remain > 0){
@@ -552,7 +552,7 @@ function unitUpdate(state, u, dt){
 
   // Prefer enemy unit in range
   if (targetUnit){
-    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 2) : u.range);
+    const need = (u.type==='melee' ? (u.radius + (targetUnit.radius||12) + 8) : u.range);
     if (dist(u,targetUnit) <= need) victim = targetUnit;
   }
 
