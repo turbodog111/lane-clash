@@ -51,7 +51,14 @@
       <button id="btnBackFromEnc" class="btn small">Back</button>
     </div>
 
-    <div class="ency">
+    <!-- Encyclopedia Tabs -->
+    <div class="ency-tabs">
+      <button id="tabCards" class="ency-tab active">Cards</button>
+      <button id="tabProgression" class="ency-tab">Progression</button>
+    </div>
+
+    <!-- Cards Tab Content -->
+    <div id="tabContentCards" class="ency tab-content" style="display:block">
       <article class="entry">
         <img src="./assets/Knight.png" alt="Knight card" />
         <div>
@@ -97,6 +104,69 @@
           <p>A compact bot that trades speed for crushing punches.</p>
         </div>
       </article>
+    </div>
+
+    <!-- Progression Tab Content -->
+    <div id="tabContentProgression" class="tab-content" style="display:none">
+      <div class="card">
+        <h3>Card Progression System</h3>
+        <p>Upgrade your cards to increase their effectiveness in battle. Each card can be upgraded from Level 0 to Level 5.</p>
+
+        <h4>Earning Coins</h4>
+        <p>Coins are earned during battle based on damage dealt:</p>
+        <ul class="stats">
+          <li><strong>Earn Rate:</strong> 0.1 coins per 1 damage dealt</li>
+          <li><strong>Example:</strong> Dealing 100 damage = 10 coins earned</li>
+        </ul>
+
+        <h4>Upgrade Costs</h4>
+
+        <div class="progression-tier">
+          <h5>Common Cards <span class="rar rar-common">COMMON</span></h5>
+          <p class="muted">Knight, Archers, Mini-MEGA</p>
+          <table class="upgrade-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>0 → 1</td><td>100 Coins</td></tr>
+              <tr><td>1 → 2</td><td>250 Coins</td></tr>
+              <tr><td>2 → 3</td><td>500 Coins</td></tr>
+              <tr><td>3 → 4</td><td>1,000 Coins</td></tr>
+              <tr><td>4 → 5</td><td>2,500 Coins</td></tr>
+              <tr class="total-row"><td><strong>Total</strong></td><td><strong>4,350 Coins</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="progression-tier">
+          <h5>Rare Cards <span class="rar rar-rare">RARE</span></h5>
+          <p class="muted">Future rare cards</p>
+          <table class="upgrade-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>0 → 1</td><td>200 Coins</td></tr>
+              <tr><td>1 → 2</td><td>500 Coins</td></tr>
+              <tr><td>2 → 3</td><td>1,000 Coins</td></tr>
+              <tr><td>3 → 4</td><td>2,000 Coins</td></tr>
+              <tr><td>4 → 5</td><td>5,000 Coins</td></tr>
+              <tr class="total-row"><td><strong>Total</strong></td><td><strong>8,700 Coins</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="hint" style="margin-top: 20px;">
+          <strong>Note:</strong> Upgrade functionality will be implemented in a future update. This information is provided for reference.
+        </p>
+      </div>
     </div>
   </section>
 

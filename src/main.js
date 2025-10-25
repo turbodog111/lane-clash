@@ -39,10 +39,12 @@ function initDiag() {
     const keyHandler = (e) => {
       const k = (e.key || '').toLowerCase();
       if (k === 'd' || e.code === 'KeyD') {
+        e.preventDefault(); // Prevent default behavior
+        e.stopPropagation(); // Stop event from bubbling
         box.style.display = (box.style.display === 'none') ? 'block' : 'none';
       }
     };
-    window.addEventListener('keydown', keyHandler, { capture:true });
+    // Only add one event listener to avoid double-triggering
     document.addEventListener('keydown', keyHandler, { capture:true });
   }
   const rows = document.getElementById('lc-diag-rows');
@@ -186,6 +188,23 @@ async function start(){
   backP   && backP.addEventListener('click', showMenu);
   backE   && backE.addEventListener('click', showMenu);
   backL   && backL.addEventListener('click', showMenu);
+
+  // encyclopedia tabs
+  const tabCards = $('tabCards'), tabProgression = $('tabProgression');
+  const tabContentCards = $('tabContentCards'), tabContentProgression = $('tabContentProgression');
+
+  const switchTab = (activeTab, activeContent) => {
+    // Remove active class from all tabs
+    [tabCards, tabProgression].forEach(tab => tab && tab.classList.remove('active'));
+    // Hide all tab contents
+    [tabContentCards, tabContentProgression].forEach(content => content && (content.style.display = 'none'));
+    // Activate selected tab and content
+    if (activeTab) activeTab.classList.add('active');
+    if (activeContent) activeContent.style.display = 'block';
+  };
+
+  tabCards && tabCards.addEventListener('click', () => switchTab(tabCards, tabContentCards));
+  tabProgression && tabProgression.addEventListener('click', () => switchTab(tabProgression, tabContentProgression));
 
   // canvas size
   function resize(){
