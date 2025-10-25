@@ -156,8 +156,8 @@ export function createGameState(canvas){
   state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
 
   // Towers (bigger radii, King rof nerfed to 1.5s)
-  const K = (side,x,y)=>({type:'king', side,x,y, r:34, hp:2000, maxHp:2000, rof:1.5, range:260, cd:0, awake:false, dmg:50});
-  const X = (side,x,y)=>({type:'xbow', side,x,y, r:22, hp:1000, maxHp:1000, rof:1.0, range:300, cd:0, dmg:30});
+  const K = (side,x,y)=>({type:'king', side,x,y, r:34, hp:2000, maxHp:2000, rof:1.5, range:260, cd:0, awake:false, dmg:50, recentDamage:0, flashAlpha:0, damageTimer:0});
+  const X = (side,x,y)=>({type:'xbow', side,x,y, r:22, hp:1000, maxHp:1000, rof:1.0, range:300, cd:0, dmg:30, recentDamage:0, flashAlpha:0, damageTimer:0});
 
   state.towers.push(
     K('blue', W/2, H-120),
@@ -223,6 +223,9 @@ export function resetMatch(state){
     t.hp = t.maxHp;
     if (t.type === 'king') t.awake = false;
     t.cd = 0;
+    t.recentDamage = 0;
+    t.flashAlpha = 0;
+    t.damageTimer = 0;
   }
 
   // Reset hand (5 cards now)
@@ -260,6 +263,32 @@ export function update(state, dt){
   for (const u of state.units)  unitUpdate(state, u, dt);
   for (let i=state.units.length-1;i>=0;i--) if (state.units[i].hp<=0) state.units.splice(i,1);
 
+  // Update damage flash and timer for towers
+  for (const t of state.towers) {
+    if (t.flashAlpha > 0) {
+      t.flashAlpha = Math.max(0, t.flashAlpha - 2.5 * dt);
+    }
+    if (t.damageTimer > 0) {
+      t.damageTimer -= dt;
+      if (t.damageTimer <= 0) {
+        t.recentDamage = 0;
+      }
+    }
+  }
+
+  // Update damage flash and timer for units
+  for (const u of state.units) {
+    if (u.flashAlpha > 0) {
+      u.flashAlpha = Math.max(0, u.flashAlpha - 2.5 * dt);
+    }
+    if (u.damageTimer > 0) {
+      u.damageTimer -= dt;
+      if (u.damageTimer <= 0) {
+        u.recentDamage = 0;
+      }
+    }
+  }
+
   updateProjectiles(state, dt);
   updateFX(state, dt);
 
@@ -282,8 +311,8 @@ export function update(state, dt){
 }
 
 function endMatch(state) {
-  // Calculate coins earned (0.1 coins per damage dealt by player)
-  state.matchCoins = Math.round(state.damageDealt * 0.1);
+  // Calculate coins earned (0.05 coins per damage dealt by player)
+  state.matchCoins = Math.round(state.damageDealt * 0.05);
   state.coins += state.matchCoins;
   saveGameData(state);
   // Trigger UI update to show end game screen
@@ -386,6 +415,8 @@ function spawnUnits(state, side, card, cx, cy, x, y){
 
   for (let i=0; i<card.count; i++){
     const off = (card.count>1 ? (i===0?-12:12) : 0);
+    // AI always gets level 0 cards, player uses card level
+    const unitLevel = (side === 'red') ? 0 : card.level;
     state.units.push({
       side, x: x+off, y: y, cx, cy,
       homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
@@ -395,6 +426,11 @@ function spawnUnits(state, side, card, cx, cy, x, y){
       individualPath: computedPath ? [...computedPath] : null,
       pathIndex: 0,
       targetTower: targetTower,
+      // Damage flash and level tracking
+      level: unitLevel,
+      recentDamage: 0,
+      flashAlpha: 0,
+      damageTimer: 0,
     });
   }
 }
@@ -711,15 +747,26 @@ function buildNav(state){
 
   const top=riverY-riverH/2, bot=riverY+riverH/2;
 
+  // First, mark ALL river cells as non-walkable (water)
   for (let cy=0; cy<rows; cy++){
     for (let cx=0; cx<cols; cx++){
       const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
-      // Make bridge areas walkable (solid ground) for smooth pathfinding
-      // Everything else in the river is blocked (water)
+      if (y>=top && y<=bot){
+        walk[cy][cx]=0; // Block all river cells initially
+      }
+    }
+  }
+
+  // Then, mark ONLY bridge areas as walkable
+  for (let cy=0; cy<rows; cy++){
+    for (let cx=0; cx<cols; cx++){
+      const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
       if (y>=top && y<=bot){
         const near = nearestLaneX(lanesX, x);
         const half = bridgeW/2; // Half of bridge width on each side of lane center
-        if (x < near-half || x > near+half){ walk[cy][cx]=0; continue; }
+        if (x >= near-half && x <= near+half){
+          walk[cy][cx]=1; // Make bridge walkable
+        }
       }
     }
   }
@@ -769,6 +816,11 @@ function dealDamage(state,target,amount,attacker){
   target.hp -= amount;
   state.floatDMG.push({x:target.x, y:target.y-20, a:1, vY:-18, txt:`${amount|0}`});
   if (target.type==='king' && !target.awake) target.awake=true;
+
+  // Set flash effect and damage display
+  target.flashAlpha = 0.8;
+  target.recentDamage = amount;
+  target.damageTimer = 1.5; // Show damage for 1.5 seconds
 
   // Track damage dealt by player (blue side)
   if (attacker && attacker.side === 'blue') {

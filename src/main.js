@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.3.3';
+const VERSION = '0.3.4';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -76,10 +76,37 @@ function roundRect(ctx,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); ctx.beginPath()
   ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr);
   ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
 }
-function drawHP(ctx,x,y,hp,maxHp){
+function drawHP(ctx,x,y,hp,maxHp,level,recentDamage,flashAlpha,side){
   const w=90,h=6,pct=clamp(hp/maxHp,0,1);
+
+  // Draw flash effect if flashAlpha > 0 (blue for blue side, red for red side)
+  if (flashAlpha && flashAlpha > 0) {
+    ctx.globalAlpha = flashAlpha;
+    ctx.fillStyle = side === 'blue' ? '#6fb0ff' : '#ff8f8f';
+    ctx.fillRect(x - w/2 - 2, y - 2, w + 4, h + 4);
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw HP text with recent damage
   ctx.fillStyle='#b8d0ff'; ctx.font='12px ui-monospace, Consolas, monospace';
-  ctx.textAlign='center'; ctx.fillText(`${Math.max(0,hp|0)}`, x, y-5);
+  ctx.textAlign='center';
+  const hpText = `${Math.max(0,hp|0)}`;
+  const damageText = recentDamage ? ` -${recentDamage|0}` : '';
+  ctx.fillText(hpText, x - 15, y-5);
+
+  // Draw recent damage in red
+  if (recentDamage) {
+    ctx.fillStyle='#ff6666';
+    ctx.fillText(damageText, x + 15, y-5);
+  }
+
+  // Draw level number to the right
+  if (level !== undefined && level > 0) {
+    ctx.fillStyle='#ffd270';
+    ctx.font='bold 10px ui-monospace, Consolas, monospace';
+    ctx.fillText(`Lv${level}`, x + w/2 + 15, y + 4);
+  }
+
   roundRect(ctx, x-w/2, y, w, h, 3); ctx.fillStyle='#0a122a'; ctx.fill();
   roundRect(ctx, x-w/2, y, w*pct, h, 3); ctx.fillStyle='#3ad07a'; ctx.fill();
 }
@@ -140,7 +167,7 @@ function draw(state){
   for (const t of state.towers){
     ctx.fillStyle = t.side==='blue' ? '#6fb0ff' : '#ff8f8f';
     roundRect(ctx, t.x - t.r, t.y - t.r, t.r*2, t.r*2, 8); ctx.fill();
-    drawHP(ctx, t.x, t.y - (t.r + 22), t.hp, t.maxHp);
+    drawHP(ctx, t.x, t.y - (t.r + 22), t.hp, t.maxHp, 0, t.recentDamage, t.flashAlpha, t.side);
   }
 
   // projectiles
@@ -170,8 +197,8 @@ function draw(state){
       ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
     }
 
-    // Draw HP bar above unit
-    drawHP(ctx, u.x, u.y - (u.radius * 1.8), u.hp, u.maxHp);
+    // Draw HP bar above unit with level and damage info
+    drawHP(ctx, u.x, u.y - (u.radius * 1.8), u.hp, u.maxHp, u.level, u.recentDamage, u.flashAlpha, u.side);
   }
 
   // damage text
