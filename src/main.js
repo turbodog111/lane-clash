@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -71,7 +71,7 @@ const hide = (el)=>{ if(el) el.style.display='none'; };
 
 // ---------- Canvas drawing helpers ----------
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-const labelFor = (u)=>u.kind==='knight'?'K':u.kind==='archers'?'Ar':u.kind==='mega'?'MG':'MM';
+const labelFor = (u)=>u.kind==='knight'?'K':u.kind==='archers'?'Ar':u.kind==='mega'?'MG':u.kind==='skeletonarmy'?'SA':'MM';
 function roundRect(ctx,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); ctx.beginPath();
   ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr);
   ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
