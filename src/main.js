@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.2.3';
+const VERSION = '0.3.0';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -71,7 +71,7 @@ const hide = (el)=>{ if(el) el.style.display='none'; };
 
 // ---------- Canvas drawing helpers ----------
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-const labelFor = (u)=>u.kind==='knight'?'K':u.kind==='archers'?'Ar':'MM';
+const labelFor = (u)=>u.kind==='knight'?'K':u.kind==='archers'?'Ar':u.kind==='mega'?'MG':'MM';
 function roundRect(ctx,x,y,w,h,r){ const rr=Math.min(r,w/2,h/2); ctx.beginPath();
   ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr);
   ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
@@ -151,6 +151,9 @@ function draw(state){
   // units
   for (const u of state.units){
     const isBlue = u.side==='blue';
+    const card = state.cards.find(c => c.id === u.kind);
+
+    // Draw unit circle
     ctx.fillStyle = isBlue ? '#6fb0ff' : '#ff8f8f';
     ctx.beginPath(); ctx.arc(u.x,u.y,u.radius,0,Math.PI*2); ctx.fill();
     ctx.lineWidth=3; ctx.strokeStyle = isBlue?'rgba(120,200,255,0.9)':'rgba(255,140,140,0.9)';
@@ -158,6 +161,28 @@ function draw(state){
     ctx.fillStyle='#fff'; ctx.font='bold 12px ui-monospace, Consolas, monospace';
     ctx.textAlign='center'; ctx.fillText(labelFor(u), u.x, u.y+4);
     drawHP(ctx, u.x, u.y - (u.radius + 18), u.hp, u.maxHp);
+
+    // Draw unit card next to unit (only if card found and image exists)
+    if (card && card.img) {
+      const cardX = u.x + u.radius + 25;
+      const cardY = u.y - 20;
+      const cardW = 40;
+      const cardH = 50;
+
+      // Card background
+      ctx.fillStyle = 'rgba(26, 39, 72, 0.95)';
+      ctx.strokeStyle = isBlue ? '#6fb0ff' : '#ff8f8f';
+      ctx.lineWidth = 2;
+      roundRect(ctx, cardX, cardY, cardW, cardH, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Card name at bottom
+      ctx.fillStyle = '#b8d0ff';
+      ctx.font = '9px ui-monospace, Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(card.name, cardX + cardW/2, cardY + cardH - 4);
+    }
   }
 
   // damage text
