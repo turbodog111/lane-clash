@@ -42,6 +42,31 @@
       Click a card (or press <kbd>1</kbd>/<kbd>2</kbd>), then click your half to deploy.
       Valid tiles highlight in green. Elixir: +1 / 2s.
     </p>
+
+    <!-- End Game Overlay -->
+    <div id="endGameOverlay" class="end-game-overlay" style="display:none">
+      <div class="end-game-card">
+        <h2 id="endGameTitle">Victory!</h2>
+        <div id="endGameStats" class="end-game-stats">
+          <div class="stat-item">
+            <span class="stat-label">Coins Earned</span>
+            <span class="stat-value" id="coinsEarned">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Damage Dealt</span>
+            <span class="stat-value" id="damageDealt">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Towers Destroyed</span>
+            <span class="stat-value" id="towersDestroyed">0</span>
+          </div>
+        </div>
+        <div class="end-game-buttons">
+          <button id="btnPlayAgain" class="btn primary">Play Again</button>
+          <button id="btnBackToMenu" class="btn">Back to Menu</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Encyclopedia -->
@@ -108,6 +133,16 @@
 
     <!-- Progression Tab Content -->
     <div id="tabContentProgression" class="tab-content" style="display:none">
+      <div class="card">
+        <div class="coins-display">
+          <div class="coins-icon">💰</div>
+          <div class="coins-info">
+            <div class="coins-label">Total Coins</div>
+            <div class="coins-value" id="totalCoins">0</div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <h3>Card Progression System</h3>
         <p>Upgrade your cards to increase their effectiveness in battle. Each card can be upgraded from Level 0 to Level 5.</p>
@@ -178,6 +213,15 @@
     </div>
 
     <div class="card">
+      <h3>v0.2.0 - Match System & Currency</h3>
+      <ul>
+        <li><strong>Match Timer:</strong> 4-minute matches with timer and mode displayed at top</li>
+        <li><strong>Win Conditions:</strong> Destroy enemy King for instant win, or win by tower count (2-1, 1-0) when timer expires</li>
+        <li><strong>Coin System:</strong> Earn 0.1 coins per damage dealt; coins displayed in Progression tab</li>
+        <li><strong>End Game Screen:</strong> View match stats including coins earned, damage dealt, and towers destroyed</li>
+        <li><strong>Play Again:</strong> Restart matches without refreshing the page</li>
+        <li><strong>Card Progression Tab:</strong> New Encyclopedia tab with upgrade costs for Common and Rare cards</li>
+      </ul>
       <h3>v0.1.5</h3>
       <ul>
         <li>Fixed archers to properly use ranged combat: now hold position and shoot instead of charging like melee units.</li>
@@ -205,6 +249,6 @@
   </section>
 
   <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.1.5"></script>
+  <script type="module" src="./src/main.js?v=0.2.0"></script>
 </body>
 </html>

@@ -52,6 +52,15 @@ export function createGameState(canvas){
     elixir: { blue: 5, red: 5 },
     winner: null,
 
+    // Match system
+    matchTime: 240, // 4 minutes in seconds
+    matchTimer: 240,
+    matchMode: 'Regular',
+    towersDestroyed: { blue: 0, red: 0 }, // Count of xbow towers destroyed by each side
+    coins: 0, // Total coins earned
+    matchCoins: 0, // Coins earned this match
+    damageDealt: 0, // Total damage dealt by player
+
     // Cards (Archers nerfed to 10 / 0.75)
     cards: [
       { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee' },
@@ -68,6 +77,7 @@ export function createGameState(canvas){
     paths: null, // 3 polylines per lane
     onElixirChange: ()=>{},
     rebuildCardBar: ()=>{},
+    onTimerChange: ()=>{},
   };
 
   // two-card rotation (player + AI)
@@ -102,9 +112,53 @@ export function createGameState(canvas){
   return state;
 }
 
+// ---------- Reset match ----------
+export function resetMatch(state){
+  // Reset match state
+  state.matchTimer = state.matchTime;
+  state.matchMode = 'Regular';
+  state.matchCoins = 0;
+  state.damageDealt = 0;
+  state.winner = null;
+  state.towersDestroyed = { blue: 0, red: 0 };
+
+  // Reset elixir
+  state.elixir = { blue: 5, red: 5 };
+
+  // Clear units and projectiles
+  state.units = [];
+  state.projectiles = [];
+  state.floatDMG = [];
+
+  // Reset towers
+  for (const t of state.towers) {
+    t.hp = t.maxHp;
+    if (t.type === 'king') t.awake = false;
+    t.cd = 0;
+  }
+
+  // Reset hand
+  state.deckOrder = shuffle([0,1,2]);
+  state.hand = [ state.deckOrder[0], state.deckOrder[1] ];
+  state.ai.deckOrder = shuffle([0,1,2]);
+  state.ai.hand = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
+  state.ai.timer = 2.0;
+
+  state.selectedHandSlot = null;
+  state.showPlacementOverlay = false;
+
+  state.rebuildCardBar();
+  state.onElixirChange();
+  state.onTimerChange();
+}
+
 // ---------- Main update ----------
 export function update(state, dt){
   if (state.winner){ updateFX(state, dt); return; }
+
+  // Match timer countdown
+  state.matchTimer = Math.max(0, state.matchTimer - dt);
+  state.onTimerChange();
 
   // elixir regen
   const { ELIXIR_MAX, ELIXIR_PER_SEC } = state.config;
@@ -122,8 +176,27 @@ export function update(state, dt){
   updateFX(state, dt);
 
   const kB = kingOf(state,'blue'), kR = kingOf(state,'red');
-  if (kB && kB.hp<=0 && !state.winner) state.winner='red';
-  if (kR && kR.hp<=0 && !state.winner) state.winner='blue';
+  // King tower destroyed = instant win
+  if (kB && kB.hp<=0 && !state.winner) { state.winner='red'; endMatch(state); }
+  if (kR && kR.hp<=0 && !state.winner) { state.winner='blue'; endMatch(state); }
+
+  // Timer expired = check tower count
+  if (state.matchTimer <= 0 && !state.winner) {
+    if (state.towersDestroyed.blue > state.towersDestroyed.red) {
+      state.winner = 'blue';
+    } else if (state.towersDestroyed.red > state.towersDestroyed.blue) {
+      state.winner = 'red';
+    } else {
+      state.winner = 'draw';
+    }
+    endMatch(state);
+  }
+}
+
+function endMatch(state) {
+  // Calculate coins earned (0.1 coins per damage dealt by player)
+  state.matchCoins = Math.round(state.damageDealt * 0.1);
+  state.coins += state.matchCoins;
 }
 
 // ---------- Placement ----------
@@ -393,7 +466,7 @@ function unitUpdate(state, u, dt){
   // apply damage if we have a victim
   u.cd -= dt;
   if (victim && u.cd<=0){
-    dealDamage(state, victim, u.dmg);
+    dealDamage(state, victim, u.dmg, u);
     u.cd = u.atk;
   }
 }
@@ -473,7 +546,7 @@ function buildNav(state){
 // ---------- Projectiles / Damage / FX ----------
 function spawnBolt(state, from, target, dmg, spd){
   const ang=Math.atan2(target.y-from.y, target.x-from.x);
-  state.projectiles.push({x:from.x,y:from.y,vx:Math.cos(ang),vy:Math.sin(ang),spd:spd||360,dmg,target});
+  state.projectiles.push({x:from.x,y:from.y,vx:Math.cos(ang),vy:Math.sin(ang),spd:spd||360,dmg,target,source:from});
 }
 function updateProjectiles(state, dt){
   const P=state.projectiles;
@@ -482,15 +555,30 @@ function updateProjectiles(state, dt){
     const dx=t.x-p.x, dy=t.y-p.y, L=Math.hypot(dx,dy)||1; p.vx=dx/L; p.vy=dy/L;
     p.x += p.vx*p.spd*dt; p.y += p.vy*p.spd*dt;
     const tr=(t.r||t.radius||12)+6;
-    if (Math.hypot(t.x-p.x, t.y-p.y) <= tr){ dealDamage(state, t, p.dmg); p.dead=true; }
+    if (Math.hypot(t.x-p.x, t.y-p.y) <= tr){ dealDamage(state, t, p.dmg, p.source); p.dead=true; }
   }
   for (let i=P.length-1;i>=0;i--) if (P[i].dead) P.splice(i,1);
 }
-function dealDamage(state,target,amount){
+function dealDamage(state,target,amount,attacker){
   if (!target || target.hp<=0) return;
+  const wasAlive = target.hp > 0;
   target.hp -= amount;
   state.floatDMG.push({x:target.x, y:target.y-20, a:1, vY:-18, txt:`${amount|0}`});
   if (target.type==='king' && !target.awake) target.awake=true;
+
+  // Track damage dealt by player (blue side)
+  if (attacker && attacker.side === 'blue') {
+    state.damageDealt += amount;
+  }
+
+  // Track xbow tower destruction
+  if (wasAlive && target.hp <= 0 && target.type === 'xbow') {
+    if (target.side === 'red') {
+      state.towersDestroyed.blue++; // Blue destroyed a red tower
+    } else if (target.side === 'blue') {
+      state.towersDestroyed.red++; // Red destroyed a blue tower
+    }
+  }
 }
 function updateFX(state,dt){
   for (const f of state.floatDMG){ f.y += f.vY*dt; f.a -= 1.2*dt; }

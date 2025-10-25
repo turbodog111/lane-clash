@@ -1,8 +1,8 @@
  // src/main.js
 // Single module: diagnostics + UI + drawing + loop
-import { createGameState, update, tryDeployAt } from './logic.js';
+import { createGameState, update, tryDeployAt, resetMatch } from './logic.js';
 
-const VERSION = '0.1.5';
+const VERSION = '0.2.0';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -103,6 +103,24 @@ function draw(state){
   ctx.fillRect(lanesX[0]-bw/2, riverY + 6,     bw, bh);
   ctx.fillRect(lanesX[1]-bw/2, riverY - bh - 6, bw, bh);
   ctx.fillRect(lanesX[1]-bw/2, riverY + 6,     bw, bh);
+
+  // Timer and mode display at top center
+  const minutes = Math.floor(state.matchTimer / 60);
+  const seconds = Math.floor(state.matchTimer % 60);
+  const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+  ctx.fillStyle = '#1a2748';
+  roundRect(ctx, W/2 - 120, 15, 240, 40, 8);
+  ctx.fill();
+
+  ctx.fillStyle = '#b8d0ff';
+  ctx.font = 'bold 18px ui-monospace, Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(timeStr, W/2, 38);
+
+  ctx.fillStyle = '#8ea6d9';
+  ctx.font = '12px ui-monospace, Consolas, monospace';
+  ctx.fillText(state.matchMode, W/2, 50);
 
   // placement overlay
   if (state.showPlacementOverlay) {
@@ -231,6 +249,66 @@ async function start(){
     renderSlot(hand1, state.cards[state.hand[1]]);
   };
   state.rebuildCardBar();
+
+  // End game overlay elements
+  const endGameOverlay = $('endGameOverlay');
+  const endGameTitle = $('endGameTitle');
+  const coinsEarnedEl = $('coinsEarned');
+  const damageDealtEl = $('damageDealt');
+  const towersDestroyedEl = $('towersDestroyed');
+  const btnPlayAgain = $('btnPlayAgain');
+  const btnBackToMenu = $('btnBackToMenu');
+  const totalCoinsEl = $('totalCoins');
+
+  // Function to update coins display
+  const updateCoinsDisplay = () => {
+    if (totalCoinsEl) totalCoinsEl.textContent = state.coins.toLocaleString();
+  };
+
+  // Function to show end game screen
+  const showEndGame = () => {
+    if (!endGameOverlay) return;
+
+    // Set title based on winner
+    if (state.winner === 'blue') {
+      endGameTitle.textContent = 'Victory! 🎉';
+    } else if (state.winner === 'red') {
+      endGameTitle.textContent = 'Defeat';
+    } else {
+      endGameTitle.textContent = 'Draw';
+    }
+
+    // Set stats
+    if (coinsEarnedEl) coinsEarnedEl.textContent = state.matchCoins.toLocaleString();
+    if (damageDealtEl) damageDealtEl.textContent = Math.round(state.damageDealt).toLocaleString();
+    if (towersDestroyedEl) towersDestroyedEl.textContent = state.towersDestroyed.blue;
+
+    endGameOverlay.style.display = 'flex';
+    updateCoinsDisplay();
+  };
+
+  // Play again button
+  btnPlayAgain && btnPlayAgain.addEventListener('click', () => {
+    resetMatch(state);
+    if (endGameOverlay) endGameOverlay.style.display = 'none';
+  });
+
+  // Back to menu from end game
+  btnBackToMenu && btnBackToMenu.addEventListener('click', () => {
+    if (endGameOverlay) endGameOverlay.style.display = 'none';
+    showMenu();
+  });
+
+  // Timer update callback
+  state.onTimerChange = () => {
+    // Check if game just ended
+    if (state.winner && endGameOverlay && endGameOverlay.style.display === 'none') {
+      showEndGame();
+    }
+  };
+
+  // Initial coins display
+  updateCoinsDisplay();
 
   // select cards (click or 1/2 keys)
   const setSel = (s)=>{ state.selectedHandSlot=s; state.showPlacementOverlay=(s!==null); [hand0,hand1].forEach((el,i)=>{ if(!el)return; el.style.outline=(s===i?'2px solid #68aaff':'none'); }); };
