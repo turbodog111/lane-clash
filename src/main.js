@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.3.2';
+const VERSION = '0.3.3';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -153,43 +153,25 @@ function draw(state){
     const isBlue = u.side==='blue';
     const card = state.cards.find(c => c.id === u.kind);
 
-    // Draw unit circle
-    ctx.fillStyle = isBlue ? '#6fb0ff' : '#ff8f8f';
-    ctx.beginPath(); ctx.arc(u.x,u.y,u.radius,0,Math.PI*2); ctx.fill();
-    ctx.lineWidth=3; ctx.strokeStyle = isBlue?'rgba(120,200,255,0.9)':'rgba(255,140,140,0.9)';
-    ctx.beginPath(); ctx.arc(u.x,u.y,u.radius+3,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle='#fff'; ctx.font='bold 12px ui-monospace, Consolas, monospace';
-    ctx.textAlign='center'; ctx.fillText(labelFor(u), u.x, u.y+4);
-    drawHP(ctx, u.x, u.y - (u.radius + 18), u.hp, u.maxHp);
-
-    // Draw unit card next to unit (only if card found and image loaded)
+    // Draw unit image only (no circles)
     if (card && imageCache[card.id]) {
-      const cardX = u.x + u.radius + 25;
-      const cardY = u.y - 20;
-      const cardW = 40;
-      const cardH = 50;
+      const img = imageCache[card.id];
+      // Make image size larger for better visibility
+      const imgSize = u.radius * 3; // 3x the radius for better visibility
+      const imgX = u.x - imgSize / 2;
+      const imgY = u.y - imgSize / 2;
 
-      // Card background
-      ctx.fillStyle = 'rgba(26, 39, 72, 0.95)';
+      // Draw colored border to indicate team
       ctx.strokeStyle = isBlue ? '#6fb0ff' : '#ff8f8f';
       ctx.lineWidth = 2;
-      roundRect(ctx, cardX, cardY, cardW, cardH, 4);
-      ctx.fill();
-      ctx.stroke();
+      ctx.strokeRect(imgX - 1, imgY - 1, imgSize + 2, imgSize + 2);
 
-      // Draw card image
-      const img = imageCache[card.id];
-      const imgSize = 32;
-      const imgX = cardX + (cardW - imgSize) / 2;
-      const imgY = cardY + 4;
+      // Draw the card image
       ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-
-      // Card name at bottom
-      ctx.fillStyle = '#b8d0ff';
-      ctx.font = '9px ui-monospace, Consolas, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(card.name, cardX + cardW/2, cardY + cardH - 4);
     }
+
+    // Draw HP bar above unit
+    drawHP(ctx, u.x, u.y - (u.radius * 1.8), u.hp, u.maxHp);
   }
 
   // damage text

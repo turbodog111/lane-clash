@@ -145,7 +145,7 @@
           <h3>Knight <span class="rar rar-common">COMMON</span></h3>
           <ul class="stats">
             <li>Elixir Cost: 2</li>
-            <li>HP: 100</li>
+            <li>HP: 200</li>
             <li>DMG: 25 / 1.0s</li>
             <li>Speed: 30 px/s</li>
             <li>Unit Count: 1</li>
@@ -176,8 +176,8 @@
           <h3>Mini-MEGA <span class="rar rar-common">COMMON</span></h3>
           <ul class="stats">
             <li>Elixir Cost: 3</li>
-            <li>HP: 300</li>
-            <li>DMG: 80 / 1.5s</li>
+            <li>HP: 250</li>
+            <li>DMG: 100 / 1.5s</li>
             <li>Speed: 20 px/s</li>
             <li>Unit Count: 1</li>
           </ul>
@@ -333,6 +333,16 @@
     </div>
 
     <div class="card">
+      <h3>v0.3.3 - Visual Overhaul & Balance Changes</h3>
+      <ul>
+        <li><strong>Visual Change:</strong> Units now display as card images instead of circles for better clarity</li>
+        <li><strong>Image Size:</strong> Unit images are 3x radius for better visibility and less crowding</li>
+        <li><strong>Team Colors:</strong> Colored borders (blue/red) indicate team affiliation</li>
+        <li><strong>Balance:</strong> Knight HP buffed 100 → 200</li>
+        <li><strong>Balance:</strong> Mini-MEGA HP nerfed 300 → 250, DMG buffed 80 → 100</li>
+        <li><strong>Combat Fix:</strong> Melee units now properly hit each other when adjacent (increased attack range tolerance)</li>
+        <li><strong>Encyclopedia:</strong> Updated Knight and Mini-MEGA stats</li>
+      </ul>
       <h3>v0.3.2 - Skeleton Army & Combat Visual Effects</h3>
       <ul>
         <li><strong>New Card:</strong> Skeleton Army (RARE) - 4 elixir, 8 units with 20 HP each</li>
@@ -425,6 +435,6 @@
   </section>
 
   <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.3.2"></script>
+  <script type="module" src="./src/main.js?v=0.3.3"></script>
 </body>
 </html>
