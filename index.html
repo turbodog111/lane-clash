@@ -79,6 +79,7 @@
     <!-- Encyclopedia Tabs -->
     <div class="ency-tabs">
       <button id="tabCards" class="ency-tab active">Cards</button>
+      <button id="tabDeck" class="ency-tab">Deck</button>
       <button id="tabProgression" class="ency-tab">Progression</button>
     </div>
 
@@ -131,6 +132,23 @@
       </article>
     </div>
 
+    <!-- Deck Tab Content -->
+    <div id="tabContentDeck" class="tab-content" style="display:none">
+      <div class="card">
+        <div class="coins-display">
+          <div class="coins-icon">💰</div>
+          <div class="coins-info">
+            <div class="coins-label">Your Coins</div>
+            <div class="coins-value" id="deckTotalCoins">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deck-cards" id="deckCards">
+        <!-- Will be populated by JavaScript -->
+      </div>
+    </div>
+
     <!-- Progression Tab Content -->
     <div id="tabContentProgression" class="tab-content" style="display:none">
       <div class="card">
@@ -153,6 +171,24 @@
           <li><strong>Earn Rate:</strong> 0.1 coins per 1 damage dealt</li>
           <li><strong>Example:</strong> Dealing 100 damage = 10 coins earned</li>
         </ul>
+
+        <h4>Level Benefits</h4>
+        <p>Each level increases your card's Health and Damage per Hit:</p>
+        <table class="upgrade-table">
+          <thead>
+            <tr>
+              <th>Level</th>
+              <th>Stat Increase</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Level 1</td><td>+10% Health & Damage</td></tr>
+            <tr><td>Level 2</td><td>+20% Health & Damage</td></tr>
+            <tr><td>Level 3</td><td>+30% Health & Damage</td></tr>
+            <tr><td>Level 4</td><td>+40% Health & Damage</td></tr>
+            <tr><td>Level 5</td><td>+50% Health & Damage</td></tr>
+          </tbody>
+        </table>
 
         <h4>Upgrade Costs</h4>
 
@@ -213,6 +249,16 @@
     </div>
 
     <div class="card">
+      <h3>v0.2.1 - Card Upgrades & Bug Fixes</h3>
+      <ul>
+        <li><strong>Deck Tab:</strong> New Encyclopedia tab to view and upgrade all your cards</li>
+        <li><strong>Card Upgrades:</strong> Spend coins to upgrade cards from Level 0 to 5</li>
+        <li><strong>Stat Scaling:</strong> Each level increases Health and Damage by 10% (up to +50% at Level 5)</li>
+        <li><strong>Bug Fix:</strong> End game screen now shows correctly when match ends</li>
+        <li><strong>Bug Fix:</strong> Coins are now properly awarded and displayed</li>
+        <li><strong>Bug Fix:</strong> Archers now properly stop and shoot at range instead of running forward</li>
+        <li><strong>Bug Fix:</strong> Units no longer glitch on bridges - smoother pathfinding</li>
+      </ul>
       <h3>v0.2.0 - Match System & Currency</h3>
       <ul>
         <li><strong>Match Timer:</strong> 4-minute matches with timer and mode displayed at top</li>
@@ -249,6 +295,6 @@
   </section>
 
   <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.2.0"></script>
+  <script type="module" src="./src/main.js?v=0.2.1"></script>
 </body>
 </html>

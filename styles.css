@@ -75,3 +75,17 @@ kbd { background: #20345d; border-radius: 4px; padding: 1px 5px; border: 1px sol
 .coins-info { flex: 1; text-align: left; }
 .coins-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .coins-value { color: var(--accent); font-size: 32px; font-weight: 700; }
+
+.deck-cards { display: grid; gap: 16px; margin-top: 16px; }
+.deck-card { background: var(--card); border: 1px solid #23325a; border-radius: 10px; padding: 16px; display: grid; grid-template-columns: 100px 1fr auto; gap: 16px; align-items: center; }
+.deck-card img { width: 100px; height: 100px; border-radius: 8px; }
+.deck-card-info { flex: 1; }
+.deck-card-info h4 { margin: 0 0 8px; font-size: 18px; }
+.deck-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 13px; color: var(--muted); }
+.deck-card-stat { display: flex; justify-content: space-between; }
+.deck-card-stat-label { color: var(--muted); }
+.deck-card-stat-value { color: var(--ink); font-weight: 600; }
+.deck-card-level { text-align: center; min-width: 120px; }
+.deck-card-level-display { font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.deck-card-upgrade-cost { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.deck-card .btn { width: 100%; }

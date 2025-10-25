@@ -7,6 +7,35 @@ const enemySide = s => s==='blue'?'red':'blue';
 const shuffle = (a)=>{ const r=a.slice(); for(let i=r.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [r[i],r[j]]=[r[j],r[i]]; } return r; };
 const randRange = (a,b)=>a + Math.random()*(b-a);
 
+// Card upgrade costs by rarity and level
+const UPGRADE_COSTS = {
+  common: [100, 250, 500, 1000, 2500],
+  rare: [200, 500, 1000, 2000, 5000]
+};
+
+// Get upgrade cost for a card
+export function getUpgradeCost(card) {
+  if (card.level >= 5) return null; // Max level
+  return UPGRADE_COSTS[card.rarity][card.level];
+}
+
+// Get scaled stat based on level (10% per level)
+export function getScaledStat(baseStat, level) {
+  return Math.round(baseStat * (1 + level * 0.1));
+}
+
+// Upgrade a card
+export function upgradeCard(state, cardIndex) {
+  const card = state.cards[cardIndex];
+  const cost = getUpgradeCost(card);
+
+  if (!cost || state.coins < cost) return false;
+
+  state.coins -= cost;
+  card.level++;
+  return true;
+}
+
 function nearestPointOnSegment(p,a,b){
   const vx=b.x-a.x, vy=b.y-a.y;
   const wx=p.x-a.x, wy=p.y-a.y;
@@ -63,9 +92,9 @@ export function createGameState(canvas){
 
     // Cards (Archers nerfed to 10 / 0.75)
     cards: [
-      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee' },
-      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged' },
-      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:45, radius:15, type:'melee' },
+      { id:'knight',   name:'Knight',    cost:2, img:'assets/Knight.png',    count:1, hp:100, dmg:20, atk:1.0,  range:22,  speed:60, radius:13, type:'melee', rarity:'common', level:0 },
+      { id:'archers',  name:'Archers',   cost:2, img:'assets/Archers.png',   count:2, hp:60,  dmg:10, atk:0.75, range:120, speed:90, radius:10, type:'ranged', rarity:'common', level:0 },
+      { id:'minimega', name:'Mini-MEGA', cost:3, img:'assets/Mini-MEGA.png', count:1, hp:300, dmg:80, atk:1.5,  range:26,  speed:45, radius:15, type:'melee', rarity:'common', level:0 },
     ],
     deckOrder: shuffle([0,1,2]),
     hand: [],
@@ -197,6 +226,8 @@ function endMatch(state) {
   // Calculate coins earned (0.1 coins per damage dealt by player)
   state.matchCoins = Math.round(state.damageDealt * 0.1);
   state.coins += state.matchCoins;
+  // Trigger UI update to show end game screen
+  if (state.onTimerChange) state.onTimerChange();
 }
 
 // ---------- Placement ----------
@@ -265,12 +296,16 @@ function spawnUnits(state, side, card, cx, cy, x, y){
   const proj = projectToNearestPath(state, laneIndex, {x,y});
   const px = proj.point?.x ?? x, py = proj.point?.y ?? y;
 
+  // Apply level scaling to stats
+  const scaledHp = getScaledStat(card.hp, card.level);
+  const scaledDmg = getScaledStat(card.dmg, card.level);
+
   for (let i=0; i<card.count; i++){
     const off = (card.count>1 ? (i===0?-12:12) : 0);
     state.units.push({
       side, x: px+off, y: py, cx, cy,
       homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
-      hp:card.hp, maxHp:card.hp, dmg:card.dmg, atk:card.atk, cd:0, range:card.range,
+      hp:scaledHp, maxHp:scaledHp, dmg:scaledDmg, atk:card.atk, cd:0, range:card.range,
       speed:card.speed, radius:card.radius, type:card.type, kind:card.id,
       pathLane: laneIndex, pathWhich: proj.whichPath, pathDir: (side==='blue')?+1:-1,
       pathI: proj.segIndex, onPath:true,
@@ -332,16 +367,18 @@ function unitUpdate(state, u, dt){
   const structTarget = laneXbow || kingOf(state,foe);
 
   // same-lane aggro candidate (no chasing; only affects attack selection)
+  // For ranged units, use weapon range; for melee use aggro radius
   let targetUnit = null;
   {
     const sameHalf = (e)=> ((u.side==='blue' && e.y>cfg.riverY) || (u.side==='red' && e.y<cfg.riverY));
+    const detectionRange = (u.type === 'ranged' ? u.range : cfg.AGGRO_RADIUS);
     let best=null, bd=1e9;
     for (const e of enemyUnits(state,u.side)){
       if (e.hp<=0) continue;
       if (!sameHalf(e)) continue;
       if (!inSameLane(state,u,e.x)) continue;
       const d = dist(u,e);
-      if (d<bd && d<=cfg.AGGRO_RADIUS){ bd=d; best=e; }
+      if (d<bd && d<=detectionRange){ bd=d; best=e; }
     }
     targetUnit = best;
   }
@@ -475,8 +512,9 @@ function unitUpdate(state, u, dt){
 function buildPaths(state){
   const { W,H, lanesX, riverY, riverH } = state.config;
   const yB0 = H - 260;                    // bottom approach
-  const yB1 = riverY + riverH/2 - 22;     // pre-bridge bottom
-  const yT1 = riverY - riverH/2 + 22;     // post-bridge top
+  const yB1 = riverY + riverH/2 - 10;     // pre-bridge bottom (reduced gap)
+  const yMid = riverY;                    // middle of bridge
+  const yT1 = riverY - riverH/2 + 10;     // post-bridge top (reduced gap)
   const yT0 = 260;                        // top approach
 
   const OFFS = [-24, 0, 24];
@@ -488,6 +526,7 @@ function buildPaths(state){
       paths[lane].push([
         { x: lx + o*0.6, y: yB0 },
         { x: lx + o,     y: yB1 },
+        { x: lx + o,     y: yMid },  // Add middle point on bridge
         { x: lx + o,     y: yT1 },
         { x: lx + o*0.6, y: yT0 },
       ]);
