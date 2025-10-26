@@ -2,7 +2,7 @@
 // Single module: diagnostics + UI + drawing + loop
 import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
 
-const VERSION = '0.3.4';
+const VERSION = '0.4.0';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -124,12 +124,53 @@ function draw(state){
   g.addColorStop(0,'#14476a'); g.addColorStop(1,'#0f3b5d'); ctx.fillStyle=g;
   ctx.fillRect(0, riverY - riverH/2, W, riverH);
 
-  // bridges
-  ctx.fillStyle='#80552d'; const bw=bridgeW, bh=20;
-  ctx.fillRect(lanesX[0]-bw/2, riverY - bh - 6, bw, bh);
-  ctx.fillRect(lanesX[0]-bw/2, riverY + 6,     bw, bh);
-  ctx.fillRect(lanesX[1]-bw/2, riverY - bh - 6, bw, bh);
-  ctx.fillRect(lanesX[1]-bw/2, riverY + 6,     bw, bh);
+  // bridges - improved aesthetic
+  const bw=bridgeW, bh=20;
+  const drawBridge = (x, y) => {
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.fillRect(x-bw/2+2, y+2, bw, bh);
+
+    // Base (stone)
+    const bridgeGrad = ctx.createLinearGradient(x-bw/2, y, x+bw/2, y);
+    bridgeGrad.addColorStop(0,'#6b5d4f');
+    bridgeGrad.addColorStop(0.5,'#8a7355');
+    bridgeGrad.addColorStop(1,'#6b5d4f');
+    ctx.fillStyle=bridgeGrad;
+    roundRect(ctx, x-bw/2, y, bw, bh, 4);
+    ctx.fill();
+
+    // Wooden planks
+    ctx.fillStyle='#5a4a3a';
+    for (let i = 0; i < 5; i++) {
+      const plankX = x - bw/2 + (i * bw/5);
+      ctx.fillRect(plankX + 2, y + 3, bw/5 - 4, bh - 6);
+    }
+
+    // Railings (posts)
+    ctx.fillStyle='#4a3a2a';
+    const posts = [x-bw/2+10, x-bw/2+bw/2, x+bw/2-10];
+    for (const px of posts) {
+      ctx.fillRect(px-2, y, 4, bh);
+    }
+
+    // Top rail
+    ctx.strokeStyle='#4a3a2a';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(x-bw/2+8, y+4);
+    ctx.lineTo(x+bw/2-8, y+4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x-bw/2+8, y+bh-4);
+    ctx.lineTo(x+bw/2-8, y+bh-4);
+    ctx.stroke();
+  };
+
+  drawBridge(lanesX[0], riverY - bh - 6);
+  drawBridge(lanesX[0], riverY + 6);
+  drawBridge(lanesX[1], riverY - bh - 6);
+  drawBridge(lanesX[1], riverY + 6);
 
   // Timer and mode display at top center
   const minutes = Math.floor(state.matchTimer / 60);
@@ -242,6 +283,48 @@ function loadImages(cards) {
       });
     })
   );
+}
+
+// ---------- Sound System ----------
+const soundCache = {};
+
+function loadSounds() {
+  const sounds = [
+    { id: 'archerShoot', src: 'assets/ArcherShoot1.mp3', volume: 0.4 },
+    { id: 'knightHit1', src: 'assets/KnightHit1.mp3', volume: 0.3 },
+    { id: 'knightHit2', src: 'assets/KnightHit2.mp3', volume: 0.3 },
+    { id: 'walk1', src: 'assets/Walk1.mp3', volume: 0.15 }, // Quiet
+    { id: 'walk2', src: 'assets/Walk2.mp3', volume: 0.15 }, // Quiet
+  ];
+
+  return Promise.all(
+    sounds.map(sound => {
+      return new Promise((resolve) => {
+        const audio = new Audio();
+        audio.volume = sound.volume;
+        audio.oncanplaythrough = () => {
+          soundCache[sound.id] = { audio: audio.cloneNode(), volume: sound.volume };
+          resolve();
+        };
+        audio.onerror = () => {
+          console.warn(`Failed to load sound: ${sound.src}`);
+          resolve(); // Continue even if sound fails
+        };
+        audio.src = sound.src;
+      });
+    })
+  );
+}
+
+function playSound(id) {
+  if (!soundCache[id]) return;
+
+  // Clone the audio to allow overlapping playback
+  const audio = soundCache[id].audio.cloneNode();
+  audio.volume = soundCache[id].volume;
+  audio.play().catch(e => {
+    // Ignore errors (e.g., user hasn't interacted with page yet)
+  });
 }
 
 // ---------- Start everything ----------
@@ -387,6 +470,9 @@ async function start(){
   };
   state.rebuildCardBar();
 
+  // Set sound callback
+  state.playSound = playSound;
+
   // End game overlay elements
   const endGameOverlay = $('endGameOverlay');
   const endGameTitle = $('endGameTitle');
@@ -467,9 +553,11 @@ async function start(){
     tryDeployAt(state, mx, my);
   });
 
-  // Load card images before starting game loop
+  // Load card images and sounds before starting game loop
   await loadImages(state.cards);
   diag.ok('images loaded');
+  await loadSounds();
+  diag.ok('sounds loaded');
 
   // safe RAF loop (paused when not on play)
   let last = performance.now();

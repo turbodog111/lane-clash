@@ -149,6 +149,8 @@ export function createGameState(canvas){
     onElixirChange: ()=>{},
     rebuildCardBar: ()=>{},
     onTimerChange: ()=>{},
+    playSound: ()=>{}, // Sound effect callback
+    knightHitToggle: false, // Alternate between knight hit sounds
   };
 
   // two-card rotation (player + AI)
@@ -431,6 +433,10 @@ function spawnUnits(state, side, card, cx, cy, x, y){
       recentDamage: 0,
       flashAlpha: 0,
       damageTimer: 0,
+      // Walk sound tracking
+      walkSoundTimer: 0,
+      lastX: x+off,
+      lastY: y,
     });
   }
 }
@@ -583,6 +589,25 @@ function unitUpdate(state, u, dt){
   u.x = clamp(u.x + vx, cfg.WORLD_PAD, cfg.W - cfg.WORLD_PAD);
   u.y = clamp(u.y + vy, cfg.WORLD_PAD, cfg.H - cfg.WORLD_PAD);
 
+  // Walk sound: play periodically if unit is moving
+  const moved = Math.hypot(u.x - u.lastX, u.y - u.lastY) > 1;
+  if (moved) {
+    u.walkSoundTimer -= dt;
+    if (u.walkSoundTimer <= 0) {
+      // Determine which walk sound to play based on unit type
+      // Walk1: Archers, Skeleton Army
+      // Walk2: Knight, MEGA, Mini-MEGA
+      if (u.kind === 'archers' || u.kind === 'skeletonarmy') {
+        state.playSound('walk1');
+      } else if (u.kind === 'knight' || u.kind === 'mega' || u.kind === 'minimega') {
+        state.playSound('walk2');
+      }
+      u.walkSoundTimer = 0.5; // Play walk sound every 0.5 seconds
+    }
+  }
+  u.lastX = u.x;
+  u.lastY = u.y;
+
   // attack selection
   let victim = null;
 
@@ -609,6 +634,12 @@ function unitUpdate(state, u, dt){
 
     dealDamage(state, victim, damage, u);
     u.cd = u.atk;
+
+    // Knight hit sound (alternate between two sounds)
+    if (u.kind === 'knight') {
+      state.playSound(state.knightHitToggle ? 'knightHit2' : 'knightHit1');
+      state.knightHitToggle = !state.knightHitToggle;
+    }
 
     // Melee pushback: push victim back slightly (not towers)
     if (u.type === 'melee' && !victim.type) { // victim.type exists means it's a tower
@@ -758,12 +789,14 @@ function buildNav(state){
   }
 
   // Then, mark ONLY bridge areas as walkable
+  // Use narrower walkable area than visual bridge to prevent edge-walking on water
+  const walkableBridgeW = bridgeW * 0.7; // 70% of visual bridge width
   for (let cy=0; cy<rows; cy++){
     for (let cx=0; cx<cols; cx++){
       const c=cellCenter(state,cx,cy); const x=c.x, y=c.y;
       if (y>=top && y<=bot){
         const near = nearestLaneX(lanesX, x);
-        const half = bridgeW/2; // Half of bridge width on each side of lane center
+        const half = walkableBridgeW/2; // Half of walkable width on each side of lane center
         if (x >= near-half && x <= near+half){
           walk[cy][cx]=1; // Make bridge walkable
         }
@@ -794,6 +827,8 @@ function spawnArrowProjectile(state, from, target){
   // Visual-only projectile for ranged units (damage already applied)
   const ang=Math.atan2(target.y-from.y, target.x-from.x);
   state.projectiles.push({x:from.x,y:from.y,vx:Math.cos(ang),vy:Math.sin(ang),spd:200,dmg:0,target,source:from,visual:true});
+  // Play archer shoot sound
+  state.playSound('archerShoot');
 }
 function updateProjectiles(state, dt){
   const P=state.projectiles;
