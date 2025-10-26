@@ -85,6 +85,46 @@ function nearestPointOnSegment(p,a,b){
 }
 const nearPoint = (p,q,eps)=>Math.abs(p.x-q.x)<=eps && Math.abs(p.y-q.y)<=eps;
 
+// ---------- AI Difficulty ----------
+// Calculate AI card levels based on difficulty
+export function calculateAICardLevels(difficulty, numCards) {
+  const levels = new Array(numCards).fill(0);
+
+  if (difficulty === 'champion') {
+    return levels.fill(5);
+  }
+
+  const diff = parseInt(difficulty);
+  if (diff === 0 || isNaN(diff)) return levels;
+
+  // Number of cards that should be at higher level (half, rounded down)
+  const halfCards = Math.floor(numCards / 2);
+
+  // Level 1: Half at level 1
+  // Level 2: All at level 1, half at level 2
+  // Level 3: All at level 2, half at level 3
+  // Level 4: All at level 3, half at level 4
+  // Level 5: All at level 4, half at level 5
+
+  const baseLevel = diff - 1; // All cards get this level
+  const bonusLevel = diff; // Half the cards get this level
+
+  for (let i = 0; i < numCards; i++) {
+    levels[i] = baseLevel;
+    if (i < halfCards) {
+      levels[i] = bonusLevel;
+    }
+  }
+
+  return levels;
+}
+
+// Set AI difficulty and update card levels
+export function setAIDifficulty(state, difficulty) {
+  state.ai.difficulty = difficulty;
+  state.ai.cardLevels = calculateAICardLevels(difficulty, state.cards.length);
+}
+
 // ---------- Game construction ----------
 export function createGameState(canvas){
   const W = canvas.width, H = canvas.height;
@@ -142,7 +182,16 @@ export function createGameState(canvas){
     hand: [],
     selectedHandSlot: null,
 
-    ai: { enabled:true, timer:2.0, minInterval:2.2, maxInterval:4.0, deckOrder: shuffle([0,1,2,3,4]), hand: [] },
+    ai: {
+      enabled:true,
+      timer:2.0,
+      minInterval:2.2,
+      maxInterval:4.0,
+      deckOrder: shuffle([0,1,2,3,4]),
+      hand: [],
+      difficulty: 0, // 0-5 or 'champion'
+      cardLevels: [] // AI card levels calculated from difficulty
+    },
 
     nav:null, showPlacementOverlay:false,
     paths: null, // 3 polylines per lane
@@ -156,6 +205,9 @@ export function createGameState(canvas){
   // two-card rotation (player + AI)
   state.hand     = [ state.deckOrder[0], state.deckOrder[1] ];
   state.ai.hand  = [ state.ai.deckOrder[0], state.ai.deckOrder[1] ];
+
+  // Initialize AI card levels (default difficulty 0)
+  state.ai.cardLevels = calculateAICardLevels(state.ai.difficulty, state.cards.length);
 
   // Towers (bigger radii, King rof nerfed to 1.5s)
   const K = (side,x,y)=>({type:'king', side,x,y, r:34, hp:2000, maxHp:2000, rof:1.5, range:260, cd:0, awake:false, dmg:50, recentDamage:0, flashAlpha:0, damageTimer:0});
@@ -332,7 +384,7 @@ export function tryDeployAt(state, mx, my){
 
   const {x,y} = cellCenter(state, cell.cx, cell.cy);
   state.elixir.blue -= card.cost;
-  spawnUnits(state, 'blue', card, cell.cx, cell.cy, x, y);
+  spawnUnits(state, 'blue', card, idx, cell.cx, cell.cy, x, y);
   rotateAfterPlay(state, idx, slot);
   state.selectedHandSlot = null;
   state.showPlacementOverlay = false;
@@ -372,7 +424,7 @@ function aiUpdate(state, dt){
 
   const {cx,cy} = cell; const {x,y} = cellCenter(state,cx,cy);
   state.elixir.red -= pick.card.cost;
-  spawnUnits(state,'red',pick.card,cx,cy,x,y);
+  spawnUnits(state,'red',pick.card,pick.idx,cx,cy,x,y);
 
   ai.deckOrder = ai.deckOrder.filter(i=>i!==pick.idx).concat([pick.idx]);
   const next = ai.deckOrder.find(i => !ai.hand.includes(i));
@@ -382,12 +434,22 @@ function aiUpdate(state, dt){
 }
 
 // ---------- Spawning & Updates ----------
-function spawnUnits(state, side, card, cx, cy, x, y){
+function spawnUnits(state, side, card, cardIdx, cx, cy, x, y){
   const laneIndex = laneForX(state, x);
 
+  // Determine card level based on side
+  let cardLevel;
+  if (side === 'red') {
+    // AI uses AI card levels based on difficulty
+    cardLevel = state.ai.cardLevels[cardIdx] || 0;
+  } else {
+    // Player uses their card level
+    cardLevel = card.level;
+  }
+
   // Apply level scaling to stats
-  const scaledHp = getScaledStat(card.hp, card.level);
-  const scaledDmg = getScaledStat(card.dmg, card.level);
+  const scaledHp = getScaledStat(card.hp, cardLevel);
+  const scaledDmg = getScaledStat(card.dmg, cardLevel);
 
   // Find nearest enemy crossbow tower for pathfinding target
   const enemySide = side === 'blue' ? 'red' : 'blue';
@@ -417,8 +479,6 @@ function spawnUnits(state, side, card, cx, cy, x, y){
 
   for (let i=0; i<card.count; i++){
     const off = (card.count>1 ? (i===0?-12:12) : 0);
-    // AI always gets level 0 cards, player uses card level
-    const unitLevel = (side === 'red') ? 0 : card.level;
     state.units.push({
       side, x: x+off, y: y, cx, cy,
       homeLaneIndex:laneIndex, homeLaneX:state.config.lanesX[laneIndex],
@@ -429,7 +489,7 @@ function spawnUnits(state, side, card, cx, cy, x, y){
       pathIndex: 0,
       targetTower: targetTower,
       // Damage flash and level tracking
-      level: unitLevel,
+      level: cardLevel,
       recentDamage: 0,
       flashAlpha: 0,
       damageTimer: 0,
