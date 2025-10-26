@@ -1,8 +1,8 @@
  // src/main.js
 // Single module: diagnostics + UI + drawing + loop
-import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat } from './logic.js';
+import { createGameState, update, tryDeployAt, resetMatch, upgradeCard, getUpgradeCost, getScaledStat, setAIDifficulty } from './logic.js';
 
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 
 // ---------- Diagnostics (very small) ----------
 function initDiag() {
@@ -290,11 +290,11 @@ const soundCache = {};
 
 function loadSounds() {
   const sounds = [
-    { id: 'archerShoot', src: 'assets/ArcherShoot1.mp3', volume: 0.4 },
-    { id: 'knightHit1', src: 'assets/KnightHit1.mp3', volume: 0.3 },
-    { id: 'knightHit2', src: 'assets/KnightHit2.mp3', volume: 0.3 },
-    { id: 'walk1', src: 'assets/Walk1.mp3', volume: 0.15 }, // Quiet
-    { id: 'walk2', src: 'assets/Walk2.mp3', volume: 0.15 }, // Quiet
+    { id: 'archerShoot', src: 'assets/ArcherShoot1.mp3', volume: 0.3 },
+    { id: 'knightHit1', src: 'assets/KnightHit1.mp3', volume: 0.225 },
+    { id: 'knightHit2', src: 'assets/KnightHit2.mp3', volume: 0.225 },
+    { id: 'walk1', src: 'assets/Walk1.mp3', volume: 0.1125 },
+    { id: 'walk2', src: 'assets/Walk2.mp3', volume: 0.1125 },
   ];
 
   return Promise.all(
@@ -346,12 +346,32 @@ async function start(){
 
   (scrMenu && scrPlay) ? showMenu() : showPlay();
 
-  btnPlay && btnPlay.addEventListener('click', showPlay);
+  btnPlay && btnPlay.addEventListener('click', () => {
+    // Reset the match when starting a new game from menu
+    if (state.winner) {
+      resetMatch(state);
+    }
+    showPlay();
+  });
   btnEnc  && btnEnc.addEventListener('click', showEnc);
   btnLog  && btnLog.addEventListener('click', showLog);
   backP   && backP.addEventListener('click', showMenu);
   backE   && backE.addEventListener('click', showMenu);
   backL   && backL.addEventListener('click', showMenu);
+
+  // Difficulty selection
+  const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+  difficultyBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active from all buttons
+      difficultyBtns.forEach(b => b.classList.remove('active'));
+      // Add active to clicked button
+      btn.classList.add('active');
+      // Set AI difficulty
+      const difficulty = btn.getAttribute('data-difficulty');
+      setAIDifficulty(state, difficulty);
+    });
+  });
 
   // encyclopedia tabs
   const tabCards = $('tabCards'), tabDeck = $('tabDeck'), tabProgression = $('tabProgression');
