@@ -3,6 +3,7 @@
   const KEY = 'raraAvis.memory.v1';
   const blank = () => ({
     v: 1, runs: 0, best: 0, bestAnswer: null, abandoned: 0, totalAnswers: 0,
+    runsSchola: 0, bestSchola: 0, scholaUnits: null,
     used: {},   // answer id → number of past runs it was used in
     found: {},  // prompt id → [answer ids ever given]
     firstSeen: Date.now(), lastSeen: 0, lastFloor: 0, muted: false,
@@ -30,10 +31,11 @@
       d.runs++;
       if (abandoned) d.abandoned++;
       d.lastFloor = run.floor;
-      d.best = Math.max(d.best, run.floor);
+      if (run.mode === 'schola') { d.runsSchola++; d.bestSchola = Math.max(d.bestSchola, run.floor); }
+      else d.best = Math.max(d.best, run.floor);
       d.totalAnswers += run.stats.answers;
       const b = run.stats.best;
-      if (b && (!d.bestAnswer || b.tier > d.bestAnswer.tier)) d.bestAnswer = b;
+      if (run.mode !== 'schola' && b && (!d.bestAnswer || b.tier > d.bestAnswer.tier)) d.bestAnswer = b;
       for (const id of run.used) {
         d.used[id] = (d.used[id] || 0) + 1;
         const pid = id.split(':')[0];

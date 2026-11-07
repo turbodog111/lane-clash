@@ -12,7 +12,7 @@ Open `index.html` in a browser. No build step and no server needed; double-click
 | Key | Action |
 |---|---|
 | `Enter` | Submit an answer |
-| `Tab` | New question (costs 4s) |
+| `Tab` | New question (costs 4s); in a drill, skip and see the answer |
 | `?` | Use a Sibyl's leaf (hint) |
 | `↑` | Glance at a question the Gorgon has hidden (costs 2s) |
 | `Esc` | Pause |
@@ -34,12 +34,31 @@ Open `index.html` in a browser. No build step and no server needed; double-click
 - **Worn words:** an answer you've used in 3+ past descents hits one tier weaker. Keep learning new ones.
 - **Codex** tracks every word you've found. The end screen shows rare answers you *could* have given.
 
+## Schola (class mode)
+
+Class mode uses **only class material**: currently the five handouts (Case Uses, the Declension Endings chart and its blank version, Adjectives, Adverbs). You choose which topics to study before each run. It mixes two kinds of question:
+
+- **Open questions** ("Name a use of the ablative case") work like the main game: many right answers, rarer ones hit harder.
+- **Drills** ("2nd declension (masculine) · genitive plural") have exactly one right answer, and the spelling must be exact. Each right answer hits and the next item appears; `Tab` skips an item and shows its answer. The end screen lists every item you missed, with its answer.
+
+In class mode, enemies are gentler, worn words don't apply (repetition is the point), Echo doesn't appear, and Charon accepts Insolitus (uncommon) answers.
+
+Class content lives in `js/data/schola.js`, one *unit* per topic, each listing the handout(s) it came from:
+
+```js
+{ id: 'vocab-1', title: 'Vocabulary set 1', la: 'Verba I', src: ['Vocab_1.pdf'], prompts: [
+  { id: 's-v1-meanings', kind: 'drill', lvl: 1, cat: 'Verba (vocabulary)', q: 'Give the English meaning',
+    items: [ { q: 'arma, armōrum (n. pl.)', a: 'arms/weapons', tier: 1 } ] },
+] }
+```
+
 ## Project layout
 
 ```
 index.html            page shell
 css/style.css         styles (single dark "red-figure vase" look)
 js/data/prompts.js    the question bank: every accepted answer with its rarity tier
+js/data/schola.js     class-mode content from the handouts (open questions + drills)
 js/data/bestiary.js   enemies, rules, gifts
 js/core/match.js      answer normalisation + matching (macrons, j/i, u/v, small typos)
 js/core/run.js        the game rules (pure logic, runs in Node too)

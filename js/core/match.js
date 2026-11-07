@@ -9,14 +9,14 @@
     { n: 'Rara Avis',  en: 'one in a million', dmg: 80, cls: 't5' },
   ];
 
-  // Lower-case, strip accents and macrons, j→i, v→u, drop everything but letters.
+  // Lower-case, strip accents and macrons, j→i, v→u, drop everything but letters and digits.
   RA.norm = function (s) {
     return String(s || '')
       .toLowerCase()
       .replace(/æ/g, 'ae').replace(/œ/g, 'oe')
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/j/g, 'i').replace(/v/g, 'u')
-      .replace(/[^a-z]/g, '');
+      .replace(/[^a-z0-9]/g, '');
   };
 
   const GEN = {
@@ -24,13 +24,25 @@
     v2: (w) => (/eor$/.test(w) ? [w.replace(/eor$/, 'eri')] : /eo$/.test(w) ? [w.replace(/eo$/, 'ere')] : []),
   };
 
+  const splitForms = (str) => str.split('/').map((x) => x.trim()).filter(Boolean);
+
   RA.buildPrompt = function (src) {
-    const p = { id: src.id, lvl: src.lvl, lang: src.lang, cat: src.cat, q: src.q, note: src.note || '', answers: [], map: new Map() };
+    const p = { id: src.id, lvl: src.lvl, lang: src.lang, cat: src.cat, q: src.q, note: src.note || '', kind: src.kind || 'open',
+                exact: !!src.exact || src.kind === 'drill', answers: [], map: new Map() };
+    if (p.kind === 'drill') {
+      src.items.forEach((it, i) => {
+        const forms = splitForms(it.a);
+        const keys = [...new Set(forms.map(RA.norm))].filter(Boolean);
+        p.answers.push({ q: it.q, sub: it.sub || '', note: it.note || '', text: it.show || forms[0], first: forms[0].replace(/^-/, ''), tier: it.tier, keys, id: p.id + ':' + i, prompt: p.id, index: i });
+      });
+      p.keys = [];
+      return p;
+    }
     for (let tier = 1; tier <= 5; tier++) {
       const line = src.t[tier];
       if (!line) continue;
       for (const item of line.split(',')) {
-        const forms = item.split('/').map((s) => s.trim()).filter(Boolean);
+        const forms = splitForms(item);
         if (!forms.length) continue;
         const extra = src.gen ? forms.flatMap(GEN[src.gen]) : [];
         const keys = [...new Set([...forms, ...extra].map(RA.norm))].filter(Boolean);
@@ -41,6 +53,12 @@
     }
     p.keys = [...p.map.keys()];
     return p;
+  };
+
+  // Drill items: exact match only (in grammar, one letter is the whole point).
+  RA.matchItem = function (item, raw) {
+    const key = RA.norm(raw);
+    return key && item.keys.includes(key) ? { a: item, typo: false } : null;
   };
 
   function lev(a, b, max) {
@@ -71,7 +89,7 @@
         if (k !== key && p.map.has(k)) return { a: p.map.get(k), typo: false };
       }
     }
-    if (allowTypo && key.length >= 5) {
+    if (allowTypo && !p.exact && key.length >= 5) {
       const max = key.length >= 9 ? 2 : 1;
       let best = null, bd = max + 1;
       for (const k of p.keys) {
@@ -93,5 +111,7 @@
   };
 
   RA.prompts = RA.PROMPT_SRC.map(RA.buildPrompt);
-  RA.promptById = Object.fromEntries(RA.prompts.map((p) => [p.id, p]));
+  RA.schola = (RA.SCHOLA_UNITS || []).map((u) => ({ ...u, prompts: u.prompts.map(RA.buildPrompt) }));
+  RA.scholaPrompts = RA.schola.flatMap((u) => u.prompts.map((p) => Object.assign(p, { unit: u.id })));
+  RA.promptById = Object.fromEntries([...RA.prompts, ...RA.scholaPrompts].map((p) => [p.id, p]));
 })(window.RA = window.RA || {});

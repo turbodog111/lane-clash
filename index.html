@@ -22,11 +22,20 @@
       <h1 class="title">Rara Avis</h1>
       <p class="subtitle">A Latin descent. Answer the Sibyl’s questions; the rarer the word, the harder it strikes.</p>
     </div>
-    <p class="sibyl sibyl-title"><span class="who">Sibylla</span> <span id="titleSibyl"></span></p>
+    <p class="sibyl sibyl-title"><span class="who">Sibylla (your guide)</span> <span id="titleSibyl"></span></p>
+    <div class="modes">
+      <button id="btnDescend" class="mode-card" type="button">
+        <span class="mode-name">Descend</span>
+        <span class="mode-en">All Latin: open questions, rare answers hit hardest</span>
+      </button>
+      <button id="btnSchola" class="mode-card" type="button">
+        <span class="mode-name">Schola</span>
+        <span class="mode-en">Class mode: only your handouts, vocabulary and passages</span>
+      </button>
+    </div>
     <div class="actions">
-      <button id="btnDescend" class="btn primary" type="button">Descend</button>
       <button id="btnHelp" class="btn" type="button">How to play</button>
-      <button id="btnCodex" class="btn" type="button">Codex</button>
+      <button id="btnCodex" class="btn" type="button">Codex (words you’ve found)</button>
     </div>
     <dl id="records" class="records"></dl>
     <p class="fine">Working title · prototype. Your progress lives only in this browser.</p>
@@ -35,18 +44,19 @@
   <!-- ── The descent ── -->
   <section id="scrRun" class="screen run-screen" hidden>
     <header class="hud">
-      <div class="hud-depth"><span class="lbl">Gradus</span><b id="hudFloor">I</b></div>
+      <div class="hud-depth"><span class="lbl">Gradus (floor)</span><b id="hudFloor">I</b> <span id="hudFloorN" class="floor-n num">1</span></div>
       <div class="hud-anima">
-        <span class="lbl">Anima <span id="animaTxt" class="num">100 / 100</span></span>
+        <span class="lbl">Anima (health) <span id="animaTxt" class="num">100 / 100</span></span>
         <div class="bar anima-bar"><i id="animaFill"></i></div>
+        <span id="hudZone" class="zone"></span>
       </div>
       <div class="hud-tokens">
-        <span id="hudFolia" class="token" title="Sibyl’s leaves: hints">Folia <b>3</b></span>
-        <span id="hudBough" class="token gold" title="Golden Bough: return once from death">Ramus <b>1</b></span>
+        <span id="hudFolia" class="token" title="Sibyl’s leaves: each one reveals a hint">Folia (hints) <b>3</b></span>
+        <span id="hudBough" class="token gold" title="Golden Bough: you return once from death">Ramus (extra life) <b>1</b></span>
       </div>
       <div class="hud-sys">
-        <button id="btnMute" class="icon-btn" type="button" aria-label="Mute sound">Sonus</button>
-        <button id="btnPause" class="icon-btn" type="button" aria-label="Pause">Pausa</button>
+        <button id="btnMute" class="icon-btn" type="button">Sound on</button>
+        <button id="btnPause" class="icon-btn" type="button">Pause <kbd>Esc</kbd></button>
       </div>
     </header>
     <div id="boonStrip" class="boon-strip" aria-label="Gifts in this descent"></div>
@@ -63,16 +73,16 @@
 
     <form id="answerForm" class="answer-form" autocomplete="off">
       <label for="answer" class="sr">Your answer</label>
-      <input id="answer" name="answer" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Respondē…" enterkeyhint="send">
-      <button class="btn primary" type="submit">Strike</button>
+      <input id="answer" name="answer" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Respondē… (your answer)" enterkeyhint="send">
+      <button class="btn primary" type="submit">Strike <span class="wide-only">(answer)</span></button>
     </form>
     <div id="feedback" class="feedback" aria-live="polite"></div>
 
     <div class="tools">
-      <button id="btnFolium" class="btn small" type="button">Leaf hint <kbd>?</kbd></button>
-      <button id="btnMuta" class="btn small" type="button">New question <kbd>Tab</kbd></button>
-      <button id="btnRespice" class="btn small" type="button" hidden>Glance <kbd>↑</kbd></button>
-      <button id="btnQuit" class="btn small ghost" type="button">Leave</button>
+      <button id="btnFolium" class="btn small" type="button">Hint (uses a leaf) <kbd>?</kbd></button>
+      <button id="btnMuta" class="btn small" type="button"><span id="mutaLabel">New question (costs 4s)</span> <kbd>Tab</kbd></button>
+      <button id="btnRespice" class="btn small" type="button" hidden>Glance (peek, costs 2s) <kbd>↑</kbd></button>
+      <button id="btnQuit" class="btn small ghost" type="button">Leave (end run)</button>
     </div>
     <p class="sibyl"><span class="who">Sibylla</span> <span id="sibylText"></span></p>
   </section>
@@ -81,7 +91,7 @@
   <section id="scrBoon" class="overlay" hidden>
     <div class="overlay-card">
       <p class="eyebrow">Gradus <span id="boonFloor">I</span> cleared</p>
-      <h2>Munera deorum</h2>
+      <h2>Munera deorum <span class="paren">(gifts of the gods)</span></h2>
       <p class="muted">Choose one gift. It lasts until this descent ends.</p>
       <div id="boonChoices" class="boon-choices"></div>
     </div>
@@ -90,11 +100,11 @@
   <!-- ── Pause ── -->
   <section id="scrPause" class="overlay" hidden>
     <div class="overlay-card narrow">
-      <h2>Pausa</h2>
+      <h2>Pausa <span class="paren">(paused)</span></h2>
       <p class="muted">The shades wait. Press <kbd>Esc</kbd> to continue.</p>
       <div class="actions">
         <button id="btnResume" class="btn primary" type="button">Continue</button>
-        <button id="btnPauseQuit" class="btn ghost" type="button">Leave this descent</button>
+        <button id="btnPauseQuit" class="btn ghost" type="button">Leave this run (go to results)</button>
       </div>
     </div>
   </section>
@@ -103,27 +113,48 @@
   <section id="scrEnd" class="screen end-screen" hidden>
     <p class="eyebrow" id="endEyebrow">Your descent ends</p>
     <h2 class="end-title">Gradus <span id="endFloor">I</span></h2>
+    <p class="muted" id="endFloorN"></p>
     <p class="sibyl"><span class="who">Sibylla</span> <span id="endSibyl"></span></p>
     <dl id="endStats" class="stats"></dl>
     <h3>What you could have said</h3>
     <p class="muted">Rare answers to the questions you faced. Learn a few; they hit hard next time.</p>
     <div id="endMissed" class="missed"></div>
     <div class="actions">
-      <button id="btnAgain" class="btn primary" type="button">Descend again <kbd>Enter</kbd></button>
-      <button id="btnToTitle" class="btn" type="button">Cave mouth</button>
+      <button id="btnAgain" class="btn primary" type="button">Descend again (same mode) <kbd>Enter</kbd></button>
+      <button id="btnToTitle" class="btn" type="button">Cave mouth (title screen)</button>
     </div>
   </section>
 
   <!-- ── Codex ── -->
   <section id="scrCodex" class="screen codex-screen" hidden>
     <div class="screen-head">
-      <h2>Codex</h2>
+      <h2>Codex <span class="paren">(words you’ve found)</span></h2>
       <button class="btn small back" type="button" data-back>Back</button>
     </div>
     <p class="muted" id="codexSummary"></p>
     <div id="codexList" class="codex-list"></div>
     <button id="btnForget" class="btn small ghost" type="button">Make the Sibyl forget everything</button>
     <p id="forgetConfirm" class="confirm" hidden>Erase every record and found word? <button id="btnForgetYes" class="btn small danger" type="button">Erase</button> <button id="btnForgetNo" class="btn small" type="button">Keep</button></p>
+  </section>
+
+  <!-- ── Class mode setup ── -->
+  <section id="scrSchola" class="screen schola-screen" hidden>
+    <div class="screen-head">
+      <h2>Schola <span class="paren">(class mode)</span></h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <p class="lede">Only material from your class. Two kinds of question appear:</p>
+    <ul class="kinds">
+      <li><b>Open questions</b> (“Name a use of the ablative”) have many right answers; rarer ones hit harder.</li>
+      <li><b>Drills</b> (“1st declension · genitive plural”) have exactly one right answer, spelled exactly. Skipping a drill item shows you the answer.</li>
+    </ul>
+    <p class="muted">Enemies are gentler here, worn words don’t apply, and Echo stays home. Pick the topics to study:</p>
+    <div id="unitList" class="unit-list"></div>
+    <div class="actions">
+      <button id="btnScholaGo" class="btn primary" type="button">Begin class descent</button>
+      <button id="btnScholaAll" class="btn small" type="button">Select all</button>
+    </div>
+    <p id="scholaRecord" class="muted"></p>
   </section>
 
   <!-- ── How to play ── -->
@@ -143,12 +174,14 @@
       <p><b>Between floors, choose a gift of the gods</b>, such as double damage for chaining last letter to first letter, or for very short words. Gifts last for one descent only. Nothing carries over except what you learn.</p>
       <p><b>The descent never ends.</b> It only gets stranger. Words you lean on across many descents grow <i>worn</i> and hit one tier weaker, so keep learning new ones.</p>
       <p class="keys"><kbd>Enter</kbd> answer · <kbd>Tab</kbd> new question (costs time) · <kbd>?</kbd> leaf hint · <kbd>↑</kbd> glance at a hidden question · <kbd>Esc</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> choose a gift</p>
-      <p class="muted">Spelling: macrons and capitals don’t matter, j = i and v = u. A one-letter slip on a long word still counts, at 80% damage.</p>
+      <p><b>Schola (class mode)</b> uses only your class handouts. Open questions work as above. <i>Drills</i> ask for one exact answer (an ending, a form, a case); every right answer hits and the next item appears. <kbd>Tab</kbd> skips a drill item and shows you its answer.</p>
+      <p class="muted">Spelling: macrons and capitals don’t matter, j = i and v = u. In open questions, a one-letter slip on a long word still counts, at 80% damage. Drills need exact spelling, since one letter is the whole point of an ending.</p>
     </div>
   </section>
 </div>
 
 <script src="js/data/prompts.js"></script>
+<script src="js/data/schola.js"></script>
 <script src="js/data/bestiary.js"></script>
 <script src="js/core/match.js"></script>
 <script src="js/core/run.js"></script>

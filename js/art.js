@@ -118,8 +118,9 @@
       ctx.beginPath(); ctx.moveTo(-17, -47); ctx.lineTo(-3, -42); ctx.moveTo(17, -47); ctx.lineTo(3, -42); ln(2.4); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, -36); ctx.lineTo(-3, -26); ctx.lineTo(2, -25); ln(1.4); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-8, -17); ctx.quadraticCurveTo(0, -21, 8, -17); ln(2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(26, 12); ctx.lineTo(54, -14); ln(9, C.line); ctx.stroke(); ln(6, C.clay); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(56, -4); ctx.lineTo(62, -50); ln(5, '#3a2418'); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(62, -6); ctx.lineTo(62, -50); ln(5, '#3a2418'); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(24, 10); ctx.quadraticCurveTo(44, 8, 60, -12); ln(9, C.line); ctx.stroke(); ln(6, C.clay); ctx.stroke();
+      ctx.beginPath(); ctx.arc(61, -13, 5, 0, 7); ctx.fillStyle = C.clay; ctx.fill(); ln(1.6); ctx.stroke();
       const f = Math.sin(t * 13) * 3;
       glow(62, -62, 46, 'rgba(232,191,85,0.8)', 0.55);
       ctx.beginPath(); ctx.moveTo(62, -50); ctx.quadraticCurveTo(46 + f, -66, 63, -92 + f); ctx.quadraticCurveTo(78 - f, -66, 62, -50);
@@ -155,7 +156,7 @@
     echo(t) {
       for (let i = 0; i < 4; i++) {
         const ph = (t * 0.5 + i / 4) % 1;
-        ctx.beginPath(); ctx.arc(0, 0, 20 + ph * 110, 0, 7);
+        ctx.beginPath(); ctx.arc(8, -6, 20 + ph * 110, 0, 7);
         ctx.globalAlpha = (1 - ph) * 0.5; ln(2, C.styx); ctx.stroke(); ctx.globalAlpha = 1;
       }
       for (let i = 2; i >= 0; i--) {
@@ -300,8 +301,130 @@
     },
   };
 
+
+  // ── Zones of the Underworld (they change as you go deeper) ─────
+  const ZONES = [
+    { from: 1,  key: 'vestibulum', label: 'Vestibulum (the entrance hall)', sky: ['#2c1b12', '#100b09'], rock: '#1b120e', rockHi: '#2b1d16', accent: '#e8a062', ember: '#e8a062', frieze: '#9a4f25' },
+    { from: 5,  key: 'styx',       label: 'Styx (the river of the dead)',   sky: ['#10302c', '#070d0c'], rock: '#0c1715', rockHi: '#15282a', accent: '#4fb3a6', ember: '#8fe3d6', frieze: '#2f7a70' },
+    { from: 10, key: 'tartarus',   label: 'Tartarus (the burning pit)',     sky: ['#43120a', '#130403'], rock: '#1e0806', rockHi: '#3a120b', accent: '#ff6a3d', ember: '#ffae6b', frieze: '#a0341c' },
+    { from: 15, key: 'elysium',    label: 'Elysium (the fields of the blessed)', sky: ['#3d3519', '#15130a'], rock: '#1f1b10', rockHi: '#3a3320', accent: '#f2d77a', ember: '#fff2b0', frieze: '#9c8740' },
+    { from: 20, key: 'ultra',      label: 'Ultra (beyond the map)',         sky: ['#221838', '#07050c'], rock: '#120d1d', rockHi: '#231a38', accent: '#b9a4ff', ember: '#d6c8ff', frieze: '#5d4c99' },
+  ];
+  const zoneOf = (n) => ZONES.reduce((z, cur) => (n >= cur.from ? cur : z), ZONES[0]);
+
+  let zone = ZONES[0], floorNow = 1, descend = 0, rocks = null, rocksFor = '';
+  let particles = [], shots = [], swans = [], intro = null, death = 0;
+
+  function seeded(seed) { let a = seed; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; }
+  // Jagged cave walls and stalactites, regenerated per size and zone.
+  function buildRocks() {
+    const r = seeded(zone.from * 977 + Math.round(W));
+    const wall = (side) => {
+      const pts = [], n = 14;
+      for (let i = 0; i <= n; i++) pts.push([(0.08 + r() * 0.12) * W, (i / n) * H]);
+      return { side, pts };
+    };
+    const stal = [];
+    for (let i = 0; i < 9; i++) stal.push({ x: r() * W, w: 8 + r() * 22, h: 12 + r() * 40 });
+    const cols = [];
+    for (let i = 0; i < 4; i++) cols.push({ x: (0.12 + i * 0.25 + (r() - 0.5) * 0.05) * W, h: 0.35 + r() * 0.35, broken: r() < 0.6 });
+    const stars = [];
+    for (let i = 0; i < 40; i++) stars.push({ x: r() * W, y: r() * H * 0.7, s: 0.5 + r() * 1.5, p: r() * 6 });
+    rocks = { left: wall('l'), right: wall('r'), stal, cols, stars };
+    rocksFor = zone.key + W + 'x' + H;
+  }
+
+  function drawScene(time) {
+    if (rocksFor !== zone.key + W + 'x' + H) buildRocks();
+    const off = descend * H * 0.6; // floor transition: the walls slide up as you go down
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, zone.sky[1]); bg.addColorStop(0.55, zone.sky[0]); bg.addColorStop(1, zone.sky[1]);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    if (zone.key === 'ultra' || zone.key === 'elysium') {
+      for (const st of rocks.stars) {
+        ctx.globalAlpha = 0.25 + 0.35 * Math.sin(time * 1.5 + st.p);
+        ctx.fillStyle = zone.ember; ctx.fillRect(st.x, (st.y + off) % H, st.s, st.s);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (zone.key === 'elysium') {
+      for (let i = 0; i < 5; i++) {
+        const x = W * (0.15 + i * 0.18) + Math.sin(time * 0.2 + i) * 20;
+        const g = ctx.createLinearGradient(x, 0, x + 60, H);
+        g.addColorStop(0, 'rgba(255,240,180,0.10)'); g.addColorStop(1, 'rgba(255,240,180,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 20, 0); ctx.lineTo(x + 30, 0); ctx.lineTo(x + 140, H); ctx.lineTo(x + 40, H); ctx.fill();
+      }
+    }
+    // Ruined columns in the entrance hall; broken arches deeper down.
+    if (zone.key === 'vestibulum' || zone.key === 'ultra') {
+      for (const c of rocks.cols) {
+        const h = c.h * H, y = H - h + off * 0.4;
+        ctx.fillStyle = zone.rockHi;
+        ctx.fillRect(c.x - 9, y, 18, h);
+        ctx.fillRect(c.x - 14, y - 6, 28, 8);
+        if (!c.broken) ctx.fillRect(c.x - 16, y - 12, 32, 6);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        for (let k = -6; k <= 6; k += 4) ctx.fillRect(c.x + k, y + 4, 1.5, h);
+        if (zone.key === 'ultra') { // fragments drift apart
+          ctx.save(); ctx.translate(c.x, y - 30 + Math.sin(time + c.x) * 6); ctx.rotate(Math.sin(time * 0.7 + c.x) * 0.3);
+          ctx.fillStyle = zone.rockHi; ctx.fillRect(-10, -6, 20, 10); ctx.restore();
+        }
+      }
+    }
+    // Cave walls
+    for (const wall of [rocks.left, rocks.right]) {
+      ctx.beginPath();
+      const sx = wall.side === 'l' ? 0 : W;
+      ctx.moveTo(sx, 0);
+      for (const [x, y] of wall.pts) ctx.lineTo(wall.side === 'l' ? x : W - x, (y + off) % (H + 1));
+      ctx.lineTo(sx, H); ctx.closePath();
+      ctx.fillStyle = zone.rock; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = zone.rockHi; ctx.stroke();
+    }
+    for (const s2 of rocks.stal) {
+      ctx.beginPath(); ctx.moveTo(s2.x - s2.w / 2, 0); ctx.lineTo(s2.x, s2.h + off * 0.2); ctx.lineTo(s2.x + s2.w / 2, 0); ctx.closePath();
+      ctx.fillStyle = zone.rock; ctx.fill();
+    }
+    // The river Styx / the fire of Tartarus along the bottom
+    if (zone.key === 'styx' || zone.key === 'tartarus') {
+      const top = H * 0.8;
+      ctx.beginPath(); ctx.moveTo(0, top);
+      for (let x = 0; x <= W + 20; x += 20) ctx.quadraticCurveTo(x + 10, top - 4 + Math.sin(time * 2 + x * 0.04) * 4, x + 20, top);
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+      const g = ctx.createLinearGradient(0, top, 0, H);
+      if (zone.key === 'styx') { g.addColorStop(0, 'rgba(79,179,166,0.55)'); g.addColorStop(1, 'rgba(7,13,12,0.95)'); }
+      else { g.addColorStop(0, 'rgba(255,106,61,0.65)'); g.addColorStop(1, 'rgba(60,8,4,0.95)'); }
+      ctx.fillStyle = g; ctx.fill();
+      if (zone.key === 'tartarus') {
+        for (let i = 0; i < 7; i++) {
+          const x = (i + 0.5) * (W / 7), fl = Math.sin(time * 9 + i * 2) * 6;
+          glow(x, top + 4, 40, 'rgba(255,140,60,0.7)', 0.35);
+          ctx.beginPath(); ctx.moveTo(x - 10, top + 6); ctx.quadraticCurveTo(x - 4 + fl, top - 22, x, top - 34 + fl); ctx.quadraticCurveTo(x + 6 - fl, top - 18, x + 10, top + 6);
+          ctx.fillStyle = 'rgba(255,174,107,0.6)'; ctx.fill();
+        }
+      } else {
+        for (let i = 0; i < 6; i++) {
+          const x = ((time * 18 + i * 130) % (W + 100)) - 50;
+          ctx.globalAlpha = 0.18; ctx.beginPath(); ctx.ellipse(x, top + 14 + i * 4, 50, 3, 0, 0, 7); ctx.fillStyle = C.bone; ctx.fill(); ctx.globalAlpha = 1;
+        }
+      }
+    }
+    // Embers / motes
+    for (const e of embers) {
+      e.y -= e.v * 0.016 * (zone.key === 'styx' ? 0.5 : 1); if (e.y < -0.05) { e.y = 1.05; e.x = Math.random(); }
+      ctx.globalAlpha = 0.3 + 0.35 * Math.sin(time * 3 + e.x * 20);
+      ctx.beginPath(); ctx.arc(e.x * W + Math.sin(time + e.y * 9) * 6, e.y * H, e.r, 0, 7); ctx.fillStyle = zone.ember; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // Vignette
+    const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+
   // Greek key frieze along a horizontal band.
-  function meander(y, h) {
+  function meander(y, h, col) {
     const u = h / 5;
     ctx.save();
     ctx.fillStyle = C.glaze2; ctx.fillRect(0, y, W, h);
@@ -312,8 +435,38 @@
       ctx.lineTo(x + u * 2, y + u * 3.5); ctx.lineTo(x + u * 2, y + u * 2);
       ctx.moveTo(x, y + h - u * 0.5); ctx.lineTo(x + u * 5, y + h - u * 0.5);
     }
-    ctx.lineWidth = Math.max(1.2, u * 0.55); ctx.strokeStyle = C.clayLo; ctx.lineCap = 'square'; ctx.stroke();
+    ctx.lineWidth = Math.max(1.2, u * 0.55); ctx.strokeStyle = col || C.clayLo; ctx.lineCap = 'square'; ctx.stroke();
     ctx.restore();
+  }
+
+  // Juvenal's "rara avis in terris nigroque simillima cygno": a black swan.
+  function drawSwan(x, y, s, t) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    glow(0, 0, 70, 'rgba(198,170,255,0.9)', 0.45);
+    const f = Math.sin(t * 9);
+    ctx.fillStyle = '#0b0809';
+    ctx.beginPath(); ctx.moveTo(-6, -4); ctx.quadraticCurveTo(-14, -30 - f * 18, -40, -36 - f * 22); ctx.quadraticCurveTo(-22, -14, -2, 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, 28, 10, -0.05, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-28, -2); ctx.lineTo(-40, -8); ctx.lineTo(-36, 4); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(20, -4); ctx.bezierCurveTo(36, -6, 30, -26, 46, -26); ln(6, '#0b0809'); ctx.stroke();
+    ctx.beginPath(); ctx.arc(47, -26, 5, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(50, -28); ctx.lineTo(62, -24); ctx.lineTo(50, -22); ctx.fillStyle = C.blood; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-4, 2); ctx.quadraticCurveTo(-10, 20 + f * 14, -32, 26 + f * 18); ctx.quadraticCurveTo(-16, 10, 4, 4); ctx.fillStyle = '#1a1420'; ctx.fill();
+    ctx.restore();
+  }
+
+  function burst(x, y, col, n, shard) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = (shard ? 120 : 60) + Math.random() * (shard ? 260 : 160);
+      particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (shard ? 120 : 30), life: 0, max: shard ? 1.6 : 0.7 + Math.random() * 0.4,
+        col, r: shard ? 4 + Math.random() * 9 : 1.5 + Math.random() * 2.5, shard, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12 });
+    }
+  }
+
+  function enemyCenter(part) {
+    const n = enemy ? enemy.parts.length : 1;
+    const dx = n > 1 ? [-0.2, 0, 0.2][part] || 0 : 0;
+    return { x: W / 2 + dx * W, y: H * (n > 1 && part === 1 ? 0.36 : 0.46) };
   }
 
   RA.Art = {
@@ -321,82 +474,210 @@
       canvas = c; ctx = c.getContext('2d');
       resize();
       window.addEventListener('resize', resize, { passive: true });
-      for (let i = 0; i < 26; i++) embers.push({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, r: 0.6 + Math.random() * 1.6 });
+      for (let i = 0; i < 30; i++) embers.push({ x: Math.random(), y: Math.random(), v: 0.02 + Math.random() * 0.05, r: 0.6 + Math.random() * 1.6 });
     },
     resize,
-    setEnemy(e) {
-      enemy = e; enemyId = e ? e.id : null; dying = 0; floaters = []; flash = []; partFade = [];
+    zone: (n) => zoneOf(n),
+    setEnemy(e, floor = 1) {
+      const prevZone = zone;
+      enemy = e; enemyId = e ? e.id : null; dying = 0; floaters = []; flash = []; shots = []; death = 0;
+      zone = zoneOf(floor);
+      if (floor > floorNow || floor === 1) descend = floor === 1 ? 0 : 1;
+      floorNow = floor;
+      if (e && e.boss) intro = { title: e.name, sub: '(' + e.en + ')', t: 0, col: zone.accent };
+      else if (zone !== prevZone || floor === 1) intro = { title: zone.label.split(' (')[0], sub: '(' + zone.label.split(' (')[1], t: 0, col: zone.accent };
     },
-    hit(part, dmg, tier) {
-      shake = Math.min(14, 3 + dmg / 8);
-      flash[part] = 1;
-      const n = enemy ? enemy.parts.length : 1;
-      floaters.push({ x: n > 1 ? [-0.24, 0, 0.24][part] : (Math.random() - 0.5) * 0.2, y: 0, t: 0, txt: dmg > 0 ? '−' + dmg : '0', col: TIER_COL[tier] || C.bone, big: tier >= 4 });
+    hit(part, dmg, tier, text) {
+      const to = enemyCenter(part);
+      shots.push({ text, tier, t: 0, from: { x: W / 2, y: H - 20 }, to, dmg, part });
+      if (tier >= 5) swans.push({ t: 0, y: H * (0.25 + Math.random() * 0.2) });
     },
     text(txt, col) { floaters.push({ x: 0, y: 0, t: 0, txt, col: col || C.bone, big: false }); },
     strike() { lunge = 1; },
-    defeat() { dying = 0.0001; },
+    defeat(player) {
+      if (player) { death = 0.0001; return; }
+      dying = 0.0001;
+      const c = enemyCenter(1);
+      burst(W / 2, c.y + 20, C.clay, 26, true);
+      burst(W / 2, c.y + 20, zone.accent, 18, false);
+    },
     set(k, v) { state[k] = v; },
-    draw(time, run) {
+
+    draw(time, run, dt = 0.016) {
       if (!ctx) return;
       if (canvas.width !== Math.round(W * dpr) || W < 20) resize();
       if (W < 20 || H < 60) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const bg = ctx.createRadialGradient(W / 2, H * 0.6, 10, W / 2, H * 0.6, Math.max(W, H) * 0.8);
-      bg.addColorStop(0, '#2a1a12'); bg.addColorStop(1, C.glaze);
-      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-      for (const e of embers) {
-        e.y -= e.v * 0.016; if (e.y < -0.05) { e.y = 1.05; e.x = Math.random(); }
-        ctx.globalAlpha = 0.35 + 0.35 * Math.sin(time * 3 + e.x * 20);
-        ctx.beginPath(); ctx.arc(e.x * W, e.y * H, e.r, 0, 7); ctx.fillStyle = C.clayHi; ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      descend *= 0.9;
+      drawScene(time);
       const band = Math.max(10, Math.min(18, H * 0.06));
-      meander(0, band); meander(H - band, band);
 
       if (enemy && DRAW[enemy.id]) {
         const s = Math.min(W / 330, (H - band * 2) / 225);
         shake *= 0.86; lunge *= 0.9;
-        if (dying) dying = Math.min(1, dying + 0.025);
+        if (dying) dying = Math.min(1, dying + dt * 3);
         ctx.save();
-        ctx.translate(W / 2 + (Math.random() - 0.5) * shake, H / 2 + 4 + (Math.random() - 0.5) * shake);
+        ctx.translate(W / 2 + (Math.random() - 0.5) * shake, H / 2 + 4 + (Math.random() - 0.5) * shake + descend * H * 0.5);
         ctx.beginPath(); ctx.ellipse(0, 96 * s, 90 * s, 12 * s, 0, 0, 7); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();
-        const sc = s * (1 + lunge * 0.12) * (1 - dying * 0.25);
+        const sc = s * (1 + lunge * 0.12) * (1 - dying * 0.15);
         ctx.scale(sc, sc);
-        ctx.globalAlpha = 1 - dying;
+        ctx.globalAlpha = Math.max(0, 1 - dying * 1.6);
         if (state.petrified && enemy.id !== 'gorgo') ctx.filter = 'grayscale(0.8)';
         DRAW[enemy.id](time, run && run.enemy === enemy ? enemy.parts : null);
         ctx.filter = 'none';
         ctx.restore();
+        ctx.globalAlpha = 1;
         const fl = Math.max(...flash.map((f) => f || 0), 0);
-        if (fl > 0.02) { ctx.fillStyle = `rgba(239,227,200,${fl * 0.22})`; ctx.fillRect(0, 0, W, H); }
+        if (fl > 0.02) { ctx.fillStyle = `rgba(239,227,200,${fl * 0.2})`; ctx.fillRect(0, 0, W, H); }
         flash = flash.map((f) => (f || 0) * 0.82);
-        if (lunge > 0.05) { ctx.fillStyle = `rgba(210,70,58,${lunge * 0.28})`; ctx.fillRect(0, 0, W, H); }
+        if (lunge > 0.05) {
+          const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.7);
+          g.addColorStop(0, 'rgba(210,70,58,0)'); g.addColorStop(1, `rgba(210,70,58,${lunge * 0.55})`);
+          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        }
       }
+
+      // Answers fly from the input up into the enemy.
+      for (const sh of shots) {
+        sh.t += dt;
+        const k = Math.min(1, sh.t / 0.26), e = 1 - Math.pow(1 - k, 3);
+        if (k < 1) {
+          const x = sh.from.x + (sh.to.x - sh.from.x) * e, y = sh.from.y + (sh.to.y - sh.from.y) * e - Math.sin(k * Math.PI) * 30;
+          ctx.font = `italic ${16 + sh.tier * 2}px 'Alegreya', Georgia, serif`;
+          ctx.textAlign = 'center'; ctx.fillStyle = TIER_COL[sh.tier]; ctx.shadowColor = TIER_COL[sh.tier]; ctx.shadowBlur = 8 + sh.tier * 3;
+          ctx.fillText(sh.text, x, y); ctx.shadowBlur = 0;
+        } else if (!sh.done) {
+          sh.done = true;
+          shake = Math.min(16, 3 + sh.dmg / 7);
+          flash[sh.part] = 1;
+          burst(sh.to.x, sh.to.y, TIER_COL[sh.tier], 6 + sh.tier * 5, false);
+          particles.push({ ring: true, x: sh.to.x, y: sh.to.y, life: 0, max: 0.45, col: TIER_COL[sh.tier], r: 10 + sh.tier * 6 });
+          floaters.push({ x: (sh.to.x - W / 2) / W, y: 0, t: 0, txt: sh.dmg > 0 ? '−' + sh.dmg : '0', col: TIER_COL[sh.tier] || C.bone, big: sh.tier >= 4 });
+        }
+      }
+      shots = shots.filter((sh) => !sh.done);
+
+      for (const p of particles) {
+        p.life += dt;
+        const a = Math.max(0, 1 - p.life / p.max);
+        ctx.globalAlpha = a;
+        if (p.ring) {
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r + p.life * 160, 0, 7); ctx.lineWidth = 3 * a; ctx.strokeStyle = p.col; ctx.stroke();
+          continue;
+        }
+        p.vy += (p.shard ? 520 : 120) * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+        if (p.shard) {
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.beginPath(); ctx.moveTo(-p.r, -p.r * 0.4); ctx.lineTo(p.r * 0.8, -p.r * 0.7); ctx.lineTo(p.r * 0.3, p.r * 0.8); ctx.closePath();
+          ctx.fillStyle = p.col; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = C.line; ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fillStyle = p.col; ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      particles = particles.filter((p) => p.life < p.max);
+
+      for (const sw of swans) {
+        sw.t += dt;
+        const k = sw.t / 2.2;
+        drawSwan(-80 + k * (W + 160), sw.y - Math.sin(k * Math.PI) * 30, Math.min(1.2, W / 600), time);
+      }
+      swans = swans.filter((sw) => sw.t < 2.2);
+
       for (const f of floaters) {
-        f.t += 0.016;
+        f.t += dt;
         const a = Math.max(0, 1 - f.t / 1.4);
         ctx.globalAlpha = a;
         ctx.font = `${f.big ? 34 : 24}px 'Marcellus SC', 'Times New Roman', serif`;
         ctx.textAlign = 'center';
         ctx.fillStyle = f.col;
         ctx.shadowColor = f.col; ctx.shadowBlur = f.big ? 16 : 6;
-        ctx.fillText(f.txt, W / 2 + f.x * W, H * 0.42 - f.t * 46);
+        ctx.fillText(f.txt, W / 2 + f.x * W, H * 0.4 - f.t * 46);
         ctx.shadowBlur = 0;
       }
       ctx.globalAlpha = 1;
       floaters = floaters.filter((f) => f.t < 1.4);
+
+      if (intro) {
+        intro.t += dt;
+        const k = intro.t, a = k < 0.4 ? k / 0.4 : k > 2.1 ? Math.max(0, 1 - (k - 2.1) / 0.5) : 1;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = 'rgba(8,5,4,0.62)'; ctx.fillRect(0, H * 0.36, W, H * 0.28);
+        ctx.fillStyle = intro.col; ctx.textAlign = 'center';
+        ctx.font = `${Math.min(46, W / 11)}px 'Marcellus SC', 'Times New Roman', serif`;
+        const spread = 1 + (1 - a) * 0.15;
+        ctx.save(); ctx.translate(W / 2, H * 0.5); ctx.scale(spread, 1); ctx.fillText(intro.title.toUpperCase(), 0, 0); ctx.restore();
+        ctx.font = `italic ${Math.min(18, W / 26)}px 'Alegreya', Georgia, serif`; ctx.fillStyle = C.bone;
+        ctx.fillText(intro.sub, W / 2, H * 0.5 + 26);
+        ctx.globalAlpha = 1;
+        if (k > 2.6) intro = null;
+      }
+
+      if (state.petrified) { ctx.fillStyle = 'rgba(120,130,128,0.12)'; ctx.fillRect(0, 0, W, H); }
+      if (death) {
+        death = Math.min(1, death + dt * 0.8);
+        ctx.fillStyle = `rgba(30,4,2,${death * 0.85})`; ctx.fillRect(0, 0, W, H);
+      }
+      meander(0, band, zone.frieze); meander(H - band, band, zone.frieze);
     },
-    // A static portrait for the title screen.
-    drawTitle(c, time) {
-      const prev = [canvas, ctx, W, H, enemy];
-      canvas = c; ctx = c.getContext('2d');
-      const r = c.getBoundingClientRect(); W = r.width; H = r.height;
-      if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
-      const ids = ['umbra', 'furia', 'harpyia', 'echo', 'sphinx', 'gorgo', 'tantalus', 'cerberus', 'charon', 'minos'];
-      enemy = { id: ids[Math.floor(time / 6) % ids.length], parts: [] };
-      this.draw(time, null);
-      [canvas, ctx, W, H, enemy] = prev;
+
+    // Title scene: the Sibyl at the mouth of her cave, her prophecy-leaves swirling on the wind.
+    drawTitle(c, time, dt = 0.016) {
+      const r = c.getBoundingClientRect();
+      const tw = r.width, th = r.height;
+      if (tw < 20 || th < 60) return;
+      const x = c.getContext('2d');
+      if (c.width !== Math.round(tw * dpr)) { c.width = Math.round(tw * dpr); c.height = Math.round(th * dpr); }
+      const prev = [canvas, ctx, W, H];
+      canvas = c; ctx = x; W = tw; H = th;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      zone = ZONES[0];
+      drawScene(time);
+      const band = Math.max(10, Math.min(18, H * 0.06));
+      const s = Math.min(W / 420, (H - band * 2) / 230);
+      // Cave mouth
+      ctx.save(); ctx.translate(W * 0.36, H * 0.56); ctx.scale(s, s);
+      ctx.beginPath(); ctx.moveTo(-90, 110); ctx.lineTo(-90, -10); ctx.quadraticCurveTo(-90, -95, 0, -95); ctx.quadraticCurveTo(90, -95, 90, -10); ctx.lineTo(90, 110); ctx.closePath();
+      const mouth = ctx.createRadialGradient(0, 40, 5, 0, 20, 120);
+      mouth.addColorStop(0, '#5a2a14'); mouth.addColorStop(0.5, '#1c0f0a'); mouth.addColorStop(1, '#070504');
+      ctx.fillStyle = mouth; ctx.fill(); ln(6, C.clayLo); ctx.stroke();
+      for (let i = 0; i < 11; i++) { const a = Math.PI + (i / 10) * Math.PI; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 90, -10 + Math.sin(a) * 85); ctx.lineTo(Math.cos(a) * 104, -10 + Math.sin(a) * 99); ln(3, C.clayLo); ctx.stroke(); }
+      for (let i = 0; i < 3; i++) { // stairs leading down
+        ctx.fillStyle = `rgba(232,160,98,${0.18 - i * 0.05})`; ctx.fillRect(-60 + i * 14, 70 + i * 12, 120 - i * 28, 6);
+      }
+      glow(0, 60, 60, 'rgba(232,120,60,0.8)', 0.35);
+      ctx.restore();
+      // The Sibyl, in profile, veiled, a leaf in her raised hand
+      ctx.save(); ctx.translate(W * 0.68, H * 0.5 + Math.sin(time * 0.8) * 2); ctx.scale(s * 1.1, s * 1.1);
+      ctx.beginPath(); ctx.moveTo(-24, -10); ctx.quadraticCurveTo(-40, 50, -46, 96); ctx.lineTo(34, 96); ctx.quadraticCurveTo(28, 40, 20, -10); ctx.closePath();
+      ctx.fillStyle = clayGrad(-40, -10, 40, 100); ctx.fill(); ln(2); ctx.stroke();
+      for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-14 + i * 6, -2); ctx.quadraticCurveTo(-22 + i * 8, 50, -36 + i * 13, 94); ln(1.2); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(-22, 30); ctx.lineTo(28, 30); ln(4, C.line); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-14, 0); ctx.quadraticCurveTo(-40, -20, -50, -52); ln(9, C.line); ctx.stroke(); ln(6, C.clay); ctx.stroke();
+      ctx.save(); ctx.translate(-52, -58); ctx.rotate(-0.5 + Math.sin(time * 2) * 0.1);
+      ctx.beginPath(); ctx.ellipse(0, -8, 5, 11, 0, 0, 7); ctx.fillStyle = '#7b8a4c'; ctx.fill(); ln(1.2); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.translate(0, -36); profileHead(C.line, true); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(-14, -66); ctx.bezierCurveTo(10, -80, 34, -60, 30, -20); ctx.bezierCurveTo(32, 10, 26, 40, 24, 60);
+      ctx.lineTo(16, 60); ctx.bezierCurveTo(16, 20, 14, -30, -4, -58); ctx.closePath();
+      ctx.fillStyle = 'rgba(79,179,166,0.55)'; ctx.fill(); ln(1.4); ctx.stroke();
+      ctx.restore();
+      // Leaves on the wind, each with a scrap of prophecy
+      const words = ['FACILIS', 'DESCENSUS', 'AVERNO', 'HOC', 'OPUS', 'HIC', 'LABOR', 'EST', 'RARA', 'AVIS'];
+      for (let i = 0; i < words.length; i++) {
+        const ph = time * 0.35 + i * 0.63;
+        const lx = W * 0.5 + Math.cos(ph) * W * 0.36, ly = H * 0.45 + Math.sin(ph * 1.7) * H * 0.26;
+        ctx.save(); ctx.translate(lx, ly); ctx.rotate(ph * 2);
+        ctx.globalAlpha = 0.75;
+        ctx.beginPath(); ctx.ellipse(0, 0, 13 * s, 6 * s, 0, 0, 7); ctx.fillStyle = i % 3 ? '#6f7d4a' : '#8a6a2a'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-12 * s, 0); ctx.lineTo(12 * s, 0); ln(0.8, 'rgba(0,0,0,0.5)'); ctx.stroke();
+        ctx.font = `${Math.max(6, 6.5 * s)}px 'Marcellus SC', serif`; ctx.fillStyle = C.bone; ctx.textAlign = 'center'; ctx.globalAlpha = 0.85;
+        ctx.fillText(words[i], 0, -8 * s);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      meander(0, band, zone.frieze); meander(H - band, band, zone.frieze);
+      [canvas, ctx, W, H] = prev;
     },
   };
 })(window.RA = window.RA || {});

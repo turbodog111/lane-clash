@@ -21,6 +21,12 @@ The first playable slice of §3, focused on **Latin + Krillion's spirit**. Krill
 
 What's still open from §8: tone, the Host's identity (currently the Sibyl), answer checking beyond curated lists, title. *Rara avis* is Juvenal's "rare bird" (a black swan, which is also the top rarity tier). It's a working title only.
 
+### Prototype 1.1 (same day): class mode and graphics
+- **Schola (class mode).** Built from turbodog111's handouts: case uses, declension endings, adjectives, adverbs. It adds **drills** (one exact answer per item) next to open questions, with topic selection and a separate record. The remaining handouts, vocabulary sets and passages still need to be added (24 files total; 5 received so far).
+- **Underworld zones** that change with depth: Vestibulum → Styx → Tartarus → Elysium → Ultra (beyond the map).
+- **Effects:** answers fly at the enemy as glowing text; *Rara Avis* answers summon Juvenal's black swan; enemies shatter into terracotta shards; title cards for bosses and new zones; a Sibyl scene on the title screen.
+- **UI clarity:** every Latin label carries its English in parentheses, e.g. Gradus (floor), Anima (health), Folia (hints), Munera deorum (gifts of the gods).
+
 ---
 
 ## 1. Executive decisions (turbodog111, 2026-11-07)

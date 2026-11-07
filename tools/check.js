@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 global.window = global;
-for (const f of ['js/data/prompts.js', 'js/data/bestiary.js', 'js/core/match.js', 'js/core/run.js']) {
+for (const f of ['js/data/prompts.js', 'js/data/schola.js', 'js/data/bestiary.js', 'js/core/match.js', 'js/core/run.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
 }
 const RA = global.RA;
@@ -28,6 +28,17 @@ for (const src of RA.PROMPT_SRC) {
     }
   }
 }
+// Class content: every drill item needs an answer and a tier; open prompts need at least one answer.
+for (const u of RA.schola) for (const pr of u.prompts) {
+  if (ids.has(pr.id)) fail(`duplicate prompt id ${pr.id}`);
+  ids.add(pr.id);
+  if (!pr.answers.length) fail(`${pr.id}: no answers`);
+  for (const a of pr.answers) {
+    if (!a.keys.length) fail(`${pr.id}: item "${a.q || a.text}" has no accepted answer`);
+    if (!(a.tier >= 1 && a.tier <= 5)) fail(`${pr.id}: item "${a.q || a.text}" has tier ${a.tier}`);
+  }
+}
+console.log(`class units: ${RA.schola.length}, questions: ${RA.scholaPrompts.length}, items/answers: ${RA.scholaPrompts.reduce((s, x) => s + x.answers.length, 0)}`);
 const p = RA.prompts;
 console.log(`prompts: ${p.length} (lvl1 ${p.filter(x=>x.lvl===1).length}, lvl2 ${p.filter(x=>x.lvl===2).length}, lvl3 ${p.filter(x=>x.lvl===3).length})`);
 console.log(`answers: ${p.reduce((s,x)=>s+x.answers.length,0)}`);
@@ -51,16 +62,32 @@ expect('animalia', 'elefantus', 'elephantus (typo)');
 expect('animalia', 'dog', null);
 expect('mensis', 'Iānuārius', 'Ianuarius');
 expect('sidera', 'ursa major', 'Ursa Maior');
+expect('s-usus-abl', 'ablative of means', 'means');
+expect('s-usus-abl', 'Instrument', 'means');
+expect('s-usus-gen', 'partitive genitive', 'partitive');
+expect('s-gradus-formae', 'saevissimus', null);
+const item = (pid, i) => RA.promptById[pid].answers[i];
+const end = RA.promptById['s-terminationes'].answers.find((a) => a.q === '1st declension (feminine) · genitive plural');
+if (!RA.matchItem(end, '-ārum') || !RA.matchItem(end, 'arum') || RA.matchItem(end, 'orum')) fail('ending drill matching');
+const sup = RA.promptById['s-gradus-adi'].answers.find((a) => a.q.startsWith('Superlative of ācer (m'));
+if (!RA.matchItem(sup, 'acerrimus') || RA.matchItem(sup, 'acerrimum')) fail('degree drill must be exact');
 
 // 3. Simulated runs with a bot that knows a fraction of answers.
-function sim(knowRate, seed, pace = 2.2, miss = 0) {
-  const run = new RA.Run({ used: {}, found: {} }, seed);
+function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
+  const run = new RA.Run({ used: {}, found: {} }, seed, mode === 'schola' ? { mode, pool: RA.scholaPrompts } : {});
   let guard = 0;
   while (run.phase !== 'dead' && guard++ < 20000) {
     if (run.phase === 'boon') { run.chooseBoon(0); continue; }
     run.tick(pace);
     if (run.phase !== 'fight') continue;
     const part = run.enemy.parts.find((x) => x.alive);
+    const cur = run.current(part);
+    if (cur) {
+      if (Math.random() < miss + (cur.tier - 1) * (0.5 - knowRate) * 0.25) run.submit('nescio');
+      else run.submit(cur.keys[0]);
+      run.events.length = 0;
+      continue;
+    }
     const left = part.prompt.answers.filter((a) => !run.used.has(a.id) && (a.tier <= 2 || Math.random() < knowRate));
     const st = run.enemy.st, R = run.enemy.rules;
     const ok = left.filter((a) => {
@@ -68,7 +95,7 @@ function sim(knowRate, seed, pace = 2.2, miss = 0) {
       if (R.includes('sphinx') && st.lastKey && k <= st.lastKey) return false;
       if (R.includes('tantalus') && k.length <= st.lastLen) return false;
       if (R.includes('judge') && st.letters.has(k[0])) return false;
-      if (R.includes('toll') && a.tier < 3) return false;
+      if (R.includes('toll') && a.tier < (run.mode === 'schola' ? 2 : 3)) return false;
       return true;
     });
     if (Math.random() < miss) { run.submit('nescio'); run.events.length = 0; continue; }
@@ -82,6 +109,11 @@ for (const [rate, pace, miss, who] of [[0.05, 6, 0.25, 'beginner'], [0.2, 4.5, 0
   const floors = Array.from({ length: 40 }, (_, i) => sim(rate, i + 1, pace, miss));
   floors.sort((a, b) => a - b);
   console.log(`${who.padEnd(14)} (knows ${Math.round(rate * 100)}% rare, ${pace}s/answer) → median floor ${floors[20]}, best ${floors[39]}`);
+}
+for (const [rate, pace, miss, who] of [[0.2, 4.5, 0.15, 'class: student'], [0.5, 3.5, 0.05, 'class: teacher']]) {
+  const floors = Array.from({ length: 40 }, (_, i) => sim(rate, i + 1, pace, miss, 'schola'));
+  floors.sort((a, b) => a - b);
+  console.log(`${who.padEnd(14)} → median floor ${floors[20]}, best ${floors[39]}`);
 }
 console.log(problems ? `${problems} problem(s)` : 'all checks passed');
 process.exit(problems ? 1 : 0);

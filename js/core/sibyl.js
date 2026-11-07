@@ -51,7 +51,7 @@
         case 'tantalus': return `Longer. More than ${ev.len} letters. He reaches past anything shorter.`;
         case 'judge': return `Minos has already heard a word beginning with ${ev.letter}.`;
         case 'echo': return 'Echo has heard that in one of your past lives. She only repeats it back.';
-        case 'toll': return 'Too common for the ferryman. Rarus or better.';
+        case 'toll': return ev.min === 2 ? 'Too common for the ferryman. Insolitus (uncommon) or better.' : 'Too common for the ferryman. Rarus (rare) or better.';
       }
       return null;
     },
