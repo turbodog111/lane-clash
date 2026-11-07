@@ -6,6 +6,23 @@
 
 ---
 
+## 0. Prototype 1: *Rara Avis* (built 2026-11-07)
+
+The first playable slice of §3, focused on **Latin + Krillion's spirit**. Krillion's core joy is kept (open prompts, rarer valid answers score more), but the structure is our own:
+
+| | Krillion | Rara Avis |
+|---|---|---|
+| Format | 7 daily prompts, one answer each | Endless descent; each enemy holds a question, and you fire answers at it until it falls |
+| Pressure | Per-prompt timer | The enemy **bites** on a timer; wrong answers and repeats hurry it |
+| Content | General trivia | Latin only: vocabulary, grammar, derivatives, gods, emperors, the *Aeneid*, the Roman world (36 questions, ~2,400 answers) |
+| Rarity | From players' answer frequency | Hand-tiered, plus **worn words**: answers you lean on across descents lose a tier |
+| Variety | New prompts daily | Enemy **rules** (Harpy, Sphinx, Echo, Gorgon, Tantalus), guardians, gifts of the gods, rules mixing deeper down |
+| Theme | Ocean depth | *Aeneid* VI: the Sibyl of Cumae guides you down to Avernus; she remembers you between descents (the DDLC thread) |
+
+What's still open from §8: tone, the Host's identity (currently the Sibyl), answer checking beyond curated lists, title. *Rara avis* is Juvenal's "rare bird" (a black swan, which is also the top rarity tier). It's a working title only.
+
+---
+
 ## 1. Executive decisions (turbodog111, 2026-11-07)
 
 1. **Drop all Clash Royale inspiration.** No lanes, elixir, towers, troop cards or deploy-a-unit combat.

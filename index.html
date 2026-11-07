@@ -1,140 +1,161 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lane Clash — Prototype</title>
-  <link rel="stylesheet" href="./styles.css" />
+<title>Rara Avis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A Latin descent: answer the Sibyl's prompts, and the rarer your answer, the harder it strikes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="site-header">
-    <h1>Lane Clash</h1>
-    <p class="tagline">A tiny lane-strategy prototype</p>
-  </header>
+<div id="app">
 
-  <!-- Main Menu -->
-  <section id="screenMenu" class="screen">
-    <div class="card">
-      <div class="btn-row">
-        <button id="btnPlay" class="btn primary">Play</button>
-        <button id="btnEncyclopedia" class="btn">Encyclopedia</button>
-        <button id="btnUpdateLog" class="btn">Update Log</button>
+  <!-- ── Cave mouth (title) ── -->
+  <section id="scrTitle" class="screen title-screen">
+    <canvas id="titleCanvas" class="title-canvas" aria-hidden="true"></canvas>
+    <div class="title-block">
+      <p class="eyebrow">Facilis descensus Averno</p>
+      <h1 class="title">Rara Avis</h1>
+      <p class="subtitle">A Latin descent. Answer the Sibyl’s questions; the rarer the word, the harder it strikes.</p>
+    </div>
+    <p class="sibyl sibyl-title"><span class="who">Sibylla</span> <span id="titleSibyl"></span></p>
+    <div class="actions">
+      <button id="btnDescend" class="btn primary" type="button">Descend</button>
+      <button id="btnHelp" class="btn" type="button">How to play</button>
+      <button id="btnCodex" class="btn" type="button">Codex</button>
+    </div>
+    <dl id="records" class="records"></dl>
+    <p class="fine">Working title · prototype. Your progress lives only in this browser.</p>
+  </section>
+
+  <!-- ── The descent ── -->
+  <section id="scrRun" class="screen run-screen" hidden>
+    <header class="hud">
+      <div class="hud-depth"><span class="lbl">Gradus</span><b id="hudFloor">I</b></div>
+      <div class="hud-anima">
+        <span class="lbl">Anima <span id="animaTxt" class="num">100 / 100</span></span>
+        <div class="bar anima-bar"><i id="animaFill"></i></div>
       </div>
-      <p class="hint">Blue (you) at the bottom. Red (AI) at the top.</p>
+      <div class="hud-tokens">
+        <span id="hudFolia" class="token" title="Sibyl’s leaves: hints">Folia <b>3</b></span>
+        <span id="hudBough" class="token gold" title="Golden Bough: return once from death">Ramus <b>1</b></span>
+      </div>
+      <div class="hud-sys">
+        <button id="btnMute" class="icon-btn" type="button" aria-label="Mute sound">Sonus</button>
+        <button id="btnPause" class="icon-btn" type="button" aria-label="Pause">Pausa</button>
+      </div>
+    </header>
+    <div id="boonStrip" class="boon-strip" aria-label="Gifts in this descent"></div>
+
+    <div class="stage">
+      <canvas id="stageCanvas" class="stage-canvas" aria-hidden="true"></canvas>
+      <div class="enemy-tag">
+        <b id="enemyName">Umbra</b> <span id="enemyEn" class="en"></span>
+        <div id="enemyRules" class="rules"></div>
+      </div>
+    </div>
+
+    <div id="parts" class="parts"></div>
+
+    <form id="answerForm" class="answer-form" autocomplete="off">
+      <label for="answer" class="sr">Your answer</label>
+      <input id="answer" name="answer" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Respondē…" enterkeyhint="send">
+      <button class="btn primary" type="submit">Strike</button>
+    </form>
+    <div id="feedback" class="feedback" aria-live="polite"></div>
+
+    <div class="tools">
+      <button id="btnFolium" class="btn small" type="button">Leaf hint <kbd>?</kbd></button>
+      <button id="btnMuta" class="btn small" type="button">New question <kbd>Tab</kbd></button>
+      <button id="btnRespice" class="btn small" type="button" hidden>Glance <kbd>↑</kbd></button>
+      <button id="btnQuit" class="btn small ghost" type="button">Leave</button>
+    </div>
+    <p class="sibyl"><span class="who">Sibylla</span> <span id="sibylText"></span></p>
+  </section>
+
+  <!-- ── Gifts of the gods ── -->
+  <section id="scrBoon" class="overlay" hidden>
+    <div class="overlay-card">
+      <p class="eyebrow">Gradus <span id="boonFloor">I</span> cleared</p>
+      <h2>Munera deorum</h2>
+      <p class="muted">Choose one gift. It lasts until this descent ends.</p>
+      <div id="boonChoices" class="boon-choices"></div>
     </div>
   </section>
 
-  <!-- Play Screen -->
-  <section id="screenPlay" class="screen" style="display:none">
-    <div class="toolbar">
-      <div class="title">Play — Blue (You) vs Red (AI)</div>
-      <button id="btnBackFromPlay" class="btn small">Back</button>
-    </div>
-
-    <canvas id="game" class="game"></canvas>
-
-    <div class="hand">
-      <div id="hand0" class="hand-slot"></div>
-      <div id="hand1" class="hand-slot"></div>
-    </div>
-
-    <p class="ins">
-      Click a card (or press <kbd>1</kbd>/<kbd>2</kbd>), then click your half to deploy.
-      Valid tiles highlight in green. Elixir: +1 / 2s.
-    </p>
-  </section>
-
-  <!-- Encyclopedia -->
-  <section id="screenEncyclopedia" class="screen" style="display:none">
-    <div class="toolbar">
-      <div class="title">Encyclopedia</div>
-      <button id="btnBackFromEnc" class="btn small">Back</button>
-    </div>
-
-    <div class="ency">
-      <article class="entry">
-        <img src="./assets/Knight.png" alt="Knight card" />
-        <div>
-          <h3>Knight <span class="rar rar-common">COMMON</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 2</li>
-            <li>HP: 100</li>
-            <li>DMG: 20 / 1.0s</li>
-            <li>Speed: 60 px/s</li>
-            <li>Unit Count: 1</li>
-          </ul>
-          <p>A brave melee fighter with steady stats and reliable defense.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/Archers.png" alt="Archers card" />
-        <div>
-          <h3>Archers <span class="rar rar-common">COMMON</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 2</li>
-            <li>HP: 60</li>
-            <li>DMG: 10 / 0.75s</li>
-            <li>Range: 120</li>
-            <li>Speed: 90 px/s</li>
-            <li>Unit Count: 2</li>
-          </ul>
-          <p>Paired ranged attackers with precise volleys from a safe distance.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/Mini-MEGA.png" alt="Mini-MEGA card" />
-        <div>
-          <h3>Mini-MEGA <span class="rar rar-common">COMMON</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 3</li>
-            <li>HP: 300</li>
-            <li>DMG: 80 / 1.5s</li>
-            <li>Speed: 45 px/s</li>
-            <li>Unit Count: 1</li>
-          </ul>
-          <p>A compact bot that trades speed for crushing punches.</p>
-        </div>
-      </article>
+  <!-- ── Pause ── -->
+  <section id="scrPause" class="overlay" hidden>
+    <div class="overlay-card narrow">
+      <h2>Pausa</h2>
+      <p class="muted">The shades wait. Press <kbd>Esc</kbd> to continue.</p>
+      <div class="actions">
+        <button id="btnResume" class="btn primary" type="button">Continue</button>
+        <button id="btnPauseQuit" class="btn ghost" type="button">Leave this descent</button>
+      </div>
     </div>
   </section>
 
-  <!-- Update Log -->
-  <section id="screenUpdateLog" class="screen" style="display:none">
-    <div class="toolbar">
-      <div class="title">Update Log</div>
-      <button id="btnBackFromLog" class="btn small">Back</button>
-    </div>
-
-    <div class="card">
-      <h3>v0.1.5</h3>
-      <ul>
-        <li>Fixed archers to properly use ranged combat: now hold position and shoot instead of charging like melee units.</li>
-        <li>Corrected Encyclopedia speed values to match actual game values (px/s units).</li>
-      </ul>
-      <h3>v0.1.4</h3>
-      <ul>
-        <li>Lane paths and AI tightened; small on-path separation; ranged standoff.</li>
-        <li>Diagnostics always on (toggle with <kbd>D</kbd>); game loop crash-proof.</li>
-      </ul>
-      <h3>v0.1.3</h3>
-      <ul>
-        <li>Grid placement overlay and segmented (10) elixir bar.</li>
-        <li>Menu/UI fixes and clearer IDs.</li>
-      </ul>
-      <h3>v0.1.2</h3>
-      <ul>
-        <li>Initial pathing across bridges and water as no-go.</li>
-      </ul>
-      <h3>v0.1.1</h3>
-      <ul>
-        <li>Encyclopedia &amp; update log screens; styling pass.</li>
-      </ul>
+  <!-- ── End of a descent ── -->
+  <section id="scrEnd" class="screen end-screen" hidden>
+    <p class="eyebrow" id="endEyebrow">Your descent ends</p>
+    <h2 class="end-title">Gradus <span id="endFloor">I</span></h2>
+    <p class="sibyl"><span class="who">Sibylla</span> <span id="endSibyl"></span></p>
+    <dl id="endStats" class="stats"></dl>
+    <h3>What you could have said</h3>
+    <p class="muted">Rare answers to the questions you faced. Learn a few; they hit hard next time.</p>
+    <div id="endMissed" class="missed"></div>
+    <div class="actions">
+      <button id="btnAgain" class="btn primary" type="button">Descend again <kbd>Enter</kbd></button>
+      <button id="btnToTitle" class="btn" type="button">Cave mouth</button>
     </div>
   </section>
 
-  <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.1.5"></script>
+  <!-- ── Codex ── -->
+  <section id="scrCodex" class="screen codex-screen" hidden>
+    <div class="screen-head">
+      <h2>Codex</h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <p class="muted" id="codexSummary"></p>
+    <div id="codexList" class="codex-list"></div>
+    <button id="btnForget" class="btn small ghost" type="button">Make the Sibyl forget everything</button>
+    <p id="forgetConfirm" class="confirm" hidden>Erase every record and found word? <button id="btnForgetYes" class="btn small danger" type="button">Erase</button> <button id="btnForgetNo" class="btn small" type="button">Keep</button></p>
+  </section>
+
+  <!-- ── How to play ── -->
+  <section id="scrHelp" class="screen help-screen" hidden>
+    <div class="screen-head">
+      <h2>How to play</h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <div class="help">
+      <p><b>Every answer is an attack.</b> Each enemy brings a question, like <i>“Name an animal, in Latin.”</i> Type an answer and press <kbd>Enter</kbd>. A correct answer damages the enemy, and the rarer it is, the harder it hits.</p>
+      <div class="tier-table-wrap"><table class="tier-table">
+        <thead><tr><th>Rarity</th><th>Meaning</th><th class="num">Damage</th><th>Example (animals)</th></tr></thead>
+        <tbody id="tierRows"></tbody>
+      </table></div>
+      <p><b>The enemy strikes back on a timer.</b> Wrong answers and repeats hurry it along. Answer fast with common words, or dig for a rare one: that trade-off is the whole game.</p>
+      <p><b>Each enemy has a rule.</b> Harpies feed on common words; the Sphinx wants alphabetical order; Echo ignores anything you said in a past descent; the Gorgon hides the question. Every fifth Gradus a guardian waits: Cerberus, Charon, Minos.</p>
+      <p><b>Between floors, choose a gift of the gods</b>, such as double damage for chaining last letter to first letter, or for very short words. Gifts last for one descent only. Nothing carries over except what you learn.</p>
+      <p><b>The descent never ends.</b> It only gets stranger. Words you lean on across many descents grow <i>worn</i> and hit one tier weaker, so keep learning new ones.</p>
+      <p class="keys"><kbd>Enter</kbd> answer · <kbd>Tab</kbd> new question (costs time) · <kbd>?</kbd> leaf hint · <kbd>↑</kbd> glance at a hidden question · <kbd>Esc</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> choose a gift</p>
+      <p class="muted">Spelling: macrons and capitals don’t matter, j = i and v = u. A one-letter slip on a long word still counts, at 80% damage.</p>
+    </div>
+  </section>
+</div>
+
+<script src="js/data/prompts.js"></script>
+<script src="js/data/bestiary.js"></script>
+<script src="js/core/match.js"></script>
+<script src="js/core/run.js"></script>
+<script src="js/core/memory.js"></script>
+<script src="js/core/sibyl.js"></script>
+<script src="js/art.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
 </body>
 </html>
