@@ -1,262 +1,157 @@
-# Lane Clash Remaster — Vision (draft 2)
+# Vision (draft 3): new direction
 
-> **Title: TBD.** We pick it once the combat and roguelite loop feel right.
-> Status: **proposed**. ❓ marks an open decision.
-> The original prototype lives on `archive/v0.1.5-prototype` and `archive/v0.4.1-functionality`.
-
-**One line:** a real-time lane-combat **roguelite**. Fight a chain of AI opponents in short battles, drafting and upgrading your units along the way, inside a world that knows it's a simulation.
+> **Title: TBD.** Status: **ideas captured, nothing built yet.**
+> - Draft 2 (lane combat inspired by Clash Royale) is retired. It's still in git history at commit `30fb3f4`.
+> - The original prototype lives on `archive/v0.1.5-prototype` and `archive/v0.4.1-functionality`.
 
 ---
 
-## 1. Why Clash Royale works (and what we take from it)
+## 1. Executive decisions (turbodog111, 2026-11-07)
 
-| # | What makes it appealing | What we do with it |
+1. **Drop all Clash Royale inspiration.** No lanes, elixir, towers, troop cards or deploy-a-unit combat.
+2. **Entirely skill-based.** No stat progression, no grinding, no currency, no money. You get better; your account doesn't.
+3. **A roguelike.** Runs, permadeath, a different run every time.
+4. **No end, and it keeps surprising.** Endless depth; the game should still be doing new things after many hours.
+
+---
+
+## 2. Idea log (raw, so nothing is lost)
+
+| Idea | Where it came from | Notes |
 |---|---|---|
-| 1 | **One input, deep decisions.** You only ever place a card at a spot and a moment, so *what / where / when* is the whole game. No hand speed needed, but the strategy keeps going deeper. | Keep exactly this. Placement precision and timing are the skill. |
-| 2 | **Every interaction is a trade.** Elixir makes every exchange measurable: killing a 5-cost push with 3 elixir *feels* like winning, even before a tower falls. | Make trades visible: show a **"+2 Compute"** pop when you out-trade the enemy. That number is the fun. |
-| 3 | **Defense becomes offense.** Units that survive defending walk across the river as a free counter-push. It's the most satisfying moment in the genre. | Design units and upgrades that reward this (e.g. upgrades that trigger "after defending"). |
-| 4 | **A readable counter web.** Swarm beats big single-target hitters, splash beats swarm, and so on. Counters are *soft*, so skill can overturn a bad matchup. | Explicit traits (§3) so counters are learnable rules, not memorized special cases. |
-| 5 | **Two lanes = pressure and punishment.** Commit to one lane and the other is open. | Keep two lanes. Several upgrades and opponents play on lane-switching. |
-| 6 | **Cycle and information.** Knowing which cards they have left ("their splash spell is gone, push now") is a mind game. | Against an AI, make the information *readable*: you always see the enemy's **next card**, and some upgrades reveal more. |
-| 7 | **A match has an arc.** Calm opening, then double elixir, then overtime. Tension builds on schedule. | Same arc, compressed into ~2.5 min so a run has many battles. |
-| 8 | **Characters with one clear job.** Every unit has a silhouette, a personality and a role you can read in half a second. | Every unit gets one job, one silhouette, one sound. |
-| 9 | **Your deck is self-expression.** Beatdown, control, siege, bait, cycle: players identify with an archetype. | In a roguelite this gets *better*: you build a new archetype every run. |
-| 10 | **Partial victory.** Taking one tower in a loss still feels like progress. | Damage dealt matters across the run (Integrity, §5). |
-
-**What we drop:** card levels bought with time or money, chest timers, trophy grinding, and paywalls. Those are why Clash Royale players burn out.
-
-**What we lose by going single-player:** reading a human opponent. We replace it with **AI opponents that have personalities**, visible intent (their next card), and **elite/boss opponents that bend the rules**.
-
-### What roguelites add on top
-- **Broken combos.** Finding a synergy that wrecks a boss is the roguelite high (Slay the Spire, Balatro, Hades).
-- **Every run is different.** Different drafts, different maps, different enemies.
-- **Risk/reward choices between fights.** Elite or safe path? Upgrade or heal?
-- **Losing is learning.** Runs are short and you come back knowing more, not owing a grind.
-
-**The fusion:** Clash Royale's hook is **trade efficiency**; the roguelite hook is **synergy**. Our upgrades should *change the trades*: a 2-cost unit that, after two upgrades, beats 5-cost units is the payoff.
+| **The world is a simulation** that knows it's a simulation | Draft 1 | Still fits; arguably fits better now |
+| **A game that knows it's a game** | *Doki Doki Literature Club* | DDLC is what started turbodog111's AI journey: building a Monika, writing their own story, and later naming their Christian AI project after one of its characters. What to take: a character aware of the player, the game changing itself between plays, the fourth wall as a mechanic. **Use an original character and story, not DDLC's.** |
+| **Krillion-style prompts** | [krillion.io](https://krillion.io) | Daily browser trivia: open-ended prompts ("name a …"), a short timer, and **rarer valid answers score more**. Points become *depth* in meters. |
+| **Category-only prompts** | turbodog111's Latin teacher | A Krillion-like game where every prompt is from one category you pick (Latin, Bible, science…). |
+| Code-drawn art | Draft 2 | Still the plan |
+| Patch Notes as lore, a Codex, a Daily Seed | Drafts 1–2 | Still fit |
+| Rollback / Breakpoint / Fork / Ping | Draft 2 Commands | Reusable as **limited-use powers** (§4) |
 
 ---
 
-## 2. The battle
+## 3. The combined concept (proposal)
 
-### Arena
-- Portrait arena; you're at the bottom.
-- Two lanes, each crossing **the Seam** (the river) on one **Link** (bridge).
-- Each side has **1 Core** (king tower) and **2 Sentries** (crossbow towers, long range).
-- The Core wakes when it's hit or when a Sentry falls. Until then it doesn't shoot.
+> **A typing roguelike of rare answers.** A self-aware simulation tests you with prompts. Every answer is an attack, and the rarer it is, the harder it hits. Descend forever; the deeper you go, the stranger the rules get, and the thing running the simulation starts paying attention to *you*.
 
-### Compute (in-battle currency)
-- Every unit and spell costs **Compute** (1–7). Max 10, start at 5, +1 every 2.5s.
-- **Overclock:** the final 60s gives 2× Compute.
-- **Hand:** 3 cards in hand plus a visible next card, drawn from your run deck (6 cards at the start, growing to ~10–14). ❓
+How each idea fits in:
+- **Krillion** gives the core action: prompt → type an answer → rarity decides the power.
+- **The Latin teacher's idea** gives **category runs**: pick a category before a run, and deep knowledge of that category is your skill.
+- **The roguelike** gives runs, escalating danger, run-only rule modifiers and powers, and permadeath.
+- **DDLC** gives the surprise engine: the Host, a self-aware character who remembers your runs and starts rewriting the game.
+- **Endless** gives depth: there's no final floor, only your record.
 
-### Match arc (~2.5 min)
-| Phase | Time | What happens |
-|---|---|---|
-| Opening | 0:00–1:30 | Normal Compute. Probing, trading, first pushes. |
-| Overclock | 1:30–2:30 | 2× Compute. Big pushes. |
-| Sudden death | up to +30s | The first structure to fall decides it. |
-
-### Winning a battle
-- **Destroy the enemy Core** → **decisive win**, bonus rewards.
-- **Time runs out** → more Sentries standing wins; ties go to the side with more Core HP left.
+### Why it's entirely skill-based
+Knowledge breadth, recall speed, and risk decisions (which Mods to take, when to use a power, whether to gamble on a rare answer). Nothing carries over between runs except **what you've learned** and the story you've uncovered.
 
 ---
 
-## 3. Combat rules: the counter web
+## 4. How a run plays
 
-Every unit is defined by a handful of stats plus **traits**. Traits *are* the counter system.
+### The core moment (≈10–20 seconds)
+1. A **prompt** appears: *"Name a Roman emperor."*
+2. A **timer** runs. You type an answer.
+3. The answer is checked:
+   - **invalid**, or
+   - **valid** with a **rarity tier**: Common → Uncommon → Rare → Ultra-rare → One-in-a-million.
+4. Rarity sets **damage**: *Augustus* barely scratches the enemy; *Pertinax* hits like a truck.
+5. You can't repeat an answer within a run.
 
-**Stats:** Cost · HP · Damage · Attack speed · Range · Move speed (slow/med/fast) · Count · Targets (ground / ground+air / structures only)
+### Combat is answering
+Each **layer** has an **enemy**: a corrupted process with HP and an attack timer (that's your time pressure). Answers damage it. When its timer fires, you lose Integrity.
 
-| Trait | Rule | Countered by |
-|---|---|---|
-| **Swarm** | Many weak bodies | Splash |
-| **Splash** | Damages everything in a small area | High-HP single units; ranged units outranging it |
-| **Armored** | Each hit taken −8 damage | Heavy hitters, Corrupt |
-| **Corrupt** | Ignores Armor, +50% damage vs Mainline | High-HP Legacy units |
-| **Hover** | Flies; melee can't hit it | Ranged / anti-air |
-| **Siege** | Only targets structures, ignores units | Swarms, distraction buildings |
-| **Charge** | Speeds up after a short run; first hit deals 2× | Freeze, swarm interrupts |
-| **Shield** | Extra HP layer that blocks one big hit's overflow | Fast multi-hit units |
-| **Spawner** | Building that periodically creates units | Siege, spells |
-| **Building** | Stationary, decays over time, pulls enemy units | Siege that outranges it |
-| **Stealth** | Invisible (untargetable) until it first attacks | Splash, structures once revealed |
+The variety comes from **enemy rules**:
 
-Readable shapes in the web: **Swarm > big single hitter > Armored > Swarm**, **Splash > Swarm**, **Hover > melee**, and **Siege is your win condition, but needs support**.
-
----
-
-## 4. Units (Scripts)
-
-Three factions, each with its own play style and its own drawn-in-code look. **Every run can draft from all three**; your starting Operator (§6) just sets your opening deck.
-
-Each unit has **3 tiers**: **I** (base) → **II** (choose A *or* B) → **III** (mastery of the branch you chose). Upgrades last for the current run only.
-
-### ⚔️ Legacy: *old-iteration assets*
-Medieval, honest, cost-efficient. **Faction theme:** formations; they're stronger together.
-
-| Unit | Cost | Role | II-A | II-B |
-|---|---|---|---|---|
-| **Warden** | 2 | Melee mini-tank, single target | *Bulwark:* gains Shield | *Duelist:* +40% attack speed, heals on kill |
-| **Longshots** | 2 | 2 archers, ranged, hits air | *Volley:* 3 archers | *Piercing:* arrows pass through a line |
-| **Bannerman** | 3 | Weak support; nearby allies +25% attack speed | *War Drum:* aura also +speed | *Last Stand:* on death, allies gain Shield |
-| **Cavalier** | 4 | Charge, fast melee | *Lancer:* charge hit stuns | *Outrider:* charges again after each kill |
-| **Shieldwall** | 4 | 3 Armored footmen, slow | *Phalanx:* +Armor while adjacent | *Taunt:* enemies must target them |
-| **Trebuchet** | 5 | Building, Siege, very long range | *Firepots:* splash + burn | *Counterweight:* fires 2× as often, shorter life |
-
-### 🤖 Mainline: *the current build*
-Robots. Expensive, Armored, hit hard. **Faction theme: Compile.** Two copies of the same Mainline unit meeting in a lane merge into their bigger form.
-
-| Unit | Cost | Role | II-A | II-B |
-|---|---|---|---|---|
-| **Arc Bot** | 2 | Short-range chain lightning (hits 3 targets) | *Capacitor:* chains to 5 | *Grounded:* stuns its first target |
-| **Drone Swarm** | 3 | 4 Hover drones, fast, fragile | *Kamikaze:* explode on death | *Escort:* +1 drone, shields allies below |
-| **Mini-MEGA** | 3 | Armored melee bruiser, heavy hits | *Overcharged:* every 3rd hit splashes | *Reinforced:* +Armor, slower |
-| **Railgun** | 4 | Building, huge single shots that pierce | *Overheat:* fires faster, decays faster | *Sniper:* +50% range |
-| **Shredder** | 5 | Armored melee splash | *Vortex:* pulls enemies in | *Spin-up:* damage ramps the longer it fights |
-| **MEGA** | 6 | Siege tank: structures only, huge HP, Armored. Or Compile 2 Mini-MEGAs | *Cannon Arm:* ranged siege | *Juggernaut:* immune to stun/freeze |
-
-### 👾 Null: *corrupted data that won't stay deleted*
-Glitchy. Swarms, tricks, and value from dying. **Faction theme: death fuels them.**
-
-| Unit | Cost | Role | II-A | II-B |
-|---|---|---|---|---|
-| **Fork Bomb** | 2 | On death splits into 2 smaller copies (2 generations) | *Recursive:* 3 generations | *Volatile:* each split explodes |
-| **Zombie Processes** | 3 | Swarm of 6, Corrupt | *Horde:* 9 zombies | *Infectious:* kills raise a new zombie |
-| **Phantom** | 3 | Stealth assassin, high damage | *Backstab:* first hit ×3 | *Blink:* teleports to a new target on kill |
-| **Memory Leak** | 4 | Hover, Siege; drains structures slowly but can't be slowed | *Overflow:* speeds up as it drains | *Persistent:* returns once after dying |
-| **Null Spawner** | 5 | Spawner of Zombie Processes | *Rapid:* spawns faster | *Infected Tomb:* releases a horde when destroyed |
-
-### ✨ Commands (spells, any faction)
-These are the simulation-bending cards.
-
-| Command | Cost | Effect | II-A | II-B |
-|---|---|---|---|---|
-| **Ping** | 1 | Tiny damage + resets attacks (interrupts Charge) | *Echo:* hits twice | *Trace:* reveals enemy hand for 5s |
-| **Breakpoint** | 2 | Freezes everything in an area for 2s (both sides) | *Selective:* enemies only | *Extended:* 3.5s |
-| **Purge** | 4 | Area damage | *Wide:* bigger area | *Executable:* +100% damage vs Swarm |
-| **Overclock** | 3 | Allies in area +40% speed and attack speed for 5s | *Sustained:* 8s | *Burst:* +80% for 3s |
-| **Rollback** | 5 | Everything in the area snaps back to its state 3s ago (HP, position, even the dead) | *Precise:* only affects your units | *Long:* rewinds 5s |
-| **Fork** | 5 | Duplicates a friendly unit at 50% HP | *Clean Copy:* 75% HP | *Inherit:* copy keeps upgrades... and buffs |
-
----
-
-## 5. The run
-
-### Structure
-- A run is **3 Sectors**. Each Sector is a branching map of ~8 nodes ending in a **boss**.
-- About **12–15 battles per run**, roughly 45–60 minutes total.
-
-| Node | What it is |
+| Enemy | Rule |
 |---|---|
-| ⚔️ **Battle** | Standard AI opponent |
-| 🔥 **Firewall** (elite) | Harder opponent with a gimmick; always drops a Patch |
-| 🛒 **Exchange** | Shop: buy units, upgrades, Patches; remove a card |
-| 🛠️ **Compiler** | Upgrade one unit for free |
-| 💾 **Restore Point** | Repair Integrity, *or* upgrade a unit |
-| ❓ **Anomaly** | Random event, often a gamble ("Sacrifice a card, upgrade two") |
-| 👑 **Boss** | Sector boss with a rule-breaking ability |
+| **Echo** | Immune to any answer you've used in a past run |
+| **Purist** | Only Rare or better answers hurt it |
+| **Leech** | Heals when you give a Common answer |
+| **Sorter** | Your answers must go in alphabetical order |
+| **Mimic** | Copies your last answer, so you can't reuse its first letter |
+| **Swarm** | Five tiny enemies, five prompts at once, one shared timer |
 
-### Integrity: your run's health
-Your Core's HP **carries through the whole run** (it starts at 3000).
-- Damage your Core takes in a battle *stays*.
-- Losing a battle on time costs a flat −500 Integrity, but the run goes on.
-- **Integrity reaches 0 → the run ends.**
-- Sentries rebuild for free each battle.
+### Integrity (health)
+- Wrong answers, blanks and enemy attacks cost **Integrity**.
+- Ultra-rare answers restore a little.
+- Integrity reaches 0 → run over. Your **depth** is your score.
 
-That's the roguelite tension: a sloppy win now hurts you three fights later. It also makes partial progress count (§1, row 10).
-
-### Bits: in-run currency
-| Source | Bits |
+### Between layers: pick 1 of 3 **Mods** (run-only rules)
+| Mod | Effect |
 |---|---|
-| Each win | +25 |
-| Each enemy Sentry destroyed | +10 |
-| Decisive win (Core destroyed) | +30 |
-| Positive Compute trade total for the battle | up to +15 |
+| **Alliteration** | ×2 if your answer starts with the same letter as your last one |
+| **Chain** | Each answer must start with the last letter of the previous one; ×3 damage |
+| **Speed Demon** | Answers within 4s deal ×1.5, but timers are 20% shorter |
+| **Polyglot** | Latin answers count double *(a nod to the Latin teacher)* |
+| **Wager** | Before answering, call your rarity tier; hit it for ×3, miss it and take damage |
+| **Minimalist** | Answers of 5 letters or fewer deal ×2 |
 
-Bits spend only at the Exchange and reset when the run ends. There's **no currency outside a run**.
+### Powers (limited uses per run)
+Repurposed from draft 2's Commands:
+- **Rollback:** retry a prompt you missed
+- **Breakpoint:** freeze the timer for 5s
+- **Fork:** submit two answers and keep the better one
+- **Ping:** reveal how many valid answers exist, or the first letter of a rare one
 
-### Rewards after a battle
-Pick one:
-- a **new unit** (choose 1 of 3), or
-- an **upgrade**: tier up a unit you own, or
-- **Bits**.
+### Glitches (the surprise layer, more common the deeper you go)
+- **Display glitches:** vowels vanish from the prompt; the prompt shows up scrambled or backwards.
+- **Timer and input glitches:** the timer runs in a different direction; your keyboard swaps two letters.
+- **Rule glitches:** the category switches mid-layer; the Host lies about one prompt, and you have to notice.
 
-Elites and bosses also drop a **Patch**.
+### Bosses every 10 layers
+Rule-breaking set pieces. Examples:
+- **"Name 6 in 30 seconds, all Rare or better."**
+- **"The Host answers too.** Anything she says first is taken."
 
-### Patches (run-wide passives: the combo engines)
-| Patch | Effect |
+---
+
+## 5. Categories (the Latin teacher's idea)
+
+- **Mixed:** prompts from everything (the default).
+- **Category-locked runs:** Latin, Bible, Science, Geography, History, Music, Games… Each has its own records.
+- **Custom packs:** anyone (a teacher, a friend) writes a simple text or JSON list of prompts and answers, and the game plays it as a category. Good for classrooms.
+
+**How rarity gets decided:** curated answer lists with rarity tiers for each category. On top of that, **the Sim remembers**: answers you've used in past runs slowly lose value *for you*. You're always pushed to learn new answers, which is what makes it endless *and* skill-building.
+
+**Daily Seed:** the same prompts for everyone each day, with a shareable result. That's the Krillion-style daily ritual, inside our game.
+
+---
+
+## 6. The Host: the DDLC layer that makes it surprising
+
+- An **original** character who runs the simulation. She knows it's a simulation, knows it's a game, and knows **you** are a player.
+- **She remembers** (stored in the browser):
+  - your past runs, your best and worst answers
+  - how long you've been gone, what time of day it is
+  - whether you quit a run halfway
+- **Her behavior shifts with depth and across many runs:**
+  - curious at first, then invested
+  - eventually she starts **editing the game herself**: new rules, fake patch notes, hidden categories, the interface itself changing
+- **Lore unfolds in fragments across runs:** why the Sim exists, what the Host is, what's at the bottom. This is the long-term surprise that makes "no end" meaningful.
+- **Optional AI layer (later, not required):** an AI model could voice the Host live and judge open-ended answers. That ties back to turbodog111's AI background. The game must work fully without it.
+
+---
+
+## 7. Alternatives considered
+
+| Direction | Why it's not the lead proposal |
 |---|---|
-| **Recycler** | When one of your units dies, gain 0.3 Compute |
-| **Cold Start** | Your first card each battle is free |
-| **Formation Protocol** | Legacy units deployed together start with Shield |
-| **Overflow** | Compute can go to 12 |
-| **Garbage Collector** | Your Swarm units' deaths damage nearby enemies |
-| **Lane Lock** | Enemy units can't switch lanes; yours gain +15% damage in the lane you've played more |
-| **Hotswap** | Your next card is always the cheapest in your deck |
-| **Admin Rights** | Commands cost 1 less; your deck can hold at most 10 cards |
+| **B. An action roguelike** (no prompts) with a meta-narrative Host | Drops the Krillion and Latin teacher ideas entirely |
+| **C. A mix of microgames:** action, puzzles and prompts in rapid rotation | Very surprising, but the skill gets spread thin and it's a lot to build |
 
-**Example build:** Null Operator → draft a second Fork Bomb → upgrade Fork Bomb to *Volatile* → find **Recycler** and **Garbage Collector**. Now a 2-Compute card refunds itself while blowing up the enemy's push. That's the "I broke it" moment.
-
-### Opponents
-- **Standard opponents:** each an AI Operator with a personality and a deck you can **scout before the fight** (*Rusher, Turtle, Splitter, Siege*).
-- **Firewalls (elites):** a gimmick each, for example:
-  - *Triple Sentry*: an extra Sentry sits on the Seam
-  - *Mirror*: plays a copy of your deck
-  - *Overclocked*: 2× Compute the whole match
-- **Bosses:**
-  - **The Gatekeeper** (Sector 1): Links closed for the first 30s; armored Sentries.
-  - **The Hive** (Sector 2): a free Zombie wave every 20s; kill the Spawner Sentries to stop it.
-  - **The Admin** (Sector 3): plays Rollback and Breakpoint against you, and at 50% Core HP pushes a **Hotfix** that changes the rules mid-fight.
+The lead proposal (§3) is the only one that uses **every** idea in the log. Parts of C, such as an occasional non-typing micro-challenge, could still show up as Glitches.
 
 ---
 
-## 6. Operators & meta progression
+## 8. Open questions for next session ❓
 
-You pick an **Operator** at the start of each run. It sets your starting deck and one passive; every run drafts from all factions.
+1. **Combat is answering:** does typed answers as attacks feel right, or should prompts sit alongside a separate action game?
+2. **Tone:** DDLC is psychological horror. How dark should the Host get? One option: unsettling and mysterious, ultimately hopeful.
+3. **The Host:** name, personality, and should she stay fully separate from turbodog111's Christian AI project?
+4. **First categories:** Latin? Bible? General knowledge?
+5. **Answer checking:** curated lists only (simple, offline), or an optional AI judge later?
+6. **Title:** decide once the concept is locked.
 
-| Operator | Starting deck | Passive |
-|---|---|---|
-| **Castellan** (Legacy) | Warden ×2, Longshots ×2, Bannerman, Purge | Sentries +25% HP |
-| **Engineer** (Mainline) | Mini-MEGA ×2, Arc Bot, Drone Swarm, Warden, Ping | Compile costs nothing extra: merged units keep both units' upgrades |
-| **Glitch** (Null) | Zombie Processes, Fork Bomb ×2, Phantom, Longshots, Breakpoint | 15% chance a dying unit returns as a zombie |
-
-**Meta progression is horizontal only, never more power:**
-- **Unlocks** add new units and Patches to the reward pool, and add new Operators.
-- **Clearance levels** (a difficulty ladder, like Slay the Spire's Ascension): beat a run to unlock the next harder modifier.
-- **Codex:** lore and stats for everything you've met.
-
----
-
-## 7. Art & feel (all drawn in code)
-- **Factions look different at a glance:**
-  - Legacy: chunky pixel style
-  - Mainline: clean vector with glowing visors
-  - Null: jittery and RGB-split
-- **Sides:** cyan outline for you, magenta for the enemy.
-- **Arena:** dark grid floor, a glowing Seam, light-bridge Links.
-- **Feedback:**
-  - hit flashes, knockback, screen shake on Core hits
-  - units dissolve into pixels on death
-  - a "+2" trade pop
-  - a CRT glitch flash on Commands
-- **Sound:** synthesized blips, thuds and zaps, one per unit.
-
-## 8. Tech (short)
-TypeScript + Vite, Canvas 2D, hosted on GitHub Pages. Battle logic runs on a fixed tick with seeded randomness, so Rollback, replays and an AI-vs-AI balance tester all work. All units, upgrades and Patches live in data files, and the Codex is generated from them.
-
----
-
-## 9. Build order
-1. **Combat core.** Arena, Compute, 6 units (Warden, Longshots, Mini-MEGA, Zombie Processes, Arc Bot, Purge), traits, one AI. *Done when a single battle is fun on its own.*
-2. **Full roster.** All units, Commands, upgrade tiers, art and sound pass.
-3. **The run.** Map, nodes, Integrity, Bits, rewards, Patches, 3 bosses.
-4. **Depth.** Operators, opponent personalities, Clearance levels, balance tester, more content.
-
-## 10. Open questions ❓
-1. **Integrity:** Core HP carrying through the run (proposed), or should losing a battle simply end the run?
-2. **Air units (Hover):** in or out? It adds counter depth but also complexity.
-3. **Hand:** 3 + next (proposed) or 4 + next?
-4. **Match length:** ~2.5 min (proposed) or closer to Clash Royale's 3–5?
-5. **Roster:** any unit here you love or hate? Anything from the old game you want back exactly as it was?
+**Proposed first build** (when we're back): one playable run, with
+- a General and a Latin category
+- 3 enemy types, 6 Mods, 2 powers
+- a basic Host with a handful of memory-aware lines
