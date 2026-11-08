@@ -106,7 +106,7 @@
     $('endSibyl').textContent = line;
     const s = run.stats;
     const rarest = s.best ? `<span class="t${s.best.tier}">${esc(s.best.text)}</span>` : 'None';
-    const tiers = [5, 4, 3].filter((t) => s.tiers[t]).map((t) => `<span class="t${t}">${s.tiers[t]}× ${tierName(t)}</span>`).join(', ') || 'None';
+    const tiers = [6, 5, 4, 3].filter((t) => s.tiers[t]).map((t) => `<span class="t${t}">${s.tiers[t]}× ${tierName(t)}</span>`).join(', ') || 'None';
     $('endStats').innerHTML = [
       ['Answers', s.answers], ['Damage dealt', s.dmg], [run.mode === 'schola' ? 'Hardest right answer' : 'Rarest word', rarest], ['Rare finds', tiers],
     ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
@@ -396,7 +396,7 @@
     }
     const rows = met.map(([p, ids]) => {
       const got = p.answers.filter((a) => ids.has(a.id)).sort((a, b) => b.tier - a.tier || a.text.localeCompare(b.text));
-      const per = [1, 2, 3, 4, 5].map((t) => {
+      const per = Array.from({ length: RA.MAXT }, (_, i) => i + 1).map((t) => {
         const all = p.answers.filter((a) => a.tier === t).length;
         return all ? `<span class="t${t}">${tierName(t)} ${got.filter((a) => a.tier === t).length}/${all}</span>` : '';
       }).join('');
@@ -490,7 +490,7 @@
 
   // Help table rows
   const anim = RA.promptById.animalia;
-  $('tierRows').innerHTML = [1, 2, 3, 4, 5].map((t) => {
+  $('tierRows').innerHTML = Array.from({ length: RA.MAXT }, (_, i) => i + 1).map((t) => {
     const ex = anim.answers.filter((a) => a.tier === t).slice(0, 2).map((a) => a.text).join(', ');
     return `<tr><td class="t${t}">${RA.TIERS[t].n}</td><td>${RA.TIERS[t].en}</td><td class="num">${RA.TIERS[t].dmg}</td><td><i>${esc(ex)}</i></td></tr>`;
   }).join('');

@@ -34,7 +34,7 @@ for (const [pid, list] of byPid) {
   const end = text.indexOf('\n    },', start);
   if (start < 0 || end < 0) { manual.push(...changes); continue; }
   let block = text.slice(start, end);
-  for (let t = 1; t <= 5; t++) {
+  for (let t = 1; t <= RA.MAXT; t++) {
     const val = next.t[t] || '';
     if (/'/.test(val)) { console.log(`! ${pid} tier ${t}: contains a quote, skipped`); continue; }
     const re = new RegExp(`(\\n\\s*)${t}: '[^']*',`);

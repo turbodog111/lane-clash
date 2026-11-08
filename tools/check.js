@@ -16,8 +16,9 @@ for (const src of RA.PROMPT_SRC) {
   if (ids.has(src.id)) fail(`duplicate prompt id ${src.id}`);
   ids.add(src.id);
   const seen = new Map();
-  for (let t = 1; t <= 5; t++) {
-    if (!src.t[t]) fail(`${src.id}: tier ${t} empty`);
+  for (let t = 1; t <= RA.MAXT; t++) {
+    if (!src.t[t] && t <= 3) fail(`${src.id}: tier ${t} empty`);
+    if (!(t in src.t)) fail(`${src.id}: no tier ${t} line`);
     for (const item of (src.t[t] || '').split(',')) {
       for (const form of item.split('/')) {
         const k = RA.norm(form);
@@ -35,7 +36,7 @@ for (const u of RA.schola) for (const pr of u.prompts) {
   if (!pr.answers.length) fail(`${pr.id}: no answers`);
   for (const a of pr.answers) {
     if (!a.keys.length) fail(`${pr.id}: item "${a.q || a.text}" has no accepted answer`);
-    if (!(a.tier >= 1 && a.tier <= 5)) fail(`${pr.id}: item "${a.q || a.text}" has tier ${a.tier}`);
+    if (!(a.tier >= 1 && a.tier <= RA.MAXT)) fail(`${pr.id}: item "${a.q || a.text}" has tier ${a.tier}`);
   }
 }
 console.log(`class units: ${RA.schola.length}, questions: ${RA.scholaPrompts.length}, items/answers: ${RA.scholaPrompts.reduce((s, x) => s + x.answers.length, 0)}`);
@@ -76,6 +77,13 @@ if (!RA.matchItem(sup, 'acerrimus') || RA.matchItem(sup, 'acerrimum')) fail('deg
 for (const [pid, typed, want] of [['animalia', 'canes', 'canis'], ['animalia', 'boves', 'bos'], ['corpus', 'ossa', 'os'], ['corpus', 'ora', 'os'], ['decl3', 'itinera', 'iter'], ['decl1', 'puellae', 'puella'], ['familia', 'coniuges', 'coniunx']]) {
   if (RA.match(RA.promptById[pid], typed, false)?.a.text !== want) fail(`plural ${typed} should count as ${want} in ${pid}`);
 }
+{
+  const none = new Set(RA.NO_PLURAL.split(/[ |]/).concat(RA.NO_PLURAL.split('|')).map(RA.norm));
+  const pl = new Set(Object.keys(RA.PLURALS).map(RA.norm));
+  for (const src of RA.PROMPT_SRC.filter((s) => s.pl)) for (const a of RA.promptById[src.id].answers) {
+    if (!pl.has(RA.norm(a.forms[0])) && !none.has(RA.norm(a.forms[0]))) fail(`${src.id}: no plural listed for ${a.text} (add it to js/data/plurals.js, or to NO_PLURAL)`);
+  }
+}
 if (RA.match(RA.promptById.dei, 'Iunones', false)) fail('plurals must not apply to questions without pl');
 for (const src of RA.PROMPT_SRC.filter((s) => s.pl)) {
   const p = RA.promptById[src.id];
@@ -90,7 +98,7 @@ for (const src of RA.PROMPT_SRC.filter((s) => s.pl)) {
   const E = [
     { op: 'tier', pid: 'animalia', key: 'canis', tier: 3, status: 'open', at: 1 },
     { op: 'alias', pid: 'animalia', key: 'lupus', alias: 'lupa', status: 'open', at: 2 },
-    { op: 'add', pid: 'animalia', text: 'draco', tier: 4, status: 'open', at: 3 },
+    { op: 'add', pid: 'animalia', text: 'basiliscus', tier: 4, status: 'open', at: 3 },
     { op: 'remove', pid: 'animalia', key: 'ursus', status: 'open', at: 4 },
     { op: 'alias', pid: 's-terminationes', index: 0, alias: 'xyz', status: 'open', at: 5 },
     { op: 'remove', pid: 's-terminationes', index: 1, status: 'open', at: 6 },
@@ -99,11 +107,11 @@ for (const src of RA.PROMPT_SRC.filter((s) => s.pl)) {
   const an = RA.promptById.animalia, td = RA.promptById['s-terminationes'];
   if (RA.match(an, 'canis')?.a.tier !== 3) fail('review: tier edit');
   if (RA.match(an, 'lupa')?.a.text !== 'lupus') fail('review: alias edit');
-  if (RA.match(an, 'draco')?.a.tier !== 4) fail('review: add edit');
+  if (RA.match(an, 'basiliscus')?.a.tier !== 4) fail('review: add edit');
   if (RA.match(an, 'ursus', false)) fail('review: remove edit');
   if (!RA.matchItem(td.answers.find((a) => a.index === 0), 'xyz')) fail('review: drill alias');
   if (td.answers.some((a) => a.index === 1)) fail('review: drill remove keeps ids');
-  if (RA.PROMPT_SRC[0].t[1].includes('draco') || !RA.PROMPT_SRC[0].t[1].includes('canis')) fail('review: source mutated');
+  if (RA.PROMPT_SRC[0].t[4].includes('basiliscus') || !RA.PROMPT_SRC[0].t[1].includes('canis')) fail('review: source mutated');
   if (RA.Review.docId(E[1]) !== 'alias~animalia~lupus~lupa') fail('review: doc id');
   RA.Review.rebuild([]);
   if (RA.match(RA.promptById.animalia, 'canis')?.a.tier !== 1) fail('review: rebuild without edits');
@@ -111,7 +119,7 @@ for (const src of RA.PROMPT_SRC.filter((s) => s.pl)) {
 
 // 3. Simulated runs with a bot that knows a fraction of answers.
 // knowRate is either a number (knows every tier 1-2 answer, and that share of rarer ones) or a
-// per-tier array [_, t1, t2, t3, t4, t5]: the chance it knows each answer, decided once per run (like a person).
+// per-tier array [_, t1 … t6]: the chance it knows each answer, decided once per run (like a person).
 function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
   const run = new RA.Run({ used: {}, found: {} }, seed, mode === 'schola' ? { mode, pool: RA.scholaPrompts } : {});
   const known = new Map();
@@ -152,7 +160,7 @@ function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
   return run.floor;
 }
 // "Human" profiles: realistic knowledge and pace (a person thinks, types, and makes mistakes).
-for (const [rate, pace, miss, who] of [[[0, 0.35, 0.12, 0.03, 0.01, 0], 10, 0.35, 'human: new'], [[0, 0.6, 0.3, 0.1, 0.03, 0.01], 8, 0.3, 'human: student'], [[0, 0.85, 0.6, 0.3, 0.1, 0.03], 6, 0.2, 'human: strong']]) {
+for (const [rate, pace, miss, who] of [[[0, 0.35, 0.12, 0.03, 0.01, 0, 0], 10, 0.35, 'human: new'], [[0, 0.6, 0.3, 0.1, 0.03, 0.01, 0.005], 8, 0.3, 'human: student'], [[0, 0.85, 0.6, 0.3, 0.1, 0.03, 0.02], 6, 0.2, 'human: strong']]) {
   const floors = Array.from({ length: 60 }, (_, i) => sim(rate, i + 1, pace, miss));
   floors.sort((a, b) => a - b);
   const past5 = floors.filter((f) => f > 5).length / floors.length;

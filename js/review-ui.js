@@ -7,6 +7,7 @@
   const marked = (s) => esc(s).replace(/\[([^\]]+)\]/g, '<mark>$1</mark>');
   const tierFull = (t) => `${RA.TIERS[t].n} (${RA.TIERS[t].en})`;
   const S = RA.Store, R = RA.Review;
+  const TIERS6 = () => Array.from({ length: RA.MAXT }, (_, i) => i + 1);
 
   let tab = 'questions', pid = null, selKey = null, query = '', showHandled = false, showDrills = false;
   try { const saved = JSON.parse(localStorage.getItem('raraAvis.reviewView') || '{}'); tab = saved.tab || tab; pid = saved.pid || null; } catch (e) { /* ignore */ }
@@ -54,20 +55,20 @@
   }
 
   function tierButtons(cur, attrs) {
-    return `<span class="tier-btns">${[1, 2, 3, 4, 5].map((t) => `<button type="button" class="tb t${t}${t === cur ? ' on' : ''}" data-tier="${t}" ${attrs} title="${tierFull(t)}">${t}</button>`).join('')}</span>`;
+    return `<span class="tier-btns">${TIERS6().map((t) => `<button type="button" class="tb t${t}${t === cur ? ' on' : ''}" data-tier="${t}" ${attrs} title="${tierFull(t)}">${t}</button>`).join('')}</span>`;
   }
 
   function openPromptHTML(p) {
     const src = srcById(p.id);
     const origTier = new Map();
-    if (src && src.t) for (let t = 1; t <= 5; t++) for (const item of (src.t[t] || '').split(',')) { const f = item.split('/')[0].trim(); if (f) origTier.set(RA.norm(f), t); }
+    if (src && src.t) for (let t = 1; t <= RA.MAXT; t++) for (const item of (src.t[t] || '').split(',')) { const f = item.split('/')[0].trim(); if (f) origTier.set(RA.norm(f), t); }
     const mine = editsFor(p.id);
     const removed = mine.filter(([, e]) => e.op === 'remove' && e.status === 'open');
     const note = (mine.find(([, e]) => e.op === 'note') || [])[1];
     const ro = !S.canEdit;
     const sel = selKey && p.answers.find((a) => a.keys[0] === selKey);
     let html = '';
-    for (let t = 1; t <= 5; t++) {
+    for (let t = 1; t <= RA.MAXT; t++) {
       const list = p.answers.filter((a) => a.tier === t).sort((a, b) => a.text.localeCompare(b.text));
       html += `<div class="rev-tier"><div class="rev-tier-lbl"><span class="t${t}">${tierFull(t)}</span> <span class="muted">${RA.TIERS[t].dmg} damage · ${list.length}</span></div><div class="rev-chips">${list.map((a) => {
         const k = a.keys[0], was = origTier.get(k);
@@ -80,7 +81,7 @@
     if (removed.length) html += `<p class="rev-removed">Removed: ${removed.map(([id, e]) => `<span class="strike">${esc(e.answer || e.key)}</span> <button type="button" class="linkish" data-act="undo" data-id="${id}">undo</button>`).join(', ')}</p>`;
     if (!ro) html += `<form class="rev-add" data-act="add">
         <label>Add a right answer <input name="text" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. ${esc(p.lang === 'en' ? 'a word' : 'verbum')}"></label>
-        <label>Tier <select name="tier">${[1, 2, 3, 4, 5].map((t) => `<option value="${t}"${t === 3 ? ' selected' : ''}>${t} · ${RA.TIERS[t].n} (${RA.TIERS[t].en})</option>`).join('')}</select></label>
+        <label>Tier <select name="tier">${TIERS6().map((t) => `<option value="${t}"${t === 3 ? ' selected' : ''}>${t} · ${RA.TIERS[t].n} (${RA.TIERS[t].en})</option>`).join('')}</select></label>
         <button class="btn small primary" type="submit">Add</button>
       </form>`;
     html += noteHTML(p, note, ro);

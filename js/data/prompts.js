@@ -1,5 +1,5 @@
 // Prompt bank.
-// Each prompt lists accepted answers grouped by rarity tier (1 = common … 5 = one in a million).
+// Each prompt lists accepted answers grouped by rarity tier (1 = common … 5 = obscure, 6 = one in a million).
 // Within a tier: answers are comma-separated; "/" separates accepted spellings (the first is shown).
 // Matching ignores case, accents/macrons, spaces and punctuation, and treats j=i and v=u.
 // lvl: 1 = early floors, 2 = middle, 3 = deep.   lang: 'la' answers in Latin, 'en' answers in English.
@@ -11,11 +11,12 @@
     {
       id: 'animalia', lvl: 1, lang: 'la', pl: true, cat: 'Animalia', q: 'Name an animal, in Latin',
       t: {
-        1: 'canis, equus, feles/felis, lupus, leo, avis, piscis, ursus',
-        2: 'vacca, porcus, sus, ovis, capra, mus, serpens, anguis, aquila, taurus, asinus, columba, corvus, cervus, vulpes, elephantus/elephas, apis, gallus, bos, agnus',
-        3: 'simia, formica, aranea, delphinus/delphin, balaena, anser, gallina, anas, lepus, cuniculus, tigris, camelus, testudo, rana, lacerta, aper, pavo, cygnus, olor, passer, musca, noctua, bubo, mulus, aries, vitulus, catulus, vermis, cancer, scorpio/scorpius',
-        4: 'hirundo, luscinia, vespertilio, cochlea, locusta, papilio, lynx, panthera, hyaena, crocodilus, psittacus, turdus, merula, accipiter, vultur, grus, ardea, mustela, talpa, castor, glis, erinaceus, hircus, haedus, iuvencus, cicada, ciconia, cornix, pica, milvus, alauda',
-        5: 'struthiocamelus, sciurus, graculus, phoca, ichneumon, onager, coturnix, perdix, upupa, salamandra, polypus, sepia, muraena, mullus, ostrea, fringilla, hippopotamus, rhinoceros, camelopardalis',
+        1: 'canis, feles/felis/cattus, equus, lupus, leo, avis, piscis, ursus, vacca, porcus, ovis, taurus, aquila, columba, corvus, cervus, vulpes, elephantus/elephas, apis, gallus, agnus, serpens, asinus, capra, mus, bos, tigris, camelus, delphinus/delphin, rana, crocodilus, mulus, cancer, scorpio/scorpius',
+        2: 'sus, gallina, anser, anas, lepus, simia, formica, aranea/araneus, testudo, pavo, cygnus, passer, musca, leaena, hippopotamus, rhinoceros, panthera, lynx, vipera, draco, balaena, aper, noctua, castor, vultur, locusta, cicada, hyaena/hyena, salamandra, aries, vermis',
+        3: 'anguis, vitulus, pullus, lacerta, bubo, catulus, cuniculus, hirundo, papilio, vespa, psittacus, caper, pardus, olor, iuvencus, hircus, haedus, glis, onager, polypus, cochlea, accipiter, luscinia, ostrea/ostreum, turdus',
+        4: 'vespertilio, merula, grus, ardea, mustela, talpa, erinaceus/ericius, ciconia, cornix, milvus, alauda, coluber, anguilla, sepia, perdix, phoca/phoce, pica, dama',
+        5: 'fringilla, graculus, muraena/murena, mullus, culex, pulex, sorex, thynnus, caprea, falco',
+        6: 'struthiocamelus, camelopardalis/camelopardus, ichneumon, upupa, sciurus, coturnix',
       },
     },
     {
@@ -26,6 +27,7 @@
         3: 'cervix, crinis, unguis, iecur, femur, cubitum, talus, calx, mentum, gena, supercilium, pulmo, stomachus, cerebrum, ren/renes, viscera, nervus, musculus, costa, latus, coxa, sura, pollex, vultus, mamma, umbilicus, vena',
         4: 'iugulum, palatum, guttur, fauces, lacertus, poples, tibia, axilla, lien, vesica, intestinum, medulla, pupula, palpebra, tempora, articulus, nates, clunes, maxilla, cartilago',
         5: 'occiput, sinciput, praecordia, ilia, inguen',
+        6: '',
       },
     },
     {
@@ -36,6 +38,7 @@
         3: 'Faunus, Flora, Pomona, Liber, Dis/Dis Pater, Terminus, Victoria, Bellona, Quirinus, Somnus, Mors, Nox, Ops, Tellus/Terra Mater, Orcus, Lares, Penates, Genius, Silvanus, Fides, Concordia, Pax, Spes, Salus, Iuventas/Juventas, Aesculapius',
         4: 'Vertumnus, Portunus, Pales, Consus, Fauna, Bona Dea, Carmenta, Egeria, Pietas, Virtus, Honos, Febris, Libertas, Feronia, Robigus, Picus, Volturnus, Tiberinus, Laverna, Lucina, Cardea, Larunda, Libitina, Angerona, Furrina, Vacuna',
         5: 'Cloacina, Sterquilinus, Rumina, Cunina, Abeona, Adeona, Forculus, Limentinus, Pilumnus, Picumnus, Fornax, Mena, Nundina, Mefitis',
+        6: '',
       },
     },
     {
@@ -46,6 +49,7 @@
         3: 'tabula rasa, sine qua non, caveat emptor, habeas corpus, ad hominem, deus ex machina, ex post facto, in absentia, in loco parentis, magna cum laude, mutatis mutandis, ceteris paribus, quod erat demonstrandum/qed, nota bene/nb, post scriptum/ps, requiescat in pace/rip, in toto, ipso facto, sui generis, terra incognita, ex libris, pro forma, pro rata, semper fidelis, semper paratus, ante bellum/antebellum, cogito ergo sum, in vino veritas, de iure/de jure, in medias res, vox populi, pax romana, sub rosa, casus belli, cui bono, mens rea, corpus delicti, ex nihilo, festina lente, in extremis, lapsus linguae, primus inter pares',
         4: 'amor fati, ars longa vita brevis, compos mentis, de novo, ex cathedra, obiter dictum, sic transit gloria mundi, sub iudice/sub judice, terminus ante quem, terminus post quem, ultima ratio, panem et circenses, nil desperandum, damnatio memoriae, ad fontes, odi et amo, quis custodiet ipsos custodes, reductio ad absurdum, si vis pacem para bellum, fiat lux, labor omnia vincit, omnia vincit amor, dulce et decorum est, sic semper tyrannis, ad maiorem dei gloriam/ad majorem dei gloriam/amdg, agnus dei, ecce homo, gloria in excelsis deo, dominus vobiscum, pax vobiscum, de profundis, ora et labora',
         5: 'timeo danaos et dona ferentes, facilis descensus averno, rara avis, hic sunt dracones, horror vacui, ignotum per ignotius, nemo iudex in causa sua, argumentum ad baculum, ubi sunt, sunt lacrimae rerum/lacrimae rerum, fiat iustitia ruat caelum/fiat justitia ruat caelum, arbiter elegantiarum, hoc opus hic labor est, tu ne cede malis, audentes fortuna iuvat/fortes fortuna iuvat, natura non facit saltus',
+        6: '',
       },
     },
     {
@@ -56,6 +60,7 @@
         3: 'undecim, duodecim, tredecim, quattuordecim, quindecim, sedecim, septendecim, duodeviginti, undeviginti, triginta, quadraginta, quinquaginta',
         4: 'sexaginta, septuaginta, octoginta, nonaginta, ducenti, trecenti, quingenti',
         5: 'quadringenti, sescenti, septingenti, octingenti, nongenti',
+        6: '',
       },
     },
     {
@@ -66,6 +71,7 @@
         3: 'Kalendae/Calendae/Kalends, Nonae/Nones, Idus/Ides',
         4: 'Quintilis, Sextilis',
         5: 'Mercedonius, Intercalaris/Mensis Intercalaris',
+        6: '',
       },
     },
     {
@@ -76,6 +82,7 @@
         3: 'aquila, praeda, provincia, querela, sapientia, scientia, tabula, toga, tunica, vigilia, iniuria, insidiae, divitiae, tenebrae, catena, cauda, cera, charta, coma, flamma, forma, gemma, gratia, herba, lacrima, lucerna, machina, mora, nebula, palma, penna, planta, procella, rota, ruina, sella, spina, statua, taberna, ursa, uva, vacca, aurora',
         4: 'scriba, lanista, auriga, collega, advena, conviva, parricida, pirata, athleta, indigena, perfuga, nuptiae',
         5: 'scurra, verna, lixa, accola, transfuga, Hadria, cometa',
+        6: '',
       },
     },
     {
@@ -86,6 +93,7 @@
         3: 'rapport, portmanteau, deportment, insupportable, unsupportable, portage, importance',
         4: 'portly, comportment, reportage, sport',
         5: 'disport, colporteur, portamento, portative',
+        6: '',
       },
     },
     {
@@ -96,6 +104,7 @@
         3: 'envy, survey, view, review, interview, preview, purview, clairvoyant, voyeur, providence, prudent, visage, vis-a-vis/visavis, audiovisual, invidious, visibility, advice',
         4: 'prudence, provident, improvident, visualize/visualise, provisional, improvisation',
         5: 'belvedere, veduta, purveyor, purvey',
+        6: '',
       },
     },
     {
@@ -106,6 +115,7 @@
         3: 'circumscribe, proscribe, ascribe, conscription, subscript, superscript, scribal, scriptorium, transcription, indescribable, prescriptive, descriptive',
         4: 'rescript, scrivener, ascription, proscription, circumscription, typescript, scrip',
         5: 'escritoire, shrive, shrift',
+        6: '',
       },
     },
     {
@@ -116,6 +126,7 @@
         3: 'aquaplane, aquaculture, aqualung, aquavit',
         4: 'aquarelle, aquanaut, aquatint, subaqueous, terraqueous',
         5: 'ewer, sewer',
+        6: '',
       },
     },
     {
@@ -126,6 +137,7 @@
         3: 'obey, obedient, obedience, audiology',
         4: 'disobey, disobedient, audiophile, inaudibly',
         5: 'oyez, subaudition',
+        6: '',
       },
     },
 
@@ -138,6 +150,7 @@
         3: 'aestimo, appello, celo, ceno, comparo, creo, declaro, desidero, dubito, existimo, fugo, gusto, honoro, ignoro, indico, lacrimo, lavo, loco, mando, migro, monstro, nego, occupo, orno, privo, propero, pulso, recuso, simulo, spero, sudo, tolero, turbo, vasto, verbero, vexo, iacto, iuro, delecto, devoro',
         4: 'aro, armo, basio, cremo, decoro, dedico, delibero, fatigo, flagro, hiemo, illustro, impetro, inflammo, lustro, macto, obsecro, palpito, plico, repudio, revoco, sacrifico, sedo, sicco, sollicito, spolio, sublevo, suspiro, titubo, triumpho, vacillo, velo, vibro, vindico, violo, vito, hortor, conor, miror, moror, precor, arbitror, cunctor, imitor, laetor, minor, opinor, vagor, venor, comitor',
         5: 'ululo, susurro, cachinno, rumino, pullulo, crepito, fumigo, scintillo, sternuto, vapulo, nuto, gratulor, sciscitor, aucupor, recordor, aemulor, fabulor, dignor, interpretor, machinor, epulor',
+        6: '',
       },
     },
     {
@@ -148,6 +161,7 @@
         3: 'censeo, mordeo, suadeo, torqueo, ardeo, caveo, faveo, foveo, langueo, lugeo, maereo, mulceo, niteo, oleo, pendeo, polleo, rubeo, splendeo, stupeo, tueor, vereor, fateor, polliceor, misereor, abstineo, exerceo, coerceo, arceo, horreo, luceo, paveo, tondeo, urgeo, pateo, doleo, frigeo, caleo',
         4: 'torreo, strideo, tumeo, vigeo, palleo, fulgeo, rigeo, madeo, cieo, ferveo, immineo, emineo, promineo, torpeo, tepeo, albeo, aveo, liceo',
         5: 'neo, conniveo, renideo, squaleo, hebeo, flaveo',
+        6: '',
       },
     },
     {
@@ -158,6 +172,7 @@
         3: 'super, tenus',
         4: 'palam, clam',
         5: 'absque, procul',
+        6: '',
       },
     },
     {
@@ -168,6 +183,7 @@
         3: 'adversus/adversum, secundum, citra, erga, penes, circa, super, subter',
         4: 'pone, cis, versus, usque',
         5: 'clam, circiter',
+        6: '',
       },
     },
     {
@@ -178,6 +194,7 @@
         3: 'patruus, avunculus, amita, matertera, neptis, socer, socrus, gener, nurus, consobrinus, consobrina, proavus, proavia, germanus, germana, mulier',
         4: 'noverca, vitricus, privignus, privigna, abavus, atavus, patruelis, sobrinus, pronepos',
         5: 'glos, ianitrix/janitrix, abnepos, tritavus, levir',
+        6: '',
       },
     },
     {
@@ -188,6 +205,7 @@
         3: 'argenteus, croceus, luteus, fulvus, puniceus, caesius, cinereus, rufus, ravus, glaucus, lividus, pullus, sanguineus, coccineus, aeneus',
         4: 'rutilus, luridus, cyaneus, ferrugineus, lacteus, niveus, igneus, ostrinus, gilvus',
         5: 'galbinus, helvus, badius, spadix, ianthinus, prasinus, venetus, russatus, amethystinus',
+        6: '',
       },
     },
     {
@@ -198,6 +216,7 @@
         3: 'Pertinax, Didius Julianus/Didius Iulianus/Didius, Geta, Elagabalus/Heliogabalus, Severus Alexander/Alexander Severus/Alexander, Lucius Verus/Verus, Macrinus, Maximinus Thrax/Maximinus, Gordian/Gordianus, Philip the Arab/Philippus Arabs/Philippus/Philip, Decius, Valerian/Valerianus, Gallienus, Aurelian/Aurelianus, Probus, Theodosius, Valentinian/Valentinianus, Constantius, Galerius, Maximian/Maximianus, Licinius, Gratian/Gratianus, Honorius, Arcadius, Romulus Augustulus/Augustulus, Jovian/Iovianus/Jovianus, Valens, Justinian/Iustinianus/Justinianus',
         4: 'Carus, Carinus, Numerian/Numerianus, Tacitus, Florianus/Florian, Quintillus, Claudius Gothicus/Claudius II, Trebonianus Gallus/Gallus, Pupienus, Balbinus, Diadumenian/Diadumenianus, Constans, Maxentius, Majorian/Maiorianus/Majorianus, Julius Nepos/Iulius Nepos/Nepos, Marcian/Marcianus, Postumus',
         5: 'Aemilianus/Aemilian, Hostilian/Hostilianus, Volusianus/Volusian, Herennius Etruscus, Glycerius, Olybrius, Anthemius, Avitus, Petronius Maximus, Libius Severus, Maximinus Daia/Maximinus Daza, Magnentius, Tetricus, Victorinus, Carausius, Allectus, Vetranio, Leo, Zeno',
+        6: '',
       },
     },
     {
@@ -208,6 +227,7 @@
         3: 'balneum, exedra, oecus, piscina, bibliotheca, cenaculum, solarium, xystus, hypocaustum/hypocaust, focus, tectum, paries, tegula, limen, pavimentum, posticum',
         4: 'apodyterium, caldarium, tepidarium, frigidarium, cryptoporticus, viridarium, porticus, pergula, nymphaeum, cellarium',
         5: 'diaeta, conclave, crypta, emblema',
+        6: '',
       },
     },
     {
@@ -218,6 +238,7 @@
         3: 'undecimus, duodecimus, vicesimus/vigesimus, tricesimus/trigesimus, quadragesimus, quinquagesimus',
         4: 'tertius decimus, quartus decimus, duodevicesimus, undevicesimus, sexagesimus, septuagesimus, octogesimus, nonagesimus',
         5: 'ducentesimus, trecentesimus, quadringentesimus, quingentesimus, sescentesimus, septingentesimus, octingentesimus, nongentesimus',
+        6: '',
       },
     },
     {
@@ -228,6 +249,7 @@
         3: 'lucus, fluvius, hortus, lectus, locus, mundus, nidus, ramus, rivus, somnus, sonus, tumulus, umerus, digitus, morbus, nasus, nodus, pontus, stilus, titulus, triumphus, tribunus, legatus, medicus, vicus, fatum, bracchium, convivium, aedificium, beneficium, collum, dorsum, exilium, fanum, frumentum, horreum, ingenium, initium, iugum, lignum, monstrum, ovum, pomum, sepulcrum, silentium, spatium, stagnum, supplicium, theatrum, vallum, vestigium, vitium, humus',
         4: 'fagus, laurus, pirus, malus, vulgus, alvus',
         5: 'cupressus, vannus, colus, carbasus, pelagus, virus',
+        6: '',
       },
     },
     {
@@ -238,6 +260,7 @@
         3: 'frons, lapis, hiems, salus, servitus, voluntas, potestas, multitudo, magnitudo, fortitudo, origo, sermo, foedus, frigus, latus, nemus, sidus, os, ius, rus, mus, tellus, aes, aequor, arbor, cor, cinis, crux, laus, fraus, nix, grex, nux, vis, sal, mel, imago, testudo, cupido, carcer, cruor, flos, mos, ros, mercator, iudex, comes, eques, pedes, princeps, sacerdos, custos, nepos',
         4: 'vas, fur, cardo, turbo, harundo, vellus, pecus, iecur, robur, ebur, marmor, sulphur, tuber, ver, iubar',
         5: 'praes, fel, far, hirudo, compes, vibex',
+        6: '',
       },
     },
     {
@@ -248,6 +271,7 @@
         3: 'missive, promise, compromise, premise, surmise, demise, message, remiss, dismissive, permissive, admissible, transmitter, emitter, intermission',
         4: 'manumit, mess, mass, missal, commissar, inadmissible',
         5: 'intromit, pretermit, demimonde',
+        6: '',
       },
     },
     {
@@ -258,6 +282,7 @@
         3: 'duke, conducive, ductile, abduction, seduction, conduit, educe, traduce, reproduce, reproduction, productive, duchess, duchy, introductory, deductive, inductive',
         4: 'subduction, ducal, ducat, doge, adduce, transducer',
         5: 'redoubt, superinduce',
+        6: '',
       },
     },
     {
@@ -268,6 +293,7 @@
         3: 'manner, manure, manumission, amanuensis, manifest, maintain, manager, management, manipulation, emancipation, manufacturer',
         4: 'maintenance, legerdemain, mortmain, manciple',
         5: 'command, demand, commend, recommend',
+        6: '',
       },
     },
     {
@@ -278,6 +304,7 @@
         3: 'paternalism, paternoster, patriotism, padre',
         4: 'pattern, expatriation, repatriation',
         5: 'patter, perpetrate',
+        6: '',
       },
     },
     {
@@ -288,6 +315,7 @@
         3: 'faba, cepa, allium, ficus, pirum, cerasum, nux, porrum, lens, cicer, rapum, lactuca, cucumis, raphanus, brassica, piper, acetum, libum, farina, hordeum, triticum, far, mustum, placenta, mulsum, posca',
         4: 'butyrum, oryza, perna, lardum, botulus, defrutum, moretum, crustulum, glires, malva, asparagus, offa',
         5: 'sapa, liquamen, muria, isicium, pepo, tisana',
+        6: '',
       },
     },
 
@@ -300,6 +328,7 @@
         3: 'manipulus, optio, signifer, aquilifer, cornicen, tubicen, onager, aries, pugio, caliga/caligae, cingulum, balteus, sarcina, agmen, acies, centuria, decurio, praefectus, primus pilus, veteranus, triarii, hastati, principes, velites, turma, castellum, praetoriani, catapulta',
         4: 'vexillarius, imaginifer, tesserarius, scorpio, carroballista, spatha, hasta, cassis, umbo, sudes, tribulus, decimatio, sacramentum, stipendium, donativum, speculatores, beneficiarius, evocatus',
         5: 'lilia, cippi, focale, plumbata/plumbatae, frumentarius/frumentarii, immunis/immunes, cornicularius, campidoctor, lixae, calones, contus',
+        6: '',
       },
     },
     {
@@ -310,6 +339,7 @@
         3: 'Propertius, Tibullus, Lucan/Lucanus, Statius, Petronius, Apuleius, Quintilian/Quintilianus, Ennius, Nepos/Cornelius Nepos, Persius, Augustine/Augustinus, Boethius, Ammianus Marcellinus/Ammianus, Varro, Cato, Sulpicia, Valerius Maximus, Vitruvius, Columella, Frontinus, Aulus Gellius/Gellius, Jerome/Hieronymus',
         4: 'Silius Italicus, Valerius Flaccus, Manilius, Phaedrus, Velleius Paterculus/Velleius, Quintus Curtius/Curtius, Florus, Eutropius, Claudian/Claudianus, Ausonius, Symmachus, Fronto, Lucilius, Naevius, Livius Andronicus, Pacuvius, Accius, Celsus, Vegetius, Macrobius, Prudentius, Ambrose/Ambrosius, Tertullian/Tertullianus, Lactantius, Sidonius Apollinaris/Sidonius, Cassiodorus, Isidore/Isidorus, Minucius Felix',
         5: 'Rutilius Namatianus, Censorinus, Commodian/Commodianus, Nemesianus, Calpurnius Siculus, Avianus, Dracontius, Corippus, Martianus Capella, Priscian/Priscianus, Servius, Laberius, Afranius, Hyginus, Solinus',
+        6: '',
       },
     },
     {
@@ -320,6 +350,7 @@
         3: 'Andromache, Helenus, Achaemenides, Iarbas, Amata, Allecto, Iuturna/Juturna, Lausus, Drances, Acestes, Entellus, Dares, Misenus, Deiphobus, Marcellus, Pyrrhus/Neoptolemus, Hecuba, Cacus, Hercules, Vulcanus/Vulcan, Messapus, Ilioneus, Mnestheus, Serestus, Iris, Fama/Rumour, Sychaeus, Pygmalion, Romulus, Augustus',
         4: 'Cloanthus, Gyas, Sergestus, Iapyx, Tolumnius, Orpheus, Minos, Rhadamanthus, Tisiphone, Ixion, Theseus, Musaeus, Silvius, Numa, Brutus, Coroebus, Panthus, Polites, Arruns, Tarchon, Barce',
         5: 'Saces, Salmoneus, Tityos, Phlegyas, Camillus, Rhipeus, Dymas, Hypanis, Androgeos, Halaesus, Ufens, Umbro, Aventinus, Caeculus, Catillus, Coras, Virbius, Metabus, Opis, Acca, Asilas, Aletes, Nautes, Beroe, Pandarus, Bitias, Cymodocea, Butes, Eurytion, Lycus, Helymus, Patron, Salius, Diores, Thymoetes',
+        6: '',
       },
     },
     {
@@ -330,6 +361,7 @@
         3: 'Corona Borealis, Canis Maior/Canis Major, Canis Minor, Lepus, Columba, Delphinus, Sagitta, Bootes, Cepheus, Hydra, Corvus, Crater, Centaurus, Lupus, Auriga, Crux, Ophiuchus, Serpens, Eridanus, Corona Australis, Piscis Austrinus, Triangulum, Vulpecula',
         4: 'Monoceros, Camelopardalis, Pyxis, Carina, Puppis, Vela, Musca, Fornax, Sculptor, Telescopium, Ara, Coma Berenices, Canes Venatici, Lacerta, Lynx, Leo Minor, Scutum, Hydrus, Tucana, Pavo, Grus, Phoenix, Dorado',
         5: 'Mensa, Antlia, Caelum, Pictor, Reticulum, Horologium, Norma, Circinus, Octans, Apus, Volans, Microscopium, Indus, Chamaeleon, Triangulum Australe, Sextans, Equuleus',
+        6: '',
       },
     },
     {
@@ -340,6 +372,7 @@
         3: 'frugalitas, industria, severitas, aequitas, comitas, firmitas, simplicitas, salubritas, modestia, pudicitia, magnanimitas, liberalitas, benevolentia, fidelitas, patientia, sapientia, spes, caritas, misericordia, gratia, amicitia, officium, mos maiorum, decus, gloria',
         4: 'integritas, innocentia, continentia, sobrietas, verecundia, diligentia, providentia, felicitas, securitas, tranquillitas, munificentia, magnificentia, indulgentia, hilaritas, laetitia, pudor, probitas',
         5: 'urbanitas, mansuetudo, castitas, sanctitas, religio, aequanimitas, longanimitas',
+        6: '',
       },
     },
     {
@@ -350,6 +383,7 @@
         3: 'Eboracum, Aquae Sulis, Camulodunum, Deva, Lindum, Verulamium, Colonia Agrippina, Lugdunum, Massilia, Narbo, Burdigala, Hispalis, Gades, Tarraco, Emerita Augusta, Toletum, Caesarea, Leptis Magna, Vindobona, Aquincum, Thessalonica, Ephesus, Pergamum, Smyrna, Tyrus, Sidon, Damascus, Palmyra, Cyrene, Utica, Tibur, Veii, Alba Longa, Cumae, Puteoli, Baiae, Aquileia, Verona, Patavium, Bononia, Florentia, Pisae, Ariminum, Beneventum, Corduba, Saguntum, Alesia',
         4: 'Augusta Treverorum, Sirmium, Hippo Regius, Tusculum, Praeneste, Lavinium, Ardea, Misenum, Stabiae, Placentia, Arretium, Clusium, Perusia, Ancona, Rhegium, Messana, Panormus, Lilybaeum, Carthago Nova, Numantia, Gergovia, Avaricum, Mogontiacum, Isca, Petra, Bostra',
         5: 'Durocortorum, Castra Regina, Augusta Vindelicorum, Noviomagus, Luguvalium, Vindolanda, Segedunum, Corinium, Durovernum, Thamugadi',
+        6: '',
       },
     },
     {
@@ -360,6 +394,7 @@
         3: 'Vestalia, Parilia/Palilia, Liberalia, Matronalia, Lemuria, Cerealia, Parentalia, Ludi Romani',
         4: 'Vinalia, Consualia, Terminalia, Quirinalia, Robigalia, Volcanalia/Vulcanalia, Neptunalia, Opalia, Compitalia, Ambarvalia, Feralia, Megalesia/Megalensia, Ludi Plebeii, Ludi Apollinares, Ludi Saeculares',
         5: 'Fordicidia, Agonalia, Equirria, Tubilustrium, Poplifugia, Larentalia, Carmentalia, Fontinalia, Armilustrium, Fornacalia, Septimontium, Meditrinalia, Furrinalia, Portunalia',
+        6: '',
       },
     },
     {
@@ -370,6 +405,7 @@
         3: 'lucent, luminosity, bioluminescent/bioluminescence, Lucifer, illumine',
         4: 'pellucid, luculent, lumen',
         5: 'lucubration, relucent, noctilucent, limn',
+        6: '',
       },
     },
   ];

@@ -5,9 +5,11 @@
     { n: 'Vulgaris',   en: 'common',          dmg: 10, cls: 't1' },
     { n: 'Insolitus',  en: 'uncommon',        dmg: 18, cls: 't2' },
     { n: 'Rarus',      en: 'rare',            dmg: 30, cls: 't3' },
-    { n: 'Rarissimus', en: 'very rare',       dmg: 50, cls: 't4' },
-    { n: 'Rara Avis',  en: 'one in a million', dmg: 80, cls: 't5' },
+    { n: 'Rarissimus', en: 'very rare',       dmg: 45, cls: 't4' },
+    { n: 'Arcanus',    en: 'obscure',          dmg: 65, cls: 't5' },
+    { n: 'Rara Avis',  en: 'one in a million', dmg: 90, cls: 't6' },
   ];
+  RA.MAXT = RA.TIERS.length - 1;   // 6 rarity tiers
 
   // Lower-case, strip accents and macrons, j→i, v→u, drop everything but letters and digits.
   RA.norm = function (s) {
@@ -39,7 +41,7 @@
       p.keys = [];
       return p;
     }
-    for (let tier = 1; tier <= 5; tier++) {
+    for (let tier = 1; tier <= RA.MAXT; tier++) {
       const line = src.t[tier];
       if (!line) continue;
       for (const item of line.split(',')) {

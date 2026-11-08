@@ -3,6 +3,8 @@
 // Checked by hand, including irregulars (bos > boves, os > ora/ossa, iter > itinera).
 (function (RA) {
   RA.PLURALS = {
+    caper: 'capri', leaena: 'leaenae', vipera: 'viperae', pullus: 'pulli', vespa: 'vespae', draco: 'dracones', pardus: 'pardi', coluber: 'colubri',
+    dama: 'damae', anguilla: 'anguillae', culex: 'culices', pulex: 'pulices', sorex: 'sorices', thynnus: 'thynni', caprea: 'capreae', falco: 'falcones',
     canis: 'canes', equus: 'equi', feles: 'feles', lupus: 'lupi', leo: 'leones', avis: 'aves', piscis: 'pisces',
     ursus: 'ursi', vacca: 'vaccae', porcus: 'porci', sus: 'sues', ovis: 'oves', capra: 'caprae', mus: 'mures',
     serpens: 'serpentes', anguis: 'angues', aquila: 'aquilae', taurus: 'tauri', asinus: 'asini', columba: 'columbae',
@@ -138,4 +140,6 @@
     mansuetudo: 'mansuetudines', castitas: 'castitates', sanctitas: 'sanctitates', religio: 'religiones',
     aequanimitas: 'aequanimitates', longanimitas: 'longanimitates'
   };
+  // Noun answers that take no plural here: already plural, uncountable, or a phrase. tools/check.js flags any noun in neither list.
+  RA.NO_PLURAL = 'parentes liberi viscera tempora nates clunes fauces praecordia ilia castra arma auxilia triarii hastati principes velites praetoriani speculatores lilia cippi lixae calones insidiae divitiae tenebrae nuptiae glires sudes sanguis lac aurum argentum ferrum vulgus garum mulsum posca defrutum sapa liquamen muria hordeum triticum oryza butyrum piper acetum mustum farina lardum virus pelagus humus sulphur fel ebur ver iubar aes far mel sal fides spes hadria|mos maiorum|primus pilus';
 })(window.RA = window.RA || {});

@@ -33,7 +33,7 @@
       this.seen = [];                 // [{pid, given: []}]
       this.rejected = [];             // guesses that matched nothing: [{text, targets: [{pid, index?}]}]
       this.events = [];
-      this.stats = { answers: 0, invalid: 0, dmg: 0, tiers: [0, 0, 0, 0, 0, 0], best: null, typos: 0, worn: 0 };
+      this.stats = { answers: 0, invalid: 0, dmg: 0, tiers: [0, 0, 0, 0, 0, 0, 0], best: null, typos: 0, worn: 0 };
       this.streak = 0;
       this.lastKey = '';
       this.lastTime = -99;
@@ -416,7 +416,7 @@
           return out;
         };
         // A mix worth learning: a couple of rare words, then the truly obscure.
-        let missed = [...take(3, 1), ...take(4, 2), ...take(5, 1)];
+        let missed = [...take(3, 1), ...take(4, 1), ...take(5, 1), ...take(6, 1)];
         if (missed.length < limit) missed.push(...take(2, limit - missed.length));
         if (missed.length < limit) missed.push(...take(1, limit - missed.length));
         return { p, given, missed: missed.slice(0, limit) };

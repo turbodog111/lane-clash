@@ -45,7 +45,8 @@
       pluck(base, 0, 0.18 + tier * 0.02);
       if (tier >= 3) pluck(base * 1.26, 0.07, 0.15);
       if (tier >= 4) pluck(base * 1.5, 0.14, 0.15);
-      if (tier >= 5) { pluck(base * 2, 0.21, 0.16); tone(base * 3, 1.6, { type: 'sine', gain: 0.06, at: 0.25 }); }
+      if (tier >= 5) pluck(base * 2, 0.21, 0.16);
+      if (tier >= 6) tone(base * 3, 1.6, { type: 'sine', gain: 0.06, at: 0.25 });
       noise(0.08, { gain: 0.12, freq: 1800 });
     },
     reject() { tone(110, 0.22, { type: 'sawtooth', gain: 0.08, slide: 0.7 }); },

@@ -36,8 +36,9 @@
       return l;
     },
     hit(ev) {
-      if (ev.tier === 5) return pick(['Rara avis! A black swan. Even I had to think about that one.', 'One in a million. The dead felt that.', 'Where did you even learn that?']);
-      if (ev.tier === 4 && Math.random() < 0.5) return pick(['Rarissimus. Very good.', 'That word has not been spoken down here in a long time.']);
+      if (ev.tier === 6) return pick(['Rara avis! A black swan. Even I had to think about that one.', 'One in a million. The dead felt that.', 'Where did you even learn that?']);
+      if (ev.tier === 5) return pick(['Arcanus. Few above remember that word.', 'An obscure one. The shades lean closer.', 'That word has not been spoken down here in a long time.']);
+      if (ev.tier === 4 && Math.random() < 0.5) return pick(['Rarissimus. Very good.', 'Very rare. You have been reading.']);
       if (ev.worn) return pick(['You keep saying that one. Worn words cut less.', 'Tritum. Used too often in past lives; it has lost its edge.']);
       if (ev.typo) return pick(['I knew what you meant. Spell it right and it hits harder.', 'Close enough… this once.']);
       if (ev.fed) return 'You fed her. Common words are food to a Harpy.';

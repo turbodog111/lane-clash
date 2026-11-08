@@ -24,11 +24,11 @@
   // Split an open prompt's tier strings into arrays of items.
   R.tiersOf = (src) => {
     const t = {};
-    for (let tier = 1; tier <= 5; tier++) t[tier] = (src.t[tier] || '').split(',').map((x) => x.trim()).filter(Boolean);
+    for (let tier = 1; tier <= RA.MAXT; tier++) t[tier] = (src.t[tier] || '').split(',').map((x) => x.trim()).filter(Boolean);
     return t;
   };
   R.find = (tiers, key) => {
-    for (let tier = 1; tier <= 5; tier++) {
+    for (let tier = 1; tier <= RA.MAXT; tier++) {
       const i = tiers[tier].findIndex((item) => forms(item).some((f) => RA.norm(f) === key));
       if (i >= 0) return { tier, i };
     }
@@ -44,7 +44,7 @@
       for (const e of mine) {
         const it = items[e.index];
         if (!it) continue;
-        if (e.op === 'tier' && e.tier >= 1 && e.tier <= 5) it.tier = e.tier;
+        if (e.op === 'tier' && e.tier >= 1 && e.tier <= RA.MAXT) it.tier = e.tier;
         else if (e.op === 'alias' && e.alias && !forms(it.a).some((f) => RA.norm(f) === RA.norm(e.alias))) it.a += '/' + e.alias.trim();
         else if (e.op === 'remove') it.off = true;
       }
@@ -64,7 +64,7 @@
       else if (e.op === 'remove') tiers[at.tier].splice(at.i, 1);
     }
     const t = {};
-    for (let tier = 1; tier <= 5; tier++) t[tier] = tiers[tier].join(', ');
+    for (let tier = 1; tier <= RA.MAXT; tier++) t[tier] = tiers[tier].join(', ');
     return { ...src, t };
   };
 

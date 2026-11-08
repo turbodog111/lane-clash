@@ -5,7 +5,7 @@
     glaze: '#110c0a', glaze2: '#1d1410', clay: '#c9733b', clayHi: '#e8a062', clayLo: '#9a4f25',
     line: '#1b0f09', bone: '#efe3c8', styx: '#4fb3a6', gold: '#e8bf55', blood: '#d2463a', wine: '#5a1d16',
   };
-  const TIER_COL = [null, '#b3a393', '#d0965a', '#5fc8b9', '#f2c95c', '#f6f1ff'];
+  const TIER_COL = [null, '#b3a393', '#d0965a', '#5fc8b9', '#f2c95c', '#b48cff', '#f6f1ff'];
   RA.C = C;
 
   let canvas, ctx, W = 0, H = 0, dpr = 1;
@@ -490,7 +490,7 @@
     hit(part, dmg, tier, text) {
       const to = enemyCenter(part);
       shots.push({ text, tier, t: 0, from: { x: W / 2, y: H - 20 }, to, dmg, part });
-      if (tier >= 5) swans.push({ t: 0, y: H * (0.25 + Math.random() * 0.2) });
+      if (tier >= 6) swans.push({ t: 0, y: H * (0.25 + Math.random() * 0.2) });
     },
     text(txt, col) { floaters.push({ x: 0, y: 0, t: 0, txt, col: col || C.bone, big: false }); },
     strike() { lunge = 1; },
