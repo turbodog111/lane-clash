@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 global.window = global;
-for (const f of ['js/data/prompts.js', 'js/data/schola.js', 'js/data/bestiary.js', 'js/core/match.js', 'js/core/review.js', 'js/core/run.js']) {
+for (const f of ['js/data/prompts.js', 'js/data/plurals.js', 'js/data/schola.js', 'js/data/bestiary.js', 'js/core/match.js', 'js/core/review.js', 'js/core/run.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
 }
 const RA = global.RA;
@@ -71,6 +71,19 @@ const end = RA.promptById['s-terminationes'].answers.find((a) => a.q === '1st de
 if (!RA.matchItem(end, '-ārum') || !RA.matchItem(end, 'arum') || RA.matchItem(end, 'orum')) fail('ending drill matching');
 const sup = RA.promptById['s-gradus-adi'].answers.find((a) => a.q.startsWith('Superlative of ācer (m'));
 if (!RA.matchItem(sup, 'acerrimus') || RA.matchItem(sup, 'acerrimum')) fail('degree drill must be exact');
+
+// Plurals count as the singular in noun questions.
+for (const [pid, typed, want] of [['animalia', 'canes', 'canis'], ['animalia', 'boves', 'bos'], ['corpus', 'ossa', 'os'], ['corpus', 'ora', 'os'], ['decl3', 'itinera', 'iter'], ['decl1', 'puellae', 'puella'], ['familia', 'coniuges', 'coniunx']]) {
+  if (RA.match(RA.promptById[pid], typed, false)?.a.text !== want) fail(`plural ${typed} should count as ${want} in ${pid}`);
+}
+if (RA.match(RA.promptById.dei, 'Iunones', false)) fail('plurals must not apply to questions without pl');
+for (const src of RA.PROMPT_SRC.filter((s) => s.pl)) {
+  const p = RA.promptById[src.id];
+  for (const a of p.answers) {
+    if (!a.plurals) continue;
+    for (const k of a.plurals.map(RA.norm)) if (p.map.get(k) !== a && !a.keys.slice(0, a.forms.length).includes(k) && process.env.PLURALS) console.log(`  note: ${src.id}: plural ${k} of ${a.text} already means ${p.map.get(k).text}`);
+  }
+}
 
 // Review overlay: edits change matching, and leave the source untouched.
 {

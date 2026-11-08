@@ -4,11 +4,12 @@
 // Matching ignores case, accents/macrons, spaces and punctuation, and treats j=i and v=u.
 // lvl: 1 = early floors, 2 = middle, 3 = deep.   lang: 'la' answers in Latin, 'en' answers in English.
 // gen: 'v1' / 'v2' auto-accepts the infinitive (amo → amare, moneo → monere; deponents too).
+// pl: true accepts each noun's nominative plural too (canes for canis), from js/data/plurals.js.
 (function (RA) {
   RA.PROMPT_SRC = [
     // ───────────────────────── Level 1 ─────────────────────────
     {
-      id: 'animalia', lvl: 1, lang: 'la', cat: 'Animalia', q: 'Name an animal, in Latin',
+      id: 'animalia', lvl: 1, lang: 'la', pl: true, cat: 'Animalia', q: 'Name an animal, in Latin',
       t: {
         1: 'canis, equus, feles/felis, lupus, leo, avis, piscis, ursus',
         2: 'vacca, porcus, sus, ovis, capra, mus, serpens, anguis, aquila, taurus, asinus, columba, corvus, cervus, vulpes, elephantus/elephas, apis, gallus, bos, agnus',
@@ -18,7 +19,7 @@
       },
     },
     {
-      id: 'corpus', lvl: 1, lang: 'la', cat: 'Corpus', q: 'Name a part of the body, in Latin',
+      id: 'corpus', lvl: 1, lang: 'la', pl: true, cat: 'Corpus', q: 'Name a part of the body, in Latin',
       t: {
         1: 'caput, manus, pes, oculus, cor, os, auris, nasus, dens',
         2: 'lingua, bracchium/brachium, crus, digitus, collum, venter, umerus/humerus, capillus, frons, genu, pectus, tergum, dorsum, sanguis, cutis, facies, barba, labrum, palma',
@@ -68,7 +69,7 @@
       },
     },
     {
-      id: 'decl1', lvl: 1, lang: 'la', cat: 'Grammatica', q: 'Name a 1st-declension noun (puella, aqua…)',
+      id: 'decl1', lvl: 1, lang: 'la', pl: true, cat: 'Grammatica', q: 'Name a 1st-declension noun (puella, aqua…)',
       t: {
         1: 'puella, aqua, terra, via, rosa, vita, porta, femina, insula, silva',
         2: 'agricola, nauta, poeta, incola, villa, casa, fama, gloria, lingua, luna, stella, patria, familia, epistula, fabula, filia, hora, ira, ianua/janua, mensa, pecunia, pugna, sagitta, schola, unda, victoria, cena, culpa, cura, fortuna, fuga, harena/arena, hasta, littera, memoria, natura, ora, poena, regina, sententia, turba, umbra, causa, copia, dea, domina, ancilla, columna, corona',
@@ -170,7 +171,7 @@
       },
     },
     {
-      id: 'familia', lvl: 2, lang: 'la', cat: 'Familia', q: 'Name a family member, in Latin',
+      id: 'familia', lvl: 2, lang: 'la', pl: true, cat: 'Familia', q: 'Name a family member, in Latin',
       t: {
         1: 'pater, mater, frater, soror, filius, filia',
         2: 'avus, avia, uxor, maritus, coniunx/coniux/conjunx, infans, parentes, liberi, nepos, vir',
@@ -200,7 +201,7 @@
       },
     },
     {
-      id: 'domus', lvl: 2, lang: 'la', cat: 'Domus', q: 'Name a room or part of a Roman house',
+      id: 'domus', lvl: 2, lang: 'la', pl: true, cat: 'Domus', q: 'Name a room or part of a Roman house',
       t: {
         1: 'atrium, impluvium, triclinium, culina, cubiculum, hortus, ianua/janua',
         2: 'peristylium/peristylum, tablinum, compluvium, vestibulum, fenestra, lararium, taberna, latrina, fauces, ala/alae, cella',
@@ -220,7 +221,7 @@
       },
     },
     {
-      id: 'decl2', lvl: 2, lang: 'la', cat: 'Grammatica', q: 'Name a 2nd-declension noun (servus, bellum…)',
+      id: 'decl2', lvl: 2, lang: 'la', pl: true, cat: 'Grammatica', q: 'Name a 2nd-declension noun (servus, bellum…)',
       t: {
         1: 'servus, amicus, bellum, dominus, puer, ager, liber, vir, oppidum, verbum, donum',
         2: 'equus, populus, filius, deus, annus, animus, oculus, lupus, campus, cibus, gladius, ludus, murus, numerus, nuntius, socius, ventus, magister, caelum, consilium, forum, imperium, periculum, praemium, proelium, regnum, signum, templum, tectum, vinum, auxilium, aurum, argentum, ferrum, saxum, scutum, studium, officium, gaudium, odium, otium, negotium, exemplum, arma, castra',
@@ -230,7 +231,7 @@
       },
     },
     {
-      id: 'decl3', lvl: 2, lang: 'la', cat: 'Grammatica', q: 'Name a 3rd-declension noun (rex, corpus…)',
+      id: 'decl3', lvl: 2, lang: 'la', pl: true, cat: 'Grammatica', q: 'Name a 3rd-declension noun (rex, corpus…)',
       t: {
         1: 'rex, lex, pax, lux, vox, mater, pater, frater, homo, nomen, corpus, tempus, mare, urbs, mons, miles, nox, dux',
         2: 'flumen, animal, civis, pons, ars, mors, gens, caput, carmen, opus, iter, labor, amor, sol, sanguis, leo, canis, finis, ignis, navis, hostis, mulier, uxor, soror, virgo, imperator, consul, senator, orator, legio, regio, natio, ratio, oratio, pars, dens, pes, mens, virtus, libertas, civitas, aetas, veritas, ordo, clamor, color, honor, timor, dolor, error, terror, pectus, litus, vulnus, genus, scelus, onus',
@@ -280,7 +281,7 @@
       },
     },
     {
-      id: 'cibus', lvl: 2, lang: 'la', cat: 'Cibus', q: 'Name a food or drink, in Latin',
+      id: 'cibus', lvl: 2, lang: 'la', pl: true, cat: 'Cibus', q: 'Name a food or drink, in Latin',
       t: {
         1: 'panis, vinum, aqua, lac, mel, caseus',
         2: 'ovum, caro, piscis, pomum, malum, uva, oliva, oleum, sal, frumentum, puls, garum',
@@ -292,7 +293,7 @@
 
     // ───────────────────────── Level 3 ─────────────────────────
     {
-      id: 'militia', lvl: 3, lang: 'la', cat: 'Militia', q: 'Name a Roman military term', note: 'Latin',
+      id: 'militia', lvl: 3, lang: 'la', pl: true, cat: 'Militia', q: 'Name a Roman military term', note: 'Latin',
       t: {
         1: 'legio, miles, gladius, castra, centurio, scutum, pilum',
         2: 'cohors, legatus, galea, lorica, aquila, signum, tribunus, imperator, testudo, ballista, eques, auxilia, vexillum, praetorium, vallum, fossa, contubernium',
@@ -332,7 +333,7 @@
       },
     },
     {
-      id: 'virtutes', lvl: 3, lang: 'la', cat: 'Mores', q: 'Name a Roman virtue or value, in Latin',
+      id: 'virtutes', lvl: 3, lang: 'la', pl: true, cat: 'Mores', q: 'Name a Roman virtue or value, in Latin',
       t: {
         1: 'virtus, pietas, fides, gravitas',
         2: 'dignitas, clementia, constantia, prudentia, iustitia/justitia, fortitudo, temperantia, honestas, humanitas, auctoritas, disciplina, veritas, libertas, concordia, honos/honor',

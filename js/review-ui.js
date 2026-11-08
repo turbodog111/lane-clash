@@ -89,9 +89,10 @@
 
   function answerEditorHTML(p, a, ro) {
     const spellings = a.forms.length > 1 ? `<span class="muted">Accepted spellings: ${esc(a.forms.join(', '))}</span>` : '<span class="muted">One accepted spelling.</span>';
-    if (ro) return `<div class="rev-editor">${spellings}</div>`;
+    const pl = a.plurals ? ` <span class="muted">· plural also counts: ${esc(a.plurals.join(', '))}</span>` : '';
+    if (ro) return `<div class="rev-editor">${spellings}${pl}</div>`;
     return `<div class="rev-editor" data-key="${a.keys[0]}">
-      <div><b>${esc(a.text)}</b> ${spellings}</div>
+      <div><b>${esc(a.text)}</b> ${spellings}${pl}</div>
       <div class="rev-row"><span class="lab">Rarity</span>${tierButtons(a.tier, `data-act="tier" data-key="${a.keys[0]}"`)}</div>
       <form class="rev-row" data-act="alias" data-key="${a.keys[0]}"><span class="lab">Also accept</span><input name="alias" type="text" autocomplete="off" spellcheck="false" placeholder="another spelling or form"><button class="btn small" type="submit">Add spelling</button></form>
       <div class="rev-row"><button type="button" class="btn small danger" data-act="remove" data-key="${a.keys[0]}" data-answer="${esc(a.text)}">Not right here: remove</button></div>

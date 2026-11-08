@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 global.window = global;
-for (const f of ['js/data/prompts.js', 'js/data/schola.js', 'js/core/match.js', 'js/core/review.js']) {
+for (const f of ['js/data/prompts.js', 'js/data/plurals.js', 'js/data/schola.js', 'js/core/match.js', 'js/core/review.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
 }
 const RA = global.RA;

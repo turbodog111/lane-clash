@@ -52,9 +52,20 @@
         for (const k of keys) if (!p.map.has(k)) p.map.set(k, a);
       }
     }
+    // Plurals (canes for canis) count as the singular. Added last, so a plural never takes over another answer's spelling.
+    if (src.pl && RA.PLURALS) {
+      for (const a of p.answers) {
+        const pl = plurals()[RA.norm(a.forms[0])];
+        if (!pl) continue;
+        a.plurals = splitForms(pl);
+        for (const k of a.plurals.map(RA.norm)) if (k && !p.map.has(k)) { p.map.set(k, a); a.keys.push(k); }
+      }
+    }
     p.keys = [...p.map.keys()];
     return p;
   };
+  let PL = null;
+  const plurals = () => PL || (PL = Object.fromEntries(Object.entries(RA.PLURALS).map(([k, v]) => [RA.norm(k), v])));
 
   // Drill items: exact match only (in grammar, one letter is the whole point).
   RA.matchItem = function (item, raw) {
