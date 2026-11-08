@@ -27,6 +27,18 @@ What's still open from §8: tone, the Host's identity (currently the Sibyl), ans
 - **Effects:** answers fly at the enemy as glowing text; *Rara Avis* answers summon Juvenal's black swan; enemies shatter into terracotta shards; title cards for bosses and new zones; a Sibyl scene on the title screen.
 - **UI clarity:** every Latin label carries its English in parentheses, e.g. Gradus (floor), Anima (health), Folia (hints), Munera deorum (gifts of the gods).
 
+### Prototype 1.2 (2026-11-08): easier start, answer review
+- **Difficulty:** turbodog111 reached only Gradus V. The simulation bots were too optimistic (they knew every common answer instantly), so `tools/check.js` now also simulates *human* players with per-word knowledge, thinking time and mistakes. Retuned:
+  - enemies have less life (48 base, slower growth)
+  - enemies bite more slowly at first (every 22s, tightening to 7s)
+  - bites hurt less (6 damage at first)
+  - more healing between floors (15)
+  - Cerberus's heads each bite softer
+  - the first guardian is weaker
+
+  A simulated student now usually gets past floor 5 (median floor 10).
+- **Tabularium (answer review):** turbodog111 reviews tiers, spellings and answers in the game itself, and every rejected guess is logged for review. Edits apply immediately as an overlay. Claude bakes them into the data with `tools/apply-review.js` and marks them applied.
+
 ---
 
 ## 1. Executive decisions (turbodog111, 2026-11-07)

@@ -1,6 +1,10 @@
 // The descent: one run of the game. Pure logic. The UI calls tick/submit/etc. and drains run.events.
 (function (RA) {
-  const BASE_HP = 60, HP_GROW = 0.17, BOSS_HP = 3.0;
+  // Tuning. tools/check.js simulates people at several skill levels against these numbers.
+  const BASE_HP = 48, HP_GROW = 0.15, BOSS_HP = 3.0;
+  const IV_START = 22, IV_STEP = 0.45, IV_MIN = 7;    // seconds between bites
+  const DMG_START = 6, DMG_STEP = 1.2;                 // bite damage
+  const FLOOR_HEAL = 15;
   const MUTABLE_RULES = ['fury', 'harpy', 'echo', 'sphinx', 'gorgo', 'tantalus'];
 
   function mulberry32(a) {
@@ -27,6 +31,7 @@
       this.used = new Set();          // answer ids used this run
       this.usedPrompts = new Set();
       this.seen = [];                 // [{pid, given: []}]
+      this.rejected = [];             // guesses that matched nothing: [{text, targets: [{pid, index?}]}]
       this.events = [];
       this.stats = { answers: 0, invalid: 0, dmg: 0, tiers: [0, 0, 0, 0, 0, 0], best: null, typos: 0, worn: 0 };
       this.streak = 0;
@@ -73,9 +78,11 @@
       // Class mode is for study: enemies are softer and bite more slowly.
       const study = this.mode === 'schola' ? { hp: 0.6, iv: 1.25 } : { hp: 1, iv: 1 };
       const sat = Math.pow(1.2, this.boons.saturnus || 0);
-      const hp = BASE_HP * (1 + HP_GROW * (n - 1)) * Math.pow(1.04, n - 1) * e.hp * (e.boss ? BOSS_HP : 1) * (furyMut ? 0.75 : 1) * study.hp;
-      const interval = Math.max(6.5, 17 - 0.35 * (n - 1)) * e.speed * (furyMut ? 0.62 : 1) * sat * study.iv;
-      const dmg = Math.round((8 + 1.4 * (n - 1)) * Math.pow(1.02, n - 1) * (e.boss ? 1.25 : 1));
+      // The first guardian is a gentler introduction to bosses.
+      const bossHp = e.boss ? BOSS_HP * (n <= 5 ? 0.75 : 1) : 1;
+      const hp = BASE_HP * (1 + HP_GROW * (n - 1)) * Math.pow(1.04, n - 1) * e.hp * bossHp * (furyMut ? 0.75 : 1) * study.hp;
+      const interval = Math.max(IV_MIN, IV_START - IV_STEP * (n - 1)) * e.speed * (furyMut ? 0.62 : 1) * sat * study.iv;
+      const dmg = Math.round((DMG_START + DMG_STEP * (n - 1)) * Math.pow(1.02, n - 1) * (e.boss ? 1.25 : 1));
 
       const heads = rules.includes('heads') ? 3 : 1;
       this.enemy = {
@@ -86,7 +93,7 @@
       for (let i = 0; i < heads; i++) {
         const php = Math.round(hp * (heads > 1 ? 0.42 : 1));
         const iv = interval * (heads > 1 ? 1.35 : 1);
-        const part = { hp: php, maxHp: php, interval: iv, timer: iv + 2 + i * (iv / 3), alive: true, given: [], hint: null };
+        const part = { hp: php, maxHp: php, interval: iv, bite: heads > 1 ? 0.6 : 1, timer: iv + 2 + i * (iv / 3), alive: true, given: [], hint: null };
         this.enemy.parts.push(part);
         this.assignPrompt(part);
       }
@@ -167,7 +174,7 @@
         this.emit({ type: 'blocked', part: this.enemy.parts.indexOf(part) });
         return;
       }
-      const dmg = this.enemy.dmg;
+      const dmg = Math.round(this.enemy.dmg * (part.bite || 1));
       this.anima -= dmg;
       if (this.enemy.rules.includes('tantalus')) this.enemy.st.lastLen = 0;
       this.emit({ type: 'strike', dmg, part: this.enemy.parts.indexOf(part) });
@@ -213,7 +220,11 @@
       if (!hit) {
         this.stats.invalid++;
         for (const p of alive) { const it = this.current(p); if (it && !p.rec.missed.includes(it.id)) p.rec.missed.push(it.id); }
-        return reject('invalid', {}, this.boons.neptunus ? 0 : 2);
+        // What was on screen when this guess missed, so it can be reviewed later (maybe it should count).
+        const targets = alive.map((p) => { const it = this.current(p); return it ? { pid: p.prompt.id, index: it.index, q: it.q } : { pid: p.prompt.id }; });
+        const key = RA.norm(text);
+        if (!this.rejected.some((r) => RA.norm(r.text) === key && r.targets[0].pid === targets[0].pid && r.targets[0].index === targets[0].index)) this.rejected.push({ text, targets });
+        return reject('invalid', { targets }, this.boons.neptunus ? 0 : 2);
       }
       const a = hit.a;
       if (this.used.has(a.id)) return reject('dup');
@@ -349,7 +360,7 @@
 
     // ── Between floors ──────────────────────────────────────────────
     clearFloor() {
-      const heal = Math.min(5, this.maxAnima - this.anima);
+      const heal = Math.min(FLOOR_HEAL, this.maxAnima - this.anima);
       this.anima += heal;
       const boss = this.enemy.boss;
       if (boss) this.folia += 1;

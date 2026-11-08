@@ -52,6 +52,22 @@ Class content lives in `js/data/schola.js`, one *unit* per topic, each listing t
 ] }
 ```
 
+## Tabularium (answer review)
+
+The **Tabularium (review answers)** button on the title screen opens a review screen for tuning the question bank:
+
+- **Questions:** every question with all its accepted answers, grouped by rarity tier. Click an answer to change its tier, accept another spelling, or remove it. You can also add missing answers and leave a note on any question.
+- **Rejected guesses:** every guess the game didn't accept, most frequent first. Accept one at a tier, link it as a spelling of an existing answer, or dismiss it. At the end of each descent you can flag guesses you think should have counted.
+- **Your changes:** everything you've changed, with undo.
+
+Changes take effect in the game straight away. In the published artifact they're kept in the artifact's shared database, where Claude reads them. Opened from a file, they're kept in your browser; use **Export** to save a JSON file. To write them into the source:
+
+```
+node tools/apply-review.js review.json
+```
+
+This updates `js/data/prompts.js` in place and lists anything (notes, class-mode questions) that has to be changed by hand.
+
 ## Project layout
 
 ```
@@ -62,12 +78,16 @@ js/data/schola.js     class-mode content from the handouts (open questions + dri
 js/data/bestiary.js   enemies, rules, gifts
 js/core/match.js      answer normalisation + matching (macrons, j/i, u/v, small typos)
 js/core/run.js        the game rules (pure logic, runs in Node too)
+js/core/review.js     review edits (re-tier, spellings, new/removed answers) applied over the question bank
 js/core/memory.js     what persists between descents (localStorage)
 js/core/sibyl.js      the Sibyl's lines
 js/art.js             all art, drawn in code on <canvas>
 js/audio.js           synthesized sound (WebAudio, no files)
+js/store.js           where review edits and rejected guesses are saved (artifact database or localStorage)
 js/ui.js              screens, input, rendering
+js/review-ui.js       the Tabularium (answer review) screen
 tools/check.js        validates the question bank and simulates runs at different skill levels
+tools/apply-review.js writes review edits into js/data/prompts.js
 tools/bundle.js       inlines everything into one HTML file
 docs/VISION.md        design direction and idea log
 ```
@@ -81,7 +101,7 @@ Add an entry to `js/data/prompts.js`:
   t: { 1: 'Tiberis, Nilus', 2: 'Rhenus, Danuvius/Danubius', 3: '…', 4: '…', 5: '…' } },
 ```
 
-Tiers run from 1 (common) to 5 (one in a million). Use `/` for alternate spellings; the first spelling is the one shown. Then run `node tools/check.js` to catch duplicates.
+Tiers run from 1 (common) to 5 (one in a million). Use `/` for alternate spellings; the first spelling is the one shown. Then run `node tools/check.js` to catch duplicates. (Or use the Tabularium screen, which is quicker for small fixes.)
 
 ## History
 

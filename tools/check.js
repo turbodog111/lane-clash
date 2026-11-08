@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 global.window = global;
-for (const f of ['js/data/prompts.js', 'js/data/schola.js', 'js/data/bestiary.js', 'js/core/match.js', 'js/core/run.js']) {
+for (const f of ['js/data/prompts.js', 'js/data/schola.js', 'js/data/bestiary.js', 'js/core/match.js', 'js/core/review.js', 'js/core/run.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(root, f), 'utf8'), { filename: f });
 }
 const RA = global.RA;
@@ -72,9 +72,41 @@ if (!RA.matchItem(end, '-ārum') || !RA.matchItem(end, 'arum') || RA.matchItem(e
 const sup = RA.promptById['s-gradus-adi'].answers.find((a) => a.q.startsWith('Superlative of ācer (m'));
 if (!RA.matchItem(sup, 'acerrimus') || RA.matchItem(sup, 'acerrimum')) fail('degree drill must be exact');
 
+// Review overlay: edits change matching, and leave the source untouched.
+{
+  const E = [
+    { op: 'tier', pid: 'animalia', key: 'canis', tier: 3, status: 'open', at: 1 },
+    { op: 'alias', pid: 'animalia', key: 'lupus', alias: 'lupa', status: 'open', at: 2 },
+    { op: 'add', pid: 'animalia', text: 'draco', tier: 4, status: 'open', at: 3 },
+    { op: 'remove', pid: 'animalia', key: 'ursus', status: 'open', at: 4 },
+    { op: 'alias', pid: 's-terminationes', index: 0, alias: 'xyz', status: 'open', at: 5 },
+    { op: 'remove', pid: 's-terminationes', index: 1, status: 'open', at: 6 },
+  ];
+  RA.Review.rebuild(E);
+  const an = RA.promptById.animalia, td = RA.promptById['s-terminationes'];
+  if (RA.match(an, 'canis')?.a.tier !== 3) fail('review: tier edit');
+  if (RA.match(an, 'lupa')?.a.text !== 'lupus') fail('review: alias edit');
+  if (RA.match(an, 'draco')?.a.tier !== 4) fail('review: add edit');
+  if (RA.match(an, 'ursus', false)) fail('review: remove edit');
+  if (!RA.matchItem(td.answers.find((a) => a.index === 0), 'xyz')) fail('review: drill alias');
+  if (td.answers.some((a) => a.index === 1)) fail('review: drill remove keeps ids');
+  if (RA.PROMPT_SRC[0].t[1].includes('draco') || !RA.PROMPT_SRC[0].t[1].includes('canis')) fail('review: source mutated');
+  if (RA.Review.docId(E[1]) !== 'alias~animalia~lupus~lupa') fail('review: doc id');
+  RA.Review.rebuild([]);
+  if (RA.match(RA.promptById.animalia, 'canis')?.a.tier !== 1) fail('review: rebuild without edits');
+}
+
 // 3. Simulated runs with a bot that knows a fraction of answers.
+// knowRate is either a number (knows every tier 1-2 answer, and that share of rarer ones) or a
+// per-tier array [_, t1, t2, t3, t4, t5]: the chance it knows each answer, decided once per run (like a person).
 function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
   const run = new RA.Run({ used: {}, found: {} }, seed, mode === 'schola' ? { mode, pool: RA.scholaPrompts } : {});
+  const known = new Map();
+  const knows = (a) => {
+    if (!Array.isArray(knowRate)) return a.tier <= 2 || Math.random() < knowRate;
+    if (!known.has(a.id)) known.set(a.id, Math.random() < knowRate[a.tier]);
+    return known.get(a.id);
+  };
   let guard = 0;
   while (run.phase !== 'dead' && guard++ < 20000) {
     if (run.phase === 'boon') { run.chooseBoon(0); continue; }
@@ -83,12 +115,13 @@ function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
     const part = run.enemy.parts.find((x) => x.alive);
     const cur = run.current(part);
     if (cur) {
-      if (Math.random() < miss + (cur.tier - 1) * (0.5 - knowRate) * 0.25) run.submit('nescio');
+      const kr = Array.isArray(knowRate) ? knowRate[3] : knowRate;
+      if (Math.random() < miss + (cur.tier - 1) * (0.5 - kr) * 0.25) run.submit('nescio');
       else run.submit(cur.keys[0]);
       run.events.length = 0;
       continue;
     }
-    const left = part.prompt.answers.filter((a) => !run.used.has(a.id) && (a.tier <= 2 || Math.random() < knowRate));
+    const left = part.prompt.answers.filter((a) => !run.used.has(a.id) && knows(a));
     const st = run.enemy.st, R = run.enemy.rules;
     const ok = left.filter((a) => {
       const k = RA.norm(a.text);
@@ -104,6 +137,14 @@ function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
     run.events.length = 0;
   }
   return run.floor;
+}
+// "Human" profiles: realistic knowledge and pace (a person thinks, types, and makes mistakes).
+for (const [rate, pace, miss, who] of [[[0, 0.35, 0.12, 0.03, 0.01, 0], 10, 0.35, 'human: new'], [[0, 0.6, 0.3, 0.1, 0.03, 0.01], 8, 0.3, 'human: student'], [[0, 0.85, 0.6, 0.3, 0.1, 0.03], 6, 0.2, 'human: strong']]) {
+  const floors = Array.from({ length: 60 }, (_, i) => sim(rate, i + 1, pace, miss));
+  floors.sort((a, b) => a - b);
+  const past5 = floors.filter((f) => f > 5).length / floors.length;
+  if (process.env.HIST) { const h = {}; floors.forEach((f) => (h[f] = (h[f] || 0) + 1)); console.log('  deaths by floor', JSON.stringify(h)); }
+  console.log(`${who.padEnd(14)} (${pace}s/attempt, ${Math.round(miss * 100)}% wrong) → median floor ${floors[30]}, best ${floors[59]}, beats Gradus V ${Math.round(past5 * 100)}%`);
 }
 for (const [rate, pace, miss, who] of [[0.05, 6, 0.25, 'beginner'], [0.2, 4.5, 0.15, 'Latin student'], [0.5, 3.5, 0.1, 'Latin teacher'], [0.6, 2.2, 0, 'perfect bot']]) {
   const floors = Array.from({ length: 40 }, (_, i) => sim(rate, i + 1, pace, miss));

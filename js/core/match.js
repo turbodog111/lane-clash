@@ -31,9 +31,10 @@
                 exact: !!src.exact || src.kind === 'drill', answers: [], map: new Map() };
     if (p.kind === 'drill') {
       src.items.forEach((it, i) => {
+        if (it.off) return;            // removed in review; the index is kept so other items keep their ids
         const forms = splitForms(it.a);
         const keys = [...new Set(forms.map(RA.norm))].filter(Boolean);
-        p.answers.push({ q: it.q, sub: it.sub || '', note: it.note || '', text: it.show || forms[0], first: forms[0].replace(/^-/, ''), tier: it.tier, keys, id: p.id + ':' + i, prompt: p.id, index: i });
+        p.answers.push({ q: it.q, sub: it.sub || '', note: it.note || '', text: it.show || forms[0], forms, first: forms[0].replace(/^-/, ''), tier: it.tier, keys, id: p.id + ':' + i, prompt: p.id, index: i });
       });
       p.keys = [];
       return p;
@@ -46,7 +47,7 @@
         if (!forms.length) continue;
         const extra = src.gen ? forms.flatMap(GEN[src.gen]) : [];
         const keys = [...new Set([...forms, ...extra].map(RA.norm))].filter(Boolean);
-        const a = { text: forms[0], tier, keys, id: p.id + ':' + keys[0], prompt: p.id };
+        const a = { text: forms[0], forms, tier, keys, id: p.id + ':' + keys[0], prompt: p.id };
         p.answers.push(a);
         for (const k of keys) if (!p.map.has(k)) p.map.set(k, a);
       }
@@ -110,8 +111,13 @@
     return s;
   };
 
-  RA.prompts = RA.PROMPT_SRC.map(RA.buildPrompt);
-  RA.schola = (RA.SCHOLA_UNITS || []).map((u) => ({ ...u, prompts: u.prompts.map(RA.buildPrompt) }));
-  RA.scholaPrompts = RA.schola.flatMap((u) => u.prompts.map((p) => Object.assign(p, { unit: u.id })));
-  RA.promptById = Object.fromEntries([...RA.prompts, ...RA.scholaPrompts].map((p) => [p.id, p]));
+  // Build the playable registries. `patch(src)` may return an edited copy of a source prompt
+  // (js/core/review.js uses this to apply review edits before they are written into the data files).
+  RA.buildAll = function (patch = (src) => src) {
+    RA.prompts = RA.PROMPT_SRC.map((s) => RA.buildPrompt(patch(s)));
+    RA.schola = (RA.SCHOLA_UNITS || []).map((u) => ({ ...u, prompts: u.prompts.map((s) => RA.buildPrompt(patch(s))) }));
+    RA.scholaPrompts = RA.schola.flatMap((u) => u.prompts.map((p) => Object.assign(p, { unit: u.id })));
+    RA.promptById = Object.fromEntries([...RA.prompts, ...RA.scholaPrompts].map((p) => [p.id, p]));
+  };
+  RA.buildAll();
 })(window.RA = window.RA || {});

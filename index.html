@@ -36,6 +36,7 @@
     <div class="actions">
       <button id="btnHelp" class="btn" type="button">How to play</button>
       <button id="btnCodex" class="btn" type="button">Codex (words you’ve found)</button>
+      <button id="btnReview" class="btn" type="button">Tabularium (review answers)</button>
     </div>
     <dl id="records" class="records"></dl>
     <p class="fine">Working title · prototype. Your progress lives only in this browser.</p>
@@ -119,6 +120,11 @@
     <h3>What you could have said</h3>
     <p class="muted">Rare answers to the questions you faced. Learn a few; they hit hard next time.</p>
     <div id="endMissed" class="missed"></div>
+    <div id="endRejectedWrap" hidden>
+      <h3>Not accepted <span class="paren">(should any of these have counted?)</span></h3>
+      <p class="muted">Every guess the game didn’t accept goes to the Tabularium (answer review). Flag the ones you think were right.</p>
+      <ul id="endRejected" class="end-rejected"></ul>
+    </div>
     <div class="actions">
       <button id="btnAgain" class="btn primary" type="button">Descend again (same mode) <kbd>Enter</kbd></button>
       <button id="btnToTitle" class="btn" type="button">Cave mouth (title screen)</button>
@@ -157,6 +163,46 @@
     <p id="scholaRecord" class="muted"></p>
   </section>
 
+  <!-- ── Answer review ── -->
+  <section id="scrReview" class="screen review-screen" hidden>
+    <div class="screen-head">
+      <h2>Tabularium <span class="paren">(answer review)</span></h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <p class="lede">Tune the question bank: move answers between rarity tiers, accept other spellings, add missing answers, and sort through guesses the game rejected. Changes count in the game straight away; Claude then writes them into the game files.</p>
+    <p id="revStatus" class="rev-status muted"></p>
+    <div class="rev-tabs" role="tablist">
+      <button id="revTabQuestions" class="rev-tab" type="button" role="tab" data-act="tab" data-tab="questions">Questions</button>
+      <button id="revTabRejects" class="rev-tab" type="button" role="tab" data-act="tab" data-tab="rejects">Rejected guesses</button>
+      <button id="revTabChanges" class="rev-tab" type="button" role="tab" data-act="tab" data-tab="changes">Your changes</button>
+    </div>
+
+    <div id="revQuestions" class="rev-questions">
+      <div class="rev-side">
+        <label class="sr" for="revSearch">Find a question or answer</label>
+        <input id="revSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Find a question or answer…">
+        <div id="revList" class="rev-list"></div>
+      </div>
+      <div id="revBody" class="rev-body"></div>
+    </div>
+
+    <div id="revRejects" hidden>
+      <p class="muted">Guesses players typed that matched nothing, most frequent first. Accept one as a new answer (pick its tier), link it as a spelling of an existing answer, or dismiss it.</p>
+      <p class="rev-filters">
+        <label><input id="revShowDrills" type="checkbox"> Include drill mistakes <span class="paren">(usually just wrong forms)</span></label>
+        <label><input id="revShowHandled" type="checkbox"> Show handled ones</label>
+      </p>
+      <div id="revRejectList" class="rev-rejects"></div>
+    </div>
+
+    <div id="revChanges" hidden>
+      <div id="revChangeList"></div>
+      <p id="revSharedNote" class="muted" hidden>These are saved with the artifact. Tell Claude “apply the review” and they’ll be written into the game files.</p>
+      <button id="revExport" class="btn small" type="button" hidden>Export changes (JSON file)</button>
+      <textarea id="revExportText" class="rev-export" rows="6" readonly hidden aria-label="Exported changes"></textarea>
+    </div>
+  </section>
+
   <!-- ── How to play ── -->
   <section id="scrHelp" class="screen help-screen" hidden>
     <div class="screen-head">
@@ -184,11 +230,14 @@
 <script src="js/data/schola.js"></script>
 <script src="js/data/bestiary.js"></script>
 <script src="js/core/match.js"></script>
+<script src="js/core/review.js"></script>
 <script src="js/core/run.js"></script>
 <script src="js/core/memory.js"></script>
 <script src="js/core/sibyl.js"></script>
 <script src="js/art.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/store.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/review-ui.js"></script>
 </body>
 </html>

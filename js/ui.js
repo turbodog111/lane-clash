@@ -19,18 +19,20 @@
   mem.load();
   RA.Audio.setMuted(mem.data.muted);
 
-  const screens = { title: $('scrTitle'), run: $('scrRun'), end: $('scrEnd'), codex: $('scrCodex'), help: $('scrHelp'), schola: $('scrSchola') };
+  const screens = { title: $('scrTitle'), run: $('scrRun'), end: $('scrEnd'), codex: $('scrCodex'), help: $('scrHelp'), schola: $('scrSchola'), review: $('scrReview') };
   const input = $('answer');
   let run = null, screen = 'title', paused = false, awayPause = false, lastMode = { mode: 'open' };
   let partEls = [], lastHud = '';
 
   function show(name) {
+    if (editsDirty && name !== 'run' && name !== 'end') { editsDirty = false; RA.Review.rebuild(Object.values(RA.Store.edits)); }
     for (const k in screens) screens[k].hidden = k !== name;
     screen = name;
     window.scrollTo(0, 0);
     if (name === 'title') renderTitle();
     if (name === 'codex') renderCodex();
     if (name === 'schola') renderSchola();
+    if (name === 'review') RA.reviewUI.render();
     if (name === 'run') requestAnimationFrame(() => RA.Art.resize());
   }
 
@@ -79,6 +81,9 @@
   // ── Starting and ending ──────────────────────────────────────────
   function startRun(opts = lastMode) {
     RA.Audio.unlock();
+    if (editsDirty) { editsDirty = false; RA.Review.rebuild(Object.values(RA.Store.edits)); }
+    // Prompt objects are rebuilt when review edits arrive, so look the class pool up fresh.
+    if (opts.units) opts = { ...opts, pool: RA.scholaPrompts.filter((p) => opts.units.includes(p.unit)) };
     lastMode = opts;
     run = new RA.Run(mem.data, undefined, opts);
     paused = false;
@@ -116,10 +121,40 @@
         <div class="lineup"><span class="lab">You said</span>${given.length ? given.map((a) => chip(a.text, a.tier)).join('') : '<span class="muted">nothing</span>'}</div>
         <div class="lineup"><span class="lab">Also right</span>${missed.map((a) => chip(a.text, a.tier, ` title="${tierFull(a.tier)}"`)).join('') || '<span class="muted">you found them all</span>'}</div>
       </div>`).join('');
+    renderRejected();
     $('scrPause').hidden = true; $('scrBoon').hidden = true;
     show('end');
     setTimeout(() => $('btnAgain').focus(), 50);
   }
+
+  function renderRejected() {
+    const list = run.rejected.slice(-12);
+    $('endRejectedWrap').hidden = !list.length;
+    $('endRejected').innerHTML = list.map((r, i) => {
+      const t = r.targets[0], p = RA.promptById[t.pid];
+      const where = p ? (t.q ? `${marked(p.q)}: ${marked(t.q)}` : esc(p.q)) : '';
+      return `<li><b class="bad">${esc(r.text)}</b> <span class="muted">for</span> ${where}
+        <button type="button" class="linkish" data-flag="${i}">It should count</button></li>`;
+    }).join('');
+  }
+  $('endRejected').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-flag]');
+    if (!b || !run) return;
+    const r = run.rejected.slice(-12)[Number(b.dataset.flag)];
+    r.targets.forEach((t) => RA.Store.logReject(t, r.text, true));
+    b.replaceWith(Object.assign(document.createElement('span'), { className: 'muted', textContent: '· flagged for review' }));
+  });
+
+  // Review edits change the question bank; rebuild it, but never in the middle of a run.
+  let editsDirty = false, editSig = '';
+  RA.Store.on(() => {
+    const sig = Object.entries(RA.Store.edits).filter(([, e]) => e.status === 'open').map(([id, e]) => id + e.at).sort().join('|');
+    if (sig === editSig) return;
+    editSig = sig;
+    if (screen === 'run' || screen === 'end') { editsDirty = true; return; }
+    RA.Review.rebuild(Object.values(RA.Store.edits));
+    if (screen === 'title') renderTitle();
+  });
 
   // ── Events from the run ──────────────────────────────────────────
   function sibyl(line) { if (line) $('sibylText').textContent = line; }
@@ -158,6 +193,7 @@
         input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake');
         const msg = { invalid: 'not a right answer here', dup: 'already said this run', sphinx: 'out of alphabetical order', tantalus: 'too short', judge: 'first letter already used', echo: 'Echo repeats it (used in a past run)', toll: 'too common for Charon' }[e.reason];
         $('feedback').innerHTML = `<span class="bad">${esc(e.text)}</span> <span class="why">${msg}</span>`;
+        if (e.reason === 'invalid' && e.targets) e.targets.forEach((t) => RA.Store.logReject(t, e.text));
         sibyl(RA.Sibyl.reject(e));
         break;
       }
@@ -392,6 +428,7 @@
   $('btnAgain').addEventListener('click', () => startRun());
   $('btnHelp').addEventListener('click', () => show('help'));
   $('btnCodex').addEventListener('click', () => show('codex'));
+  $('btnReview').addEventListener('click', () => show('review'));
   $('btnToTitle').addEventListener('click', () => show('title'));
   document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => show('title')));
   $('answerForm').addEventListener('submit', (ev) => {
