@@ -137,7 +137,9 @@ function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
     const cur = run.current(part);
     if (cur) {
       const kr = Array.isArray(knowRate) ? knowRate[3] : knowRate;
-      if (Array.isArray(knowRate) ? !knows(cur) || Math.random() < miss : Math.random() < miss + (cur.tier - 1) * (0.5 - kr) * 0.25) run.submit('nescio');
+      // A person who doesn't know an item guesses once, then skips it (Tab), as in the main game.
+      if (Array.isArray(knowRate) && !knows(cur)) { if (Math.random() < 0.5) run.submit('nescio'); run.muta(); }
+      else if (Math.random() < miss + (Array.isArray(knowRate) ? 0 : (cur.tier - 1) * (0.5 - kr) * 0.25)) run.submit('nescio');
       else run.submit(cur.keys[0]);
       run.events.length = 0;
       continue;

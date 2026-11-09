@@ -3,8 +3,7 @@
   const KEY = 'raraAvis.memory.v1';
   const blank = () => ({
     v: 1, runs: 0, best: 0, bestAnswer: null, abandoned: 0, totalAnswers: 0,
-    runsSchola: 0, bestSchola: 0, scholaUnits: null, scholaUntimed: false,
-    mastery: {},  // class-mode drill item id → [times right first try, times missed]
+    runsSchola: 0, bestSchola: 0, scholaUnits: null,
     used: {},   // answer id → number of past runs it was used in
     found: {},  // prompt id → [answer ids ever given]
     firstSeen: Date.now(), lastSeen: 0, lastFloor: 0, muted: false,
@@ -32,17 +31,12 @@
       d.runs++;
       if (abandoned) d.abandoned++;
       d.lastFloor = run.floor;
-      // Untimed practice and mistake reviews still teach (mastery), but don't set records.
-      const practice = run.untimed || !!run.focus;
-      if (run.mode === 'schola') { d.runsSchola++; if (!practice) d.bestSchola = Math.max(d.bestSchola, run.floor); }
-      else d.best = Math.max(d.best, run.floor);
+      // Stats count in every mode; class mode also keeps its own best for the topic screen.
+      d.best = Math.max(d.best, run.floor);
+      if (run.mode === 'schola') { d.runsSchola++; d.bestSchola = Math.max(d.bestSchola, run.floor); }
       d.totalAnswers += run.stats.answers;
       const b = run.stats.best;
-      if (run.mode !== 'schola' && b && (!d.bestAnswer || b.tier > d.bestAnswer.tier)) d.bestAnswer = b;
-      for (const [id, [r, w]] of Object.entries(run.itemLog || {})) {
-        const m = d.mastery[id] || (d.mastery[id] = [0, 0]);
-        m[0] += r; m[1] += w;
-      }
+      if (b && (!d.bestAnswer || b.tier > d.bestAnswer.tier)) d.bestAnswer = b;
       for (const id of run.used) {
         d.used[id] = (d.used[id] || 0) + 1;
         const pid = id.split(':')[0];

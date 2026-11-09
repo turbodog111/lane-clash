@@ -19,13 +19,8 @@
   class Run {
     constructor(mem, seed, opts = {}) {
       this.mem = mem || { used: {}, found: {} };
-      this.mode = opts.mode || 'open';           // 'open' (all Latin) or 'schola' (class content)
+      this.mode = opts.mode || 'open';           // 'open' (all Latin) or 'schola' (class handouts only; otherwise the same game)
       this.pool = opts.pool && opts.pool.length ? opts.pool : RA.prompts;
-      // Class-mode study options: focus = only these drill items (review your mistakes); untimed = enemies never bite.
-      this.focus = opts.focus && opts.focus.length ? new Set(opts.focus) : null;
-      if (this.focus) this.pool = this.pool.filter((p) => p.kind === 'drill' && p.answers.some((a) => this.focus.has(a.id)));
-      this.untimed = !!opts.untimed;
-      this.itemLog = {};              // drill item id → [right, wrong] this run (for mastery)
       this.rng = mulberry32(seed == null ? (Date.now() & 0x7fffffff) : seed);
       this.floor = 0;
       this.maxAnima = 100;
@@ -64,8 +59,7 @@
       let id;
       if (n % 5 === 0) id = RA.BOSS_ORDER[(n / 5 - 1) % RA.BOSS_ORDER.length];
       else {
-        // Echo punishes answers from past runs; in class mode repetition is the point, so she stays home.
-        const pool = Object.entries(RA.ENEMIES).filter(([k, e]) => !e.boss && e.min <= n && k !== this.lastEnemy && !(this.mode === 'schola' && k === 'echo'));
+        const pool = Object.entries(RA.ENEMIES).filter(([k, e]) => !e.boss && e.min <= n && k !== this.lastEnemy);
         // Newly unlocked enemies are likelier, so each new one gets introduced promptly.
         id = this.weighted(pool.map(([k, e]) => ({ v: k, w: e.min >= n - 1 ? 4 : 1 })));
       }
@@ -75,18 +69,16 @@
       let mutated = null;
       const deepChance = e.boss ? (n > 15 ? 1 : 0) : n >= 11 ? Math.min(0.65, (n - 10) * 0.08) : 0;
       if (deepChance && this.rng() < deepChance) {
-        const options = MUTABLE_RULES.filter((r) => !rules.includes(r) && !(rules.includes('heads') && r === 'gorgo') && !(this.mode === 'schola' && r === 'echo'));
+        const options = MUTABLE_RULES.filter((r) => !rules.includes(r) && !(rules.includes('heads') && r === 'gorgo'));
         mutated = this.pick(options);
         rules.push(mutated);
       }
       const furyMut = mutated === 'fury';
-      // Class mode is for study: enemies are softer and bite more slowly.
-      const study = this.mode === 'schola' ? { hp: 0.8, iv: 1.15 } : { hp: 1, iv: 1 };
       const sat = Math.pow(1.2, this.boons.saturnus || 0);
       // The first guardian is a gentler introduction to bosses.
       const bossHp = e.boss ? BOSS_HP * (n <= 5 ? 0.6 : 1) : 1;
-      const hp = BASE_HP * (1 + HP_GROW * (n - 1)) * Math.pow(1.04, n - 1) * e.hp * bossHp * (furyMut ? 0.75 : 1) * study.hp;
-      const interval = Math.max(IV_MIN, IV_START - IV_STEP * (n - 1)) * e.speed * (furyMut ? 0.62 : 1) * sat * study.iv;
+      const hp = BASE_HP * (1 + HP_GROW * (n - 1)) * Math.pow(1.04, n - 1) * e.hp * bossHp * (furyMut ? 0.75 : 1);
+      const interval = Math.max(IV_MIN, IV_START - IV_STEP * (n - 1)) * e.speed * (furyMut ? 0.62 : 1) * sat;
       const dmg = Math.round((DMG_START + DMG_STEP * (n - 1)) * Math.pow(1.02, n - 1) * (e.boss ? 1.25 : 1));
 
       const heads = rules.includes('heads') ? 3 : 1;
@@ -132,18 +124,14 @@
       if (!rec) { rec = { pid: p.id, given: [], missed: [] }; this.seen.push(rec); }
       part.rec = rec;
       if (p.kind === 'drill') {
-        const eligible = (i) => !this.focus || this.focus.has(p.answers[i].id);
-        let order = p.answers.map((_, i) => i).filter((i) => !this.used.has(p.answers[i].id) && eligible(i));
-        // Every item already answered this run: go round again (drills are practice, repeats are fine).
-        if (!order.length) order = p.answers.map((_, i) => i).filter(eligible);
+        let order = p.answers.map((_, i) => i).filter((i) => !this.used.has(p.answers[i].id));
+        // Every item already answered this run: go round again rather than stall.
+        if (!order.length) order = p.answers.map((_, i) => i);
         for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-        // Easier items first, so a drill ramps up. In class mode, items you've missed before come first
-        // and items you've mastered wait at the back.
-        const stage = (i) => (this.mode === 'schola' ? RA.masteryOf(this.mem, p.answers[i].id).stage : 1);
-        const rank = { weak: 0, new: 1, learning: 1, mastered: 2 };
-        const key = new Map(order.map((i) => [i, (this.mode === 'schola' ? rank[stage(i)] * 10 : 0) + p.answers[i].tier + (this.rng() - 0.5) * 2.5]));
+        // Easier items first, so a drill ramps up.
+        const key = new Map(order.map((i) => [i, p.answers[i].tier + (this.rng() - 0.5) * 2.5]));
         order.sort((a, b) => key.get(a) - key.get(b));
-        part.drill = { order, i: 0, tries: 0, requeued: new Set() };
+        part.drill = { order, i: 0 };
         if (!order.length) { part.drill = null; this.usedPrompts.add(p.id); }
       } else part.drill = null;
       if (this.boons.apollo) this.makeHint(part);
@@ -156,25 +144,8 @@
       return idx == null ? null : part.prompt.answers[idx];
     }
 
-    log(id, right) {
-      const l = this.itemLog[id] || (this.itemLog[id] = [0, 0]);
-      l[right ? 0 : 1]++;
-    }
-
-    // Show a drill item's answer, then ask it again a few items later (once).
-    revealDrill(part, auto) {
-      const it = this.current(part);
-      if (!part.rec.missed.includes(it.id)) part.rec.missed.push(it.id);
-      if (!part.drill.tries) this.log(it.id, false);
-      this.emit({ type: 'reveal', part: this.enemy.parts.indexOf(part), q: it.q, a: it.text, note: it.note, auto });
-      const d = part.drill, idx = d.order[d.i];
-      if (!d.requeued.has(idx)) { d.requeued.add(idx); d.order.splice(Math.min(d.order.length, d.i + 4), 0, idx); }
-      this.advanceDrill(part);
-    }
-
     advanceDrill(part) {
       part.drill.i++;
-      part.drill.tries = 0;
       part.shownAt = this.time;
       part.hint = null;
       if (!this.current(part)) this.assignPrompt(part);
@@ -186,7 +157,6 @@
     tick(dt) {
       if (this.phase !== 'fight') return;
       this.time += dt;
-      if (this.untimed) return;
       for (const part of this.enemy.parts) {
         if (!part.alive) continue;
         part.timer -= dt;
@@ -252,18 +222,9 @@
         for (const p of alive) { const it = this.current(p); if (it && !p.rec.missed.includes(it.id)) p.rec.missed.push(it.id); }
         // What was on screen when this guess missed, so it can be reviewed later (maybe it should count).
         const targets = alive.map((p) => { const it = this.current(p); return it ? { pid: p.prompt.id, index: it.index, q: it.q } : { pid: p.prompt.id }; });
-        // Drills: a wrong answer gets one more try; a second miss shows the answer and brings the item back later.
-        for (const p of alive) {
-          const it = this.current(p);
-          if (!it) continue;
-          if (!p.drill.tries) this.log(it.id, false);
-          p.drill.tries++;
-        }
         const key = RA.norm(text);
         if (!this.rejected.some((r) => RA.norm(r.text) === key && r.targets[0].pid === targets[0].pid && r.targets[0].index === targets[0].index)) this.rejected.push({ text, targets });
-        const ev = reject('invalid', { targets, retry: alive.some((p) => p.drill && p.drill.tries === 1) }, this.boons.neptunus ? 0 : 2);
-        for (const p of alive) if (this.current(p) && p.drill.tries >= 2) this.revealDrill(p, true);
-        return ev;
+        return reject('invalid', { targets }, this.boons.neptunus ? 0 : 2);
       }
       const a = hit.a;
       if (this.used.has(a.id) && !part.drill) return reject('dup');
@@ -279,16 +240,14 @@
       if (rules.includes('echo') && (this.mem.used[a.id] || 0) > 0) return reject('echo', {}, 0);
 
       let tier = a.tier, worn = false;
-      if (this.mode !== 'schola' && (this.mem.used[a.id] || 0) >= 3 && tier > 1) { tier--; worn = true; }
-      const tollMin = this.mode === 'schola' ? 2 : 3;
+      if ((this.mem.used[a.id] || 0) >= 3 && tier > 1) { tier--; worn = true; }
+      const tollMin = 3;
       if (rules.includes('toll') && tier < tollMin) return reject('toll', { tier, min: tollMin }, 0);
 
       // Accepted.
       this.used.add(a.id);
       part.given.push(a.id);
       part.rec.given.push(a.id);
-      if (drill && !part.drill.tries) this.log(a.id, true);
-      else if (drill) this.itemLog[a.id] = this.itemLog[a.id] || [0, 1];
       if (!drill) { st.lastKey = key; st.lastText = a.text; st.lastLen = key.length; st.letters.add(key[0]); }
 
       const B = this.boons, mult = [];
@@ -347,8 +306,8 @@
       for (const p of this.enemy.parts) {
         if (!p.alive) continue;
         const it = this.current(p);
-        // In a drill, skipping shows you the answer (and asks it again later), so the skip still teaches something.
-        if (it) this.revealDrill(p, false);
+        // A drill skips to its next item (the end screen lists what you skipped); an open question is replaced.
+        if (it) { if (!p.rec.missed.includes(it.id)) p.rec.missed.push(it.id); this.advanceDrill(p); }
         else this.assignPrompt(p);
       }
       this.penalty(4);
@@ -461,16 +420,6 @@
       });
     }
   }
-
-  // How well a class-mode drill item is known: new, weak (missed more than got right), learning, or mastered
-  // (right first try at least 3 times, and well ahead of misses).
-  RA.masteryOf = function (mem, id) {
-    const m = (mem && mem.mastery && mem.mastery[id]) || null;
-    if (!m) return { stage: 'new', r: 0, w: 0 };
-    const [r, w] = m;
-    const stage = w > r ? 'weak' : r >= 3 && r >= 2 * w + 2 ? 'mastered' : 'learning';
-    return { stage, r, w };
-  };
 
   RA.Run = Run;
 })(window.RA = window.RA || {});

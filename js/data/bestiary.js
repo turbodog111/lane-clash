@@ -8,7 +8,7 @@
     sphinx:   { label: 'Riddling',   text: 'Each answer must come later in the alphabet than your last.' },
     gorgo:    { label: 'Petrifying', text: 'The question turns to stone after 4 seconds. Press ↑ to glance back (costs 2s).' },
     tantalus: { label: 'Reaching',   text: 'Each answer must be longer than your last. Resets whenever he strikes.' },
-    toll:     { label: 'The Toll',   text: 'Only Rarus (rare) or rarer answers pay the ferryman. In class mode, Insolitus (uncommon) is enough.' },
+    toll:     { label: 'The Toll',   text: 'Only Rarus (rare) or rarer answers pay the ferryman.' },
     judge:    { label: 'Judgement',  text: 'Every answer must begin with a letter you have not yet used in this fight.' },
     heads:    { label: 'Three Heads', text: 'Three questions at once. Each head has its own life and its own bite.' },
   };

@@ -12,7 +12,7 @@ Open `index.html` in a browser. No build step and no server needed; double-click
 | Key | Action |
 |---|---|
 | `Enter` | Submit an answer |
-| `Tab` | New question (costs 4s); in a drill, skip and see the answer |
+| `Tab` | New question (costs 4s); in a drill, skip to the next item |
 | `?` | Use a Sibyl's leaf (hint) |
 | `↑` | Glance at a question the Gorgon has hidden (costs 2s) |
 | `Esc` | Pause |
@@ -42,18 +42,12 @@ Open `index.html` in a browser. No build step and no server needed; double-click
 
 ## Schola (class mode)
 
-Class mode uses **only class material**: currently the five handouts (Case Uses, the Declension Endings chart and its blank version, Adjectives, Adverbs). You choose which topics to study before each run. It mixes two kinds of question:
+Class mode is the same game, with the questions restricted to **class material**. Currently that's the five handouts: Case Uses, the Declension Endings chart and its blank version, Adjectives, and Adverbs. Enemies, rules, gifts, worn words and records all work exactly as in the main game, and your stats count in both modes. You pick which topics to include. The handouts give two kinds of question:
 
-- **Open questions** ("Name a use of the ablative case") work like the main game: many right answers, rarer ones hit harder.
-- **Drills** ("2nd declension (masculine) · genitive plural") have exactly one right answer, and the spelling must be exact. Each right answer hits and the next item appears; `Tab` skips an item and shows its answer. The end screen lists every item you missed, with its answer.
+- **Open questions** ("Name a use of the ablative case") have many right answers; rarer ones hit harder.
+- **Drills** ("2nd declension (masculine) · genitive plural") have exactly one right answer, and the spelling must be exact. Each right answer hits and the next item appears; `Tab` skips to the next item. The end screen lists the items you missed, with their answers.
 
-In class mode, enemies are gentler, worn words don't apply (repetition is the point), Echo doesn't appear, and Charon accepts Insolitus (uncommon) answers.
-
-Class mode is built for studying:
-- **Second chances:** a wrong drill answer gets one more try. A second miss shows the answer, and the item comes back a few items later.
-- **Mastery:** the game remembers every drill item you've got right or missed. Items you've missed come first; mastered ones wait at the back. Each topic shows a mastery bar.
-- **Review my mistakes:** a run made only of the items you've missed.
-- **Untimed practice:** enemies never bite, and no records are kept.
+Rules that pick *which* answer you may give (the Sphinx's alphabetical order, Tantalus, Minos, the Harpy, Charon's toll, Echo) skip drill items, because a drill item has only one right answer.
 
 Class content lives in `js/data/schola.js`, one *unit* per topic, each listing the handout(s) it came from:
 

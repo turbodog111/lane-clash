@@ -51,6 +51,12 @@ What's still open from §8: tone, the Host's identity (currently the Sibyl), ans
   - Answers you can guess from English (*hippopotamus*) are never top-tier.
 - **Rebalanced** for the flatter damage the pyramid gives: enemy base life is now 36, and the first guardian is weaker.
 
+### Prototype 1.4 (2026-11-09): class mode is just a content filter
+- turbodog111 found class mode too educational. It now plays exactly like the main game; only the questions differ, and they're limited to the handouts.
+- **Removed:** gentler enemies, second tries, mastery tracking, mistake review and untimed practice.
+- **Stats** (deepest descent, rarest answer, words found) now count in every mode.
+- Multiplayer is shelved. The research is kept in `docs/MULTIPLAYER.md`.
+
 ---
 
 ## 1. Executive decisions (turbodog111, 2026-11-07)

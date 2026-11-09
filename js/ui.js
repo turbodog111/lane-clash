@@ -43,8 +43,8 @@
     const found = Object.values(d.found).reduce((s, l) => s + l.length, 0);
     const total = [...RA.prompts, ...RA.scholaPrompts].reduce((s, p) => s + p.answers.length, 0);
     const rows = [
-      ['Deepest descent', d.best ? gradus(d.best) : 'Not yet'],
-      ['Class mode best', d.bestSchola ? gradus(d.bestSchola) : 'Not yet'],
+      ['Deepest descent', d.best ? gradus(d.best) + (d.bestSchola ? ` <span class="muted">· class mode ${RA.roman(d.bestSchola)}</span>` : '') : 'Not yet'],
+      ['Descents', d.runs || 'None yet'],
       ['Words found', `${found} of ${total}`],
       ['Rarest word', d.bestAnswer ? `<span class="t${d.bestAnswer.tier}">${esc(d.bestAnswer.text)}</span>` : 'None yet'],
     ];
@@ -56,44 +56,21 @@
     const saved = mem.data.scholaUnits;
     return new Set(saved && saved.length ? saved : RA.schola.map((u) => u.id));
   }
-  // Mastery of a unit's drill items: { total, mastered, learning, weak, ids of weak items }.
-  function unitMastery(u) {
-    const out = { total: 0, mastered: 0, learning: 0, weak: 0, weakIds: [] };
-    for (const p of u.prompts) if (p.kind === 'drill') for (const a of p.answers) {
-      out.total++;
-      const st = RA.masteryOf(mem.data, a.id).stage;
-      if (st === 'mastered') out.mastered++;
-      else if (st === 'learning') out.learning++;
-      else if (st === 'weak') { out.weak++; out.weakIds.push(a.id); }
-    }
-    return out;
-  }
   function renderSchola() {
     const sel = selectedUnits();
-    $('scholaUntimed').checked = !!mem.data.scholaUntimed;
-    let weakTotal = 0;
     $('unitList').innerHTML = RA.schola.map((u) => {
       const items = u.prompts.reduce((s, p) => s + p.answers.length, 0);
       const drills = u.prompts.filter((p) => p.kind === 'drill').length;
-      const m = unitMastery(u);
-      if (sel.has(u.id)) weakTotal += m.weak;
-      const pct = (n) => (m.total ? (100 * n) / m.total : 0);
-      const bar = m.total ? `<span class="mastery" title="${m.mastered} mastered · ${m.learning} learning · ${m.weak} to review · ${m.total - m.mastered - m.learning - m.weak} not seen yet">
-          <span class="mastery-bar"><i class="m-done" style="width:${pct(m.mastered)}%"></i><i class="m-learn" style="width:${pct(m.learning)}%"></i><i class="m-weak" style="width:${pct(m.weak)}%"></i></span>
-          <span class="mastery-txt">${m.mastered} of ${m.total} drill items mastered${m.weak ? ` · <b>${m.weak} to review</b>` : ''}</span></span>` : '';
       return `<label class="unit">
         <input type="checkbox" id="unit-${u.id}" data-unit="${u.id}" ${sel.has(u.id) ? 'checked' : ''}>
         <span class="unit-body">
           <span class="unit-title">${esc(u.la)} <span class="paren">(${esc(u.title.toLowerCase())})</span></span>
           <span class="unit-meta">${u.prompts.length - drills} open question${u.prompts.length - drills === 1 ? '' : 's'} · ${drills} drill${drills === 1 ? '' : 's'} · ${items} answers</span>
           <span class="unit-src">from ${u.src.map(esc).join(', ')}</span>
-          ${bar}
         </span>
       </label>`;
     }).join('');
     $('scholaRecord').textContent = mem.data.bestSchola ? `Your class-mode record: ${gradus(mem.data.bestSchola)}.` : '';
-    $('btnScholaReview').disabled = !weakTotal;
-    $('btnScholaReview').textContent = weakTotal ? `Review my mistakes (${weakTotal} item${weakTotal > 1 ? 's' : ''})` : 'Review my mistakes (none yet)';
   }
   function scholaPool() {
     const ids = [...document.querySelectorAll('#unitList input:checked')].map((c) => c.dataset.unit);
@@ -123,21 +100,15 @@
   function endRun(abandoned) {
     const line = abandoned ? 'You turned back. The dead will keep your place.' : RA.Sibyl.death(run, mem.data);
     mem.record(run, abandoned);
-    const practice = run.untimed ? ' · untimed practice' : run.focus ? ' · reviewing mistakes' : '';
-    $('endEyebrow').textContent = (abandoned ? 'You left the descent at' : 'Your descent ends at') + (run.mode === 'schola' ? ' · class mode' + practice : '');
+    $('endEyebrow').textContent = (abandoned ? 'You left the descent at' : 'Your descent ends at') + (run.mode === 'schola' ? ' · class mode' : '');
     $('endFloor').textContent = RA.roman(run.floor);
     $('endFloorN').textContent = `(floor ${run.floor})`;
     $('endSibyl').textContent = line;
     const s = run.stats;
     const rarest = s.best ? `<span class="t${s.best.tier}">${esc(s.best.text)}</span>` : 'None';
     const tiers = [6, 5, 4, 3].filter((t) => s.tiers[t]).map((t) => `<span class="t${t}">${s.tiers[t]}× ${tierName(t)}</span>`).join(', ') || 'None';
-    const log = Object.values(run.itemLog);
-    const study = run.mode === 'schola' && log.length ? [
-      ['Drill items right first try', log.filter(([r]) => r).length],
-      ['Missed (to review)', log.filter(([r, w]) => w && !r).length],
-    ] : [];
     $('endStats').innerHTML = [
-      ['Answers', s.answers], ['Damage dealt', s.dmg], [run.mode === 'schola' ? 'Hardest right answer' : 'Rarest word', rarest], ...(run.mode === 'schola' ? study : [['Rare finds', tiers]]),
+      ['Answers', s.answers], ['Damage dealt', s.dmg], ['Rarest answer', rarest], ['Rare finds', tiers],
     ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
     $('endMissed').innerHTML = run.missed(4).map(({ p, given, missed, drill }) => drill ? `
       <div class="missed-row">
@@ -220,15 +191,14 @@
       case 'reject': {
         RA.Audio.reject();
         input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake');
-        const msg = { invalid: e.retry ? 'not quite: one more try' : 'not a right answer here', dup: 'already said this run', sphinx: 'out of alphabetical order', tantalus: 'too short', judge: 'first letter already used', echo: 'Echo repeats it (used in a past run)', toll: 'too common for Charon' }[e.reason];
+        const msg = { invalid: 'not a right answer here', dup: 'already said this run', sphinx: 'out of alphabetical order', tantalus: 'too short', judge: 'first letter already used', echo: 'Echo repeats it (used in a past run)', toll: 'too common for Charon' }[e.reason];
         $('feedback').innerHTML = `<span class="bad">${esc(e.text)}</span> <span class="why">${msg}</span>`;
         if (e.reason === 'invalid' && e.targets) e.targets.forEach((t) => RA.Store.logReject(t, e.text));
         sibyl(RA.Sibyl.reject(e));
         break;
       }
       case 'reveal':
-        $('feedback').innerHTML = `<span class="why">${e.auto ? 'The answer:' : 'Skipped:'}</span> <span class="muted">${marked(e.q)}</span> → <b class="reveal">${esc(e.a)}</b>${e.note ? ` <span class="why">${esc(e.note)}</span>` : ''} <span class="why">(it will come back)</span>`;
-        if (e.auto) RA.Audio.muta();
+        $('feedback').innerHTML = `<span class="why">Skipped:</span> <span class="muted">${marked(e.q)}</span> → <b class="reveal">${esc(e.a)}</b>`;
         break;
       case 'next':
         renderPart(e.part);
@@ -271,9 +241,7 @@
     let meta, instr, q, note;
     if (it) {
       const done = p.drill.i, total = p.drill.order.length;
-      const st = run.mode === 'schola' ? RA.masteryOf(mem.data, it.id).stage : '';
-      const stLabel = { weak: ' · <b class="st-weak">missed before</b>', mastered: ' · mastered', new: ' · new' }[st] || '';
-      meta = head || `<span>drill · item ${done + 1} of ${total}${stLabel}</span>`;
+      meta = head || `<span>drill · item ${done + 1} of ${total}</span>`;
       instr = it.sub || p.prompt.q;
       q = marked(it.q);
       note = '';
@@ -408,7 +376,7 @@
       pe.hpTxt.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
       const frac = p.alive ? Math.max(0, p.timer / p.interval) : 0;
       pe.biteFill.style.width = (100 * frac) + '%';
-      pe.biteTxt.textContent = run.untimed ? 'off (untimed)' : p.alive ? `${Math.ceil(p.timer)}s` : '—';
+      pe.biteTxt.textContent = p.alive ? `${Math.ceil(p.timer)}s` : '—';
       pe.bite.classList.toggle('urgent', p.alive && p.timer < 3);
       const vis = run.promptVisible(p);
       if (!vis) petrified = true;
@@ -454,16 +422,8 @@
   $('btnScholaGo').addEventListener('click', () => {
     const { ids, pool } = scholaPool();
     if (!ids.length) { $('scholaRecord').textContent = 'Pick at least one topic first.'; return; }
-    startRun({ mode: 'schola', pool, units: ids, untimed: $('scholaUntimed').checked });
+    startRun({ mode: 'schola', pool, units: ids });
   });
-  $('btnScholaReview').addEventListener('click', () => {
-    const { ids } = scholaPool();
-    const focus = RA.schola.filter((u) => ids.includes(u.id)).flatMap((u) => unitMastery(u).weakIds);
-    if (!focus.length) return;
-    startRun({ mode: 'schola', units: ids, focus, untimed: $('scholaUntimed').checked });
-  });
-  $('scholaUntimed').addEventListener('change', () => { mem.data.scholaUntimed = $('scholaUntimed').checked; mem.save(); });
-  $('unitList').addEventListener('change', () => renderSchola());
   $('btnScholaAll').addEventListener('click', () => document.querySelectorAll('#unitList input').forEach((c) => { c.checked = true; }));
   $('btnAgain').addEventListener('click', () => startRun());
   $('btnHelp').addEventListener('click', () => show('help'));
