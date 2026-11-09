@@ -1,483 +1,244 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lane Clash — Prototype</title>
-  <link rel="stylesheet" href="./styles.css" />
+<title>Rara Avis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A Latin descent: answer the Sibyl's prompts, and the rarer your answer, the harder it strikes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="site-header">
-    <h1>Lane Clash</h1>
-    <p class="tagline">A tiny lane-strategy prototype</p>
-  </header>
+<div id="app">
 
-  <!-- Main Menu -->
-  <section id="screenMenu" class="screen">
-    <div class="hero-card">
-      <div class="hero-content">
-        <div class="hero-icon">⚔️</div>
-        <h2 class="hero-title">Welcome to Lane Clash</h2>
-        <p class="hero-subtitle">Deploy troops, conquer lanes, claim victory!</p>
+  <!-- ── Cave mouth (title) ── -->
+  <section id="scrTitle" class="screen title-screen">
+    <canvas id="titleCanvas" class="title-canvas" aria-hidden="true"></canvas>
+    <div class="title-block">
+      <p class="eyebrow">Facilis descensus Averno</p>
+      <h1 class="title">Rara Avis</h1>
+      <p class="subtitle">A Latin descent. Answer the Sibyl’s questions; the rarer the word, the harder it strikes.</p>
+    </div>
+    <p class="sibyl sibyl-title"><span class="who">Sibylla (your guide)</span> <span id="titleSibyl"></span></p>
+    <div class="modes">
+      <button id="btnDescend" class="mode-card" type="button">
+        <span class="mode-name">Descend</span>
+        <span class="mode-en">All Latin: open questions, rare answers hit hardest</span>
+      </button>
+      <button id="btnSchola" class="mode-card" type="button">
+        <span class="mode-name">Schola</span>
+        <span class="mode-en">Class mode: only your handouts, vocabulary and passages</span>
+      </button>
+    </div>
+    <div class="actions">
+      <button id="btnHelp" class="btn" type="button">How to play</button>
+      <button id="btnCodex" class="btn" type="button">Codex (words you’ve found)</button>
+      <button id="btnReview" class="btn" type="button">Tabularium (review answers)</button>
+    </div>
+    <dl id="records" class="records"></dl>
+    <p class="fine">Working title · prototype. Your progress lives only in this browser.</p>
+  </section>
+
+  <!-- ── The descent ── -->
+  <section id="scrRun" class="screen run-screen" hidden>
+    <header class="hud">
+      <div class="hud-depth"><span class="lbl">Gradus (floor)</span><b id="hudFloor">I</b> <span id="hudFloorN" class="floor-n num">1</span></div>
+      <div class="hud-anima">
+        <span class="lbl">Anima (health) <span id="animaTxt" class="num">100 / 100</span></span>
+        <div class="bar anima-bar"><i id="animaFill"></i></div>
+        <span id="hudZone" class="zone"></span>
       </div>
-
-      <div class="menu-grid">
-        <button id="btnPlay" class="menu-btn menu-btn-primary">
-          <span class="menu-btn-icon">🎮</span>
-          <span class="menu-btn-text">
-            <strong>Play Game</strong>
-            <small>Battle against AI</small>
-          </span>
-        </button>
-        <button id="btnEncyclopedia" class="menu-btn">
-          <span class="menu-btn-icon">📚</span>
-          <span class="menu-btn-text">
-            <strong>Encyclopedia</strong>
-            <small>View cards & deck</small>
-          </span>
-        </button>
-        <button id="btnUpdateLog" class="menu-btn">
-          <span class="menu-btn-icon">📋</span>
-          <span class="menu-btn-text">
-            <strong>Update Log</strong>
-            <small>See what's new</small>
-          </span>
-        </button>
+      <div class="hud-tokens">
+        <span id="hudFolia" class="token" title="Sibyl’s leaves: each one reveals a hint">Folia (hints) <b>3</b></span>
+        <span id="hudBough" class="token gold" title="Golden Bough: you return once from death">Ramus (extra life) <b>1</b></span>
       </div>
-
-      <div class="difficulty-section">
-        <h3 class="difficulty-title">AI Difficulty</h3>
-        <div class="difficulty-grid">
-          <button class="difficulty-btn active" data-difficulty="0">Level 0<small>No Upgrades</small></button>
-          <button class="difficulty-btn" data-difficulty="1">Level 1<small>Half Lv.1</small></button>
-          <button class="difficulty-btn" data-difficulty="2">Level 2<small>All Lv.1, Half Lv.2</small></button>
-          <button class="difficulty-btn" data-difficulty="3">Level 3<small>All Lv.2, Half Lv.3</small></button>
-          <button class="difficulty-btn" data-difficulty="4">Level 4<small>All Lv.3, Half Lv.4</small></button>
-          <button class="difficulty-btn" data-difficulty="5">Level 5<small>All Lv.4, Half Lv.5</small></button>
-          <button class="difficulty-btn difficulty-btn-champion" data-difficulty="champion">Champion<small>All Lv.5</small></button>
-        </div>
+      <div class="hud-sys">
+        <button id="btnMute" class="icon-btn" type="button">Sound on</button>
+        <button id="btnPause" class="icon-btn" type="button">Pause <kbd>Esc</kbd></button>
       </div>
+    </header>
+    <div id="boonStrip" class="boon-strip" aria-label="Gifts in this descent"></div>
 
-      <div class="hint-box">
-        <span class="hint-icon">💡</span>
-        <span>Blue (you) at the bottom. Red (AI) at the top.</span>
+    <div class="stage">
+      <canvas id="stageCanvas" class="stage-canvas" aria-hidden="true"></canvas>
+      <div class="enemy-tag">
+        <b id="enemyName">Umbra</b> <span id="enemyEn" class="en"></span>
+        <div id="enemyRules" class="rules"></div>
+      </div>
+    </div>
+
+    <div id="parts" class="parts"></div>
+
+    <form id="answerForm" class="answer-form" autocomplete="off">
+      <label for="answer" class="sr">Your answer</label>
+      <input id="answer" name="answer" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Respondē… (your answer)" enterkeyhint="send">
+      <button class="btn primary" type="submit">Strike <span class="wide-only">(answer)</span></button>
+    </form>
+    <div id="feedback" class="feedback" aria-live="polite"></div>
+
+    <div class="tools">
+      <button id="btnFolium" class="btn small" type="button">Hint (uses a leaf) <kbd>?</kbd></button>
+      <button id="btnMuta" class="btn small" type="button"><span id="mutaLabel">New question (costs 4s)</span> <kbd>Tab</kbd></button>
+      <button id="btnRespice" class="btn small" type="button" hidden>Glance (peek, costs 2s) <kbd>↑</kbd></button>
+      <button id="btnQuit" class="btn small ghost" type="button">Leave (end run)</button>
+    </div>
+    <p class="sibyl"><span class="who">Sibylla</span> <span id="sibylText"></span></p>
+  </section>
+
+  <!-- ── Gifts of the gods ── -->
+  <section id="scrBoon" class="overlay" hidden>
+    <div class="overlay-card">
+      <p class="eyebrow">Gradus <span id="boonFloor">I</span> cleared</p>
+      <h2>Munera deorum <span class="paren">(gifts of the gods)</span></h2>
+      <p class="muted">Choose one gift. It lasts until this descent ends.</p>
+      <div id="boonChoices" class="boon-choices"></div>
+    </div>
+  </section>
+
+  <!-- ── Pause ── -->
+  <section id="scrPause" class="overlay" hidden>
+    <div class="overlay-card narrow">
+      <h2>Pausa <span class="paren">(paused)</span></h2>
+      <p class="muted">The shades wait. Press <kbd>Esc</kbd> to continue.</p>
+      <div class="actions">
+        <button id="btnResume" class="btn primary" type="button">Continue</button>
+        <button id="btnPauseQuit" class="btn ghost" type="button">Leave this run (go to results)</button>
       </div>
     </div>
   </section>
 
-  <!-- Play Screen -->
-  <section id="screenPlay" class="screen" style="display:none">
-    <div class="toolbar">
-      <div class="title">Play — Blue (You) vs Red (AI)</div>
-      <button id="btnBackFromPlay" class="btn small">Back</button>
+  <!-- ── End of a descent ── -->
+  <section id="scrEnd" class="screen end-screen" hidden>
+    <p class="eyebrow" id="endEyebrow">Your descent ends</p>
+    <h2 class="end-title">Gradus <span id="endFloor">I</span></h2>
+    <p class="muted" id="endFloorN"></p>
+    <p class="sibyl"><span class="who">Sibylla</span> <span id="endSibyl"></span></p>
+    <dl id="endStats" class="stats"></dl>
+    <h3>What you could have said</h3>
+    <p class="muted">Rare answers to the questions you faced. Learn a few; they hit hard next time.</p>
+    <div id="endMissed" class="missed"></div>
+    <div id="endRejectedWrap" hidden>
+      <h3>Not accepted <span class="paren">(should any of these have counted?)</span></h3>
+      <p class="muted">Every guess the game didn’t accept goes to the Tabularium (answer review). Flag the ones you think were right.</p>
+      <ul id="endRejected" class="end-rejected"></ul>
     </div>
-
-    <canvas id="game" class="game"></canvas>
-
-    <div class="hand">
-      <div id="hand0" class="hand-slot"></div>
-      <div id="hand1" class="hand-slot"></div>
-    </div>
-
-    <p class="ins">
-      Click a card (or press <kbd>1</kbd>/<kbd>2</kbd>), then click your half to deploy.
-      Valid tiles highlight in green. Elixir: +1 / 2s.
-    </p>
-
-    <!-- End Game Overlay -->
-    <div id="endGameOverlay" class="end-game-overlay" style="display:none">
-      <div class="end-game-card">
-        <h2 id="endGameTitle">Victory!</h2>
-        <div id="endGameStats" class="end-game-stats">
-          <div class="stat-item">
-            <span class="stat-label">Coins Earned</span>
-            <span class="stat-value" id="coinsEarned">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Damage Dealt</span>
-            <span class="stat-value" id="damageDealt">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Towers Destroyed</span>
-            <span class="stat-value" id="towersDestroyed">0</span>
-          </div>
-        </div>
-        <div class="end-game-buttons">
-          <button id="btnPlayAgain" class="btn primary">Play Again</button>
-          <button id="btnBackToMenu" class="btn">Back to Menu</button>
-        </div>
-      </div>
+    <div class="actions">
+      <button id="btnAgain" class="btn primary" type="button">Descend again (same mode) <kbd>Enter</kbd></button>
+      <button id="btnToTitle" class="btn" type="button">Cave mouth (title screen)</button>
     </div>
   </section>
 
-  <!-- Encyclopedia -->
-  <section id="screenEncyclopedia" class="screen" style="display:none">
-    <div class="toolbar">
-      <div class="title">Encyclopedia</div>
-      <button id="btnBackFromEnc" class="btn small">Back</button>
+  <!-- ── Codex ── -->
+  <section id="scrCodex" class="screen codex-screen" hidden>
+    <div class="screen-head">
+      <h2>Codex <span class="paren">(words you’ve found)</span></h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <p class="muted" id="codexSummary"></p>
+    <div id="codexList" class="codex-list"></div>
+    <button id="btnForget" class="btn small ghost" type="button">Make the Sibyl forget everything</button>
+    <p id="forgetConfirm" class="confirm" hidden>Erase every record and found word? <button id="btnForgetYes" class="btn small danger" type="button">Erase</button> <button id="btnForgetNo" class="btn small" type="button">Keep</button></p>
+  </section>
+
+  <!-- ── Class mode setup ── -->
+  <section id="scrSchola" class="screen schola-screen" hidden>
+    <div class="screen-head">
+      <h2>Schola <span class="paren">(class mode)</span></h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <p class="lede">Only material from your class. Two kinds of question appear:</p>
+    <ul class="kinds">
+      <li><b>Open questions</b> (“Name a use of the ablative”) have many right answers; rarer ones hit harder.</li>
+      <li><b>Drills</b> (“1st declension · genitive plural”) have exactly one right answer, spelled exactly. <kbd>Tab</kbd> skips to the next item.</li>
+    </ul>
+    <p class="muted">Everything else is the same game: same enemies, rules, gifts and records. Pick the topics:</p>
+    <div id="unitList" class="unit-list"></div>
+    <div class="actions">
+      <button id="btnScholaGo" class="btn primary" type="button">Begin class descent</button>
+      <button id="btnScholaAll" class="btn small" type="button">Select all</button>
+    </div>
+    <p id="scholaRecord" class="muted"></p>
+  </section>
+
+  <!-- ── Answer review ── -->
+  <section id="scrReview" class="screen review-screen" hidden>
+    <div class="screen-head">
+      <h2>Tabularium <span class="paren">(answer review)</span></h2>
+      <button class="btn small back" type="button" data-back>Back</button>
+    </div>
+    <p class="lede">Tune the question bank: move answers between rarity tiers, accept other spellings, add missing answers, and sort through guesses the game rejected. Changes count in the game straight away; Claude then writes them into the game files.</p>
+    <p id="revStatus" class="rev-status muted"></p>
+    <div class="rev-tabs" role="tablist">
+      <button id="revTabQuestions" class="rev-tab" type="button" role="tab" data-act="tab" data-tab="questions">Questions</button>
+      <button id="revTabRejects" class="rev-tab" type="button" role="tab" data-act="tab" data-tab="rejects">Rejected guesses</button>
+      <button id="revTabChanges" class="rev-tab" type="button" role="tab" data-act="tab" data-tab="changes">Your changes</button>
     </div>
 
-    <!-- Encyclopedia Tabs -->
-    <div class="ency-tabs">
-      <button id="tabCards" class="ency-tab active">Cards</button>
-      <button id="tabDeck" class="ency-tab">Deck</button>
-      <button id="tabProgression" class="ency-tab">Progression</button>
+    <div id="revQuestions" class="rev-questions">
+      <div class="rev-side">
+        <label class="sr" for="revSearch">Find a question or answer</label>
+        <input id="revSearch" type="search" autocomplete="off" spellcheck="false" placeholder="Find a question or answer…">
+        <div id="revList" class="rev-list"></div>
+      </div>
+      <div id="revBody" class="rev-body"></div>
     </div>
 
-    <!-- Cards Tab Content -->
-    <div id="tabContentCards" class="ency tab-content" style="display:block">
-      <article class="entry entry-tower">
-        <div class="tower-icon">👑</div>
-        <div>
-          <h3>King Tower</h3>
-          <ul class="stats">
-            <li>HP: 2000</li>
-            <li>DMG: 50 / 1.5s</li>
-            <li>Range: 260</li>
-          </ul>
-          <p>The heart of your defense. If destroyed, you lose the match.</p>
-        </div>
-      </article>
-
-      <article class="entry entry-tower">
-        <div class="tower-icon">🏹</div>
-        <div>
-          <h3>Crossbow Tower</h3>
-          <ul class="stats">
-            <li>HP: 1000</li>
-            <li>DMG: 30 / 1.0s</li>
-            <li>Range: 300</li>
-          </ul>
-          <p>Defensive structure protecting lanes. Destroyed towers count toward victory.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/Knight.png" alt="Knight card" />
-        <div>
-          <h3>Knight <span class="rar rar-common">COMMON</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 2</li>
-            <li>HP: 200</li>
-            <li>DMG: 25 / 1.0s</li>
-            <li>Speed: 30 px/s</li>
-            <li>Unit Count: 1</li>
-          </ul>
-          <p>A brave melee fighter with steady stats and reliable defense.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/Archers.png" alt="Archers card" />
-        <div>
-          <h3>Archers <span class="rar rar-common">COMMON</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 2</li>
-            <li>HP: 60</li>
-            <li>DMG: 10 / 0.75s</li>
-            <li>Range: 120</li>
-            <li>Speed: 35 px/s</li>
-            <li>Unit Count: 2</li>
-          </ul>
-          <p>Paired ranged attackers with precise volleys from a safe distance.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/Mini-MEGA.png" alt="Mini-MEGA card" />
-        <div>
-          <h3>Mini-MEGA <span class="rar rar-common">COMMON</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 3</li>
-            <li>HP: 250</li>
-            <li>DMG: 100 / 1.5s</li>
-            <li>Speed: 20 px/s</li>
-            <li>Unit Count: 1</li>
-          </ul>
-          <p>A compact bot that trades speed for crushing punches.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/MEGA.png" alt="MEGA card" />
-        <div>
-          <h3>MEGA <span class="rar rar-rare">RARE</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 5</li>
-            <li>HP: 800</li>
-            <li>DMG: 150 / 2.0s</li>
-            <li>Speed: 15 px/s</li>
-            <li>Unit Count: 1</li>
-          </ul>
-          <p>A massive war machine with devastating power. Slow but nearly unstoppable.</p>
-        </div>
-      </article>
-
-      <article class="entry">
-        <img src="./assets/Skeleton-Army.png" alt="Skeleton Army card" />
-        <div>
-          <h3>Skeleton Army <span class="rar rar-rare">RARE</span></h3>
-          <ul class="stats">
-            <li>Elixir Cost: 4</li>
-            <li>HP: 20 (per skeleton)</li>
-            <li>DMG: 25 / 1.0s (vs MEGA), 5 / 1.0s (vs others)</li>
-            <li>Speed: 30 px/s</li>
-            <li>Unit Count: 8</li>
-          </ul>
-          <p>A horde of skeletal warriors. Weak individually but overwhelms with numbers. Deals bonus damage to MEGA units.</p>
-        </div>
-      </article>
+    <div id="revRejects" hidden>
+      <p class="muted">Guesses players typed that matched nothing, most frequent first. Accept one as a new answer (pick its tier), link it as a spelling of an existing answer, or dismiss it.</p>
+      <p class="rev-filters">
+        <label><input id="revShowDrills" type="checkbox"> Include drill mistakes <span class="paren">(usually just wrong forms)</span></label>
+        <label><input id="revShowHandled" type="checkbox"> Show handled ones</label>
+      </p>
+      <div id="revRejectList" class="rev-rejects"></div>
     </div>
 
-    <!-- Deck Tab Content -->
-    <div id="tabContentDeck" class="tab-content" style="display:none">
-      <div class="card">
-        <div class="coins-display">
-          <div class="coins-icon">💰</div>
-          <div class="coins-info">
-            <div class="coins-label">Your Coins</div>
-            <div class="coins-value" id="deckTotalCoins">0</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck-cards" id="deckCards">
-        <!-- Will be populated by JavaScript -->
-      </div>
-    </div>
-
-    <!-- Progression Tab Content -->
-    <div id="tabContentProgression" class="tab-content" style="display:none">
-      <div class="card">
-        <div class="coins-display">
-          <div class="coins-icon">💰</div>
-          <div class="coins-info">
-            <div class="coins-label">Total Coins</div>
-            <div class="coins-value" id="totalCoins">0</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Card Progression System</h3>
-        <p>Upgrade your cards to increase their effectiveness in battle. Each card can be upgraded from Level 0 to Level 5.</p>
-
-        <h4>Earning Coins</h4>
-        <p>Coins are earned during battle based on damage dealt:</p>
-        <ul class="stats">
-          <li><strong>Earn Rate:</strong> 0.1 coins per 1 damage dealt</li>
-          <li><strong>Example:</strong> Dealing 100 damage = 10 coins earned</li>
-        </ul>
-
-        <h4>Level Benefits</h4>
-        <p>Each level increases your card's Health and Damage per Hit:</p>
-        <table class="upgrade-table">
-          <thead>
-            <tr>
-              <th>Level</th>
-              <th>Stat Increase</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Level 1</td><td>+10% Health & Damage</td></tr>
-            <tr><td>Level 2</td><td>+20% Health & Damage</td></tr>
-            <tr><td>Level 3</td><td>+30% Health & Damage</td></tr>
-            <tr><td>Level 4</td><td>+40% Health & Damage</td></tr>
-            <tr><td>Level 5</td><td>+50% Health & Damage</td></tr>
-          </tbody>
-        </table>
-
-        <h4>Upgrade Costs</h4>
-
-        <div class="progression-tier">
-          <h5>Common Cards <span class="rar rar-common">COMMON</span></h5>
-          <p class="muted">Knight, Archers, Mini-MEGA (3 cards)</p>
-          <table class="upgrade-table">
-            <thead>
-              <tr>
-                <th>Level</th>
-                <th>Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>0 → 1</td><td>100 Coins</td></tr>
-              <tr><td>1 → 2</td><td>250 Coins</td></tr>
-              <tr><td>2 → 3</td><td>500 Coins</td></tr>
-              <tr><td>3 → 4</td><td>1,000 Coins</td></tr>
-              <tr><td>4 → 5</td><td>2,500 Coins</td></tr>
-              <tr class="total-row"><td><strong>Total</strong></td><td><strong>4,350 Coins</strong></td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="progression-tier">
-          <h5>Rare Cards <span class="rar rar-rare">RARE</span></h5>
-          <p class="muted">MEGA, Skeleton Army (2 cards)</p>
-          <table class="upgrade-table">
-            <thead>
-              <tr>
-                <th>Level</th>
-                <th>Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>0 → 1</td><td>200 Coins</td></tr>
-              <tr><td>1 → 2</td><td>500 Coins</td></tr>
-              <tr><td>2 → 3</td><td>1,000 Coins</td></tr>
-              <tr><td>3 → 4</td><td>2,000 Coins</td></tr>
-              <tr><td>4 → 5</td><td>5,000 Coins</td></tr>
-              <tr class="total-row"><td><strong>Total</strong></td><td><strong>8,700 Coins</strong></td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p class="hint" style="margin-top: 20px;">
-          <strong>Note:</strong> Upgrade functionality will be implemented in a future update. This information is provided for reference.
-        </p>
-      </div>
+    <div id="revChanges" hidden>
+      <div id="revChangeList"></div>
+      <p id="revSharedNote" class="muted" hidden>These are saved with the artifact. Tell Claude “apply the review” and they’ll be written into the game files.</p>
+      <button id="revExport" class="btn small" type="button" hidden>Export changes (JSON file)</button>
+      <textarea id="revExportText" class="rev-export" rows="6" readonly hidden aria-label="Exported changes"></textarea>
     </div>
   </section>
 
-  <!-- Update Log -->
-  <section id="screenUpdateLog" class="screen" style="display:none">
-    <div class="toolbar">
-      <div class="title">Update Log</div>
-      <button id="btnBackFromLog" class="btn small">Back</button>
+  <!-- ── How to play ── -->
+  <section id="scrHelp" class="screen help-screen" hidden>
+    <div class="screen-head">
+      <h2>How to play</h2>
+      <button class="btn small back" type="button" data-back>Back</button>
     </div>
-
-    <div class="card">
-      <h3>v0.4.1 - AI Difficulty & Quality of Life</h3>
-      <ul>
-        <li><strong>AI Difficulty Selection:</strong> Choose from 7 difficulty levels (0-5 + Champion Mode) before starting a match</li>
-        <li><strong>Level 0:</strong> No card upgrades (default)</li>
-        <li><strong>Levels 1-5:</strong> Progressive difficulty with half cards at higher level, all at base level</li>
-        <li><strong>Champion Mode:</strong> All AI cards at maximum level 5</li>
-        <li><strong>Sound Balance:</strong> All sound effects reduced to 75% volume for better audio mixing</li>
-        <li><strong>Replay Fix:</strong> Fixed bug where clicking Play again after a match showed frozen gameplay</li>
-        <li><strong>UI Enhancement:</strong> New difficulty selector in main menu with visual indicators</li>
-        <li><strong>Polish:</strong> Updated welcome subtitle to be more engaging</li>
-      </ul>
-      <h3>v0.4.0 - Sound Effects & Enhanced Bridge Design</h3>
-      <ul>
-        <li><strong>Sound Effects:</strong> Added immersive sound effects to the game!</li>
-        <li><strong>Archer Shots:</strong> Archers play a shooting sound when firing projectiles</li>
-        <li><strong>Knight Hits:</strong> Knights play alternating hit sounds when dealing damage</li>
-        <li><strong>Footstep Sounds:</strong> Units play quiet footstep sounds while moving (Walk1 for Archers/Skeleton Army, Walk2 for Knight/MEGA/Mini-MEGA)</li>
-        <li><strong>Improved Bridges:</strong> Bridges now feature detailed wooden planks, stone bases, railings, and shadows for better visual clarity</li>
-        <li><strong>Pathfinding Fix:</strong> Narrowed walkable bridge area to 70% of visual width to prevent units from walking along water edges</li>
-        <li><strong>Visual Polish:</strong> Enhanced bridge aesthetic makes it much clearer where units can safely cross the river</li>
-      </ul>
-      <h3>v0.3.4 - Damage Feedback System</h3>
-      <ul>
-        <li><strong>Visual Feedback:</strong> Units and towers flash when taking damage (blue flash for blue team, red flash for red team)</li>
-        <li><strong>Damage Display:</strong> Recent damage amount shown in health bar after each attack</li>
-        <li><strong>Level Display:</strong> Card level number displayed next to health bars for leveled units</li>
-        <li><strong>AI Balance:</strong> AI always uses level 0 cards regardless of player's card levels</li>
-        <li><strong>Economy Adjustment:</strong> Coin gain rate reduced from 0.1 to 0.05 per damage dealt</li>
-        <li><strong>Bug Fix:</strong> Water areas now completely non-pathable (improved bridge/water pathfinding logic)</li>
-      </ul>
-      <h3>v0.3.3 - Visual Overhaul & Balance Changes</h3>
-      <ul>
-        <li><strong>Visual Change:</strong> Units now display as card images instead of circles for better clarity</li>
-        <li><strong>Image Size:</strong> Unit images are 3x radius for better visibility and less crowding</li>
-        <li><strong>Team Colors:</strong> Colored borders (blue/red) indicate team affiliation</li>
-        <li><strong>Balance:</strong> Knight HP buffed 100 → 200</li>
-        <li><strong>Balance:</strong> Mini-MEGA HP nerfed 300 → 250, DMG buffed 80 → 100</li>
-        <li><strong>Combat Fix:</strong> Melee units now properly hit each other when adjacent (increased attack range tolerance)</li>
-        <li><strong>Encyclopedia:</strong> Updated Knight and Mini-MEGA stats</li>
-      </ul>
-      <h3>v0.3.2 - Skeleton Army & Combat Visual Effects</h3>
-      <ul>
-        <li><strong>New Card:</strong> Skeleton Army (RARE) - 4 elixir, 8 units with 20 HP each</li>
-        <li><strong>Special Ability:</strong> Skeleton Army deals 25 DMG vs MEGA, 5 DMG vs all other units</li>
-        <li><strong>Visual Feedback:</strong> Archer attacks now spawn visible arrow projectiles</li>
-        <li><strong>Melee Pushback:</strong> Melee units push enemies back 3px on each hit for better combat feedback</li>
-        <li><strong>Balance:</strong> Towers cannot be pushed back by melee attacks</li>
-        <li><strong>Deck Expansion:</strong> 5 cards available (was 4)</li>
-        <li><strong>Encyclopedia:</strong> All unit speeds updated to current values</li>
-      </ul>
-      <h3>v0.3.1 - Bug Fixes & Balance Updates</h3>
-      <ul>
-        <li><strong>Bug Fix:</strong> Units no longer walk on water - bridge pathfinding properly restricted to bridge width</li>
-        <li><strong>Bug Fix:</strong> Unit card images now display correctly during battle</li>
-        <li><strong>Feature:</strong> Players can now place troops at destroyed enemy crossbow tower locations</li>
-        <li><strong>Balance:</strong> Updated unit speeds - Knight: 30 px/s, Archers: 35 px/s, Mini-MEGA: 20 px/s, MEGA: 15 px/s</li>
-        <li><strong>Optimization:</strong> Card images pre-loaded at game start for better performance</li>
-      </ul>
-      <h3>v0.3.0 - Individual Pathfinding & Major Gameplay Overhaul</h3>
-      <ul>
-        <li><strong>Individual A* Pathfinding:</strong> Each unit now computes its own path to the nearest crossbow tower using A* algorithm</li>
-        <li><strong>Improved Combat:</strong> Units now engage enemies within 60px aggro range (melee) or weapon range (ranged)</li>
-        <li><strong>Bridge Improvements:</strong> Bridges now use solid walkable ground for smooth unit movement - no more gaps!</li>
-        <li><strong>Unit Cards:</strong> Unit type cards now display next to units during battle</li>
-        <li><strong>Abbreviation Fix:</strong> MEGA units now show 'MG' label, Mini-MEGA shows 'MM'</li>
-        <li><strong>Dynamic Targeting:</strong> Units automatically switch to new towers when current target is destroyed</li>
-        <li><strong>Visual Aesthetic:</strong> Bridges retain their visual appearance while providing solid ground underneath</li>
-      </ul>
-      <h3>v0.2.3 - MEGA Unit & UI Enhancements</h3>
-      <ul>
-        <li><strong>New Card:</strong> MEGA unit added - 5 elixir, 800 HP, 150 DMG / 2.0s (RARE)</li>
-        <li><strong>Main Menu:</strong> Redesigned with gradient hero card, animated icon, and enhanced button layout</li>
-        <li><strong>Visual Polish:</strong> Added hover effects, smooth transitions, and better typography to main menu</li>
-        <li><strong>Deck Expansion:</strong> Player and AI decks now include 4 cards instead of 3</li>
-      </ul>
-      <h3>v0.2.2 - Persistence & Critical Fixes</h3>
-      <ul>
-        <li><strong>Persistent Storage:</strong> Coins and card levels now save automatically using localStorage</li>
-        <li><strong>Bug Fix:</strong> Archers now properly attack enemies after crossing the bridge</li>
-        <li><strong>Bug Fix:</strong> Melee units (especially Knights) now correctly damage King Towers</li>
-        <li><strong>Bug Fix:</strong> Bridge pathfinding improved - wider walkable area prevents unit glitching</li>
-        <li><strong>Bug Fix:</strong> Deck card images now display with proper aspect ratio</li>
-        <li><strong>Balance:</strong> King Tower damage nerfed to 50 / 1.5s (was 50 / 1.0s)</li>
-        <li><strong>Balance:</strong> Knight damage buffed to 25 / 1.0s (was 20 / 1.0s)</li>
-        <li><strong>Encyclopedia:</strong> Added King Tower and Crossbow Tower stats</li>
-      </ul>
-      <h3>v0.2.1 - Card Upgrades & Bug Fixes</h3>
-      <ul>
-        <li><strong>Deck Tab:</strong> New Encyclopedia tab to view and upgrade all your cards</li>
-        <li><strong>Card Upgrades:</strong> Spend coins to upgrade cards from Level 0 to 5</li>
-        <li><strong>Stat Scaling:</strong> Each level increases Health and Damage by 10% (up to +50% at Level 5)</li>
-        <li><strong>Bug Fix:</strong> End game screen now shows correctly when match ends</li>
-        <li><strong>Bug Fix:</strong> Coins are now properly awarded and displayed</li>
-        <li><strong>Bug Fix:</strong> Archers now properly stop and shoot at range instead of running forward</li>
-        <li><strong>Bug Fix:</strong> Units no longer glitch on bridges - smoother pathfinding</li>
-      </ul>
-      <h3>v0.2.0 - Match System & Currency</h3>
-      <ul>
-        <li><strong>Match Timer:</strong> 4-minute matches with timer and mode displayed at top</li>
-        <li><strong>Win Conditions:</strong> Destroy enemy King for instant win, or win by tower count (2-1, 1-0) when timer expires</li>
-        <li><strong>Coin System:</strong> Earn 0.1 coins per damage dealt; coins displayed in Progression tab</li>
-        <li><strong>End Game Screen:</strong> View match stats including coins earned, damage dealt, and towers destroyed</li>
-        <li><strong>Play Again:</strong> Restart matches without refreshing the page</li>
-        <li><strong>Card Progression Tab:</strong> New Encyclopedia tab with upgrade costs for Common and Rare cards</li>
-      </ul>
-      <h3>v0.1.5</h3>
-      <ul>
-        <li>Fixed archers to properly use ranged combat: now hold position and shoot instead of charging like melee units.</li>
-        <li>Corrected Encyclopedia speed values to match actual game values (px/s units).</li>
-      </ul>
-      <h3>v0.1.4</h3>
-      <ul>
-        <li>Lane paths and AI tightened; small on-path separation; ranged standoff.</li>
-        <li>Diagnostics always on (toggle with <kbd>D</kbd>); game loop crash-proof.</li>
-      </ul>
-      <h3>v0.1.3</h3>
-      <ul>
-        <li>Grid placement overlay and segmented (10) elixir bar.</li>
-        <li>Menu/UI fixes and clearer IDs.</li>
-      </ul>
-      <h3>v0.1.2</h3>
-      <ul>
-        <li>Initial pathing across bridges and water as no-go.</li>
-      </ul>
-      <h3>v0.1.1</h3>
-      <ul>
-        <li>Encyclopedia &amp; update log screens; styling pass.</li>
-      </ul>
+    <div class="help">
+      <p><b>Every answer is an attack.</b> Each enemy brings a question, like <i>“Name an animal, in Latin.”</i> Type an answer and press <kbd>Enter</kbd>. A correct answer damages the enemy, and the rarer it is, the harder it hits.</p>
+      <div class="tier-table-wrap"><table class="tier-table">
+        <thead><tr><th>Rarity</th><th>Meaning</th><th class="num">Damage</th><th>Example (animals)</th></tr></thead>
+        <tbody id="tierRows"></tbody>
+      </table></div>
+      <p><b>The enemy strikes back on a timer.</b> Wrong answers and repeats hurry it along. Answer fast with common words, or dig for a rare one: that trade-off is the whole game.</p>
+      <p><b>Each enemy has a rule.</b> Harpies feed on common words; the Sphinx wants alphabetical order; Echo ignores anything you said in a past descent; the Gorgon hides the question. Every fifth Gradus a guardian waits: Cerberus, Charon, Minos.</p>
+      <p><b>Between floors, choose a gift of the gods</b>, such as double damage for chaining last letter to first letter, or for very short words. Gifts last for one descent only. Nothing carries over except what you learn.</p>
+      <p><b>The descent never ends.</b> It only gets stranger. Words you lean on across many descents grow <i>worn</i> and hit one tier weaker, so keep learning new ones.</p>
+      <p class="keys"><kbd>Enter</kbd> answer · <kbd>Tab</kbd> new question (costs time) · <kbd>?</kbd> leaf hint · <kbd>↑</kbd> glance at a hidden question · <kbd>Esc</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> choose a gift</p>
+      <p><b>Schola (class mode)</b> uses only your class handouts. Open questions work as above. <i>Drills</i> ask for one exact answer (an ending, a form, a case); every right answer hits and the next item appears. <kbd>Tab</kbd> skips to the next drill item. Everything else (enemies, rules, gifts, records) works exactly as in the main game.</p>
+      <p class="muted">Spelling: macrons and capitals don’t matter, j = i and v = u. In open questions, a one-letter slip on a long word still counts, at 80% damage. Drills need exact spelling, since one letter is the whole point of an ending.</p>
     </div>
   </section>
+</div>
 
-  <!-- Single entry module -->
-  <script type="module" src="./src/main.js?v=0.3.3"></script>
+<script src="js/data/prompts.js"></script>
+<script src="js/data/plurals.js"></script>
+<script src="js/data/schola.js"></script>
+<script src="js/data/bestiary.js"></script>
+<script src="js/core/match.js"></script>
+<script src="js/core/review.js"></script>
+<script src="js/core/run.js"></script>
+<script src="js/core/memory.js"></script>
+<script src="js/core/sibyl.js"></script>
+<script src="js/art.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/review-ui.js"></script>
 </body>
 </html>

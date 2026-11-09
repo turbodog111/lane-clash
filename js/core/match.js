@@ -1,0 +1,158 @@
+// Answer normalisation, prompt building and matching. No DOM here.
+(function (RA) {
+  RA.TIERS = [
+    null,
+    { n: 'Vulgaris',   en: 'common',          dmg: 10, cls: 't1' },
+    { n: 'Insolitus',  en: 'uncommon',        dmg: 18, cls: 't2' },
+    { n: 'Rarus',      en: 'rare',            dmg: 30, cls: 't3' },
+    { n: 'Rarissimus', en: 'very rare',       dmg: 45, cls: 't4' },
+    { n: 'Arcanus',    en: 'obscure',          dmg: 65, cls: 't5' },
+    { n: 'Rara Avis',  en: 'one in a million', dmg: 90, cls: 't6' },
+  ];
+  RA.MAXT = RA.TIERS.length - 1;   // 6 rarity tiers
+
+  // Lower-case, strip accents and macrons, j→i, v→u, drop everything but letters and digits.
+  RA.norm = function (s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/æ/g, 'ae').replace(/œ/g, 'oe')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/j/g, 'i').replace(/v/g, 'u')
+      .replace(/[^a-z0-9]/g, '');
+  };
+
+  const GEN = {
+    v1: (w) => (/or$/.test(w) ? [w.replace(/or$/, 'ari')] : /o$/.test(w) ? [w.replace(/o$/, 'are')] : []),
+    v2: (w) => (/eor$/.test(w) ? [w.replace(/eor$/, 'eri')] : /eo$/.test(w) ? [w.replace(/eo$/, 'ere')] : []),
+  };
+
+  const splitForms = (str) => str.split('/').map((x) => x.trim()).filter(Boolean);
+
+  RA.buildPrompt = function (src) {
+    const p = { id: src.id, lvl: src.lvl, lang: src.lang, cat: src.cat, q: src.q, note: src.note || '', kind: src.kind || 'open',
+                exact: !!src.exact || src.kind === 'drill', answers: [], map: new Map() };
+    if (p.kind === 'drill') {
+      src.items.forEach((it, i) => {
+        if (it.off) return;            // removed in review; the index is kept so other items keep their ids
+        const forms = splitForms(it.a);
+        const keys = [...new Set(forms.map(RA.norm))].filter(Boolean);
+        p.answers.push({ q: it.q, sub: it.sub || '', note: it.note || '', text: it.show || forms[0], forms, first: forms[0].replace(/^-/, ''), tier: it.tier, keys, id: p.id + ':' + i, prompt: p.id, index: i });
+      });
+      p.keys = [];
+      return p;
+    }
+    for (let tier = 1; tier <= RA.MAXT; tier++) {
+      const line = src.t[tier];
+      if (!line) continue;
+      for (const item of line.split(',')) {
+        const forms = splitForms(item);
+        if (!forms.length) continue;
+        const extra = src.gen ? forms.flatMap(GEN[src.gen]) : [];
+        const keys = [...new Set([...forms, ...extra].map(RA.norm))].filter(Boolean);
+        const a = { text: forms[0], forms, tier, keys, id: p.id + ':' + keys[0], prompt: p.id };
+        p.answers.push(a);
+        for (const k of keys) if (!p.map.has(k)) p.map.set(k, a);
+      }
+    }
+    // Forms that count as the answer without being listed: noun plurals (canes for canis) and, for adjectives,
+    // the feminine and neuter (alba, album for albus). Added last, so they never take over another answer's spelling.
+    for (const a of p.answers) {
+      const extra = [];
+      if (src.pl && RA.PLURALS) { const pl = plurals()[RA.norm(a.forms[0])]; if (pl) extra.push(...splitForms(pl)); }
+      if (src.adj) for (const f of a.forms) extra.push(...RA.adjForms(f));
+      if (!extra.length) continue;
+      a.plurals = [...new Set(extra)].filter((x) => !a.forms.includes(x));
+      for (const k of a.plurals.map(RA.norm)) if (k && !p.map.has(k)) { p.map.set(k, a); a.keys.push(k); }
+    }
+    p.keys = [...p.map.keys()];
+    return p;
+  };
+  let PL = null;
+  // Feminine, neuter and plural forms of an adjective given in the masculine (albus → alba, album, albi, albae).
+  // Multi-word answers change every word the same way (tertius decimus → tertia decima).
+  const KEEP_E = new Set(['liber', 'miser', 'asper', 'tener', 'lacer', 'prosper', 'liber']);
+  function adjWord(w) {
+    const lw = w.toLowerCase();
+    if (lw === 'duo') return ['duae'];
+    if (lw === 'tres') return ['tria'];
+    if (/us$/.test(lw)) { const s = w.slice(0, -2); return [s + 'a', s + 'um', s + 'i', s + 'ae']; }
+    if (/er$/.test(lw)) { const s = KEEP_E.has(lw) ? w : w.slice(0, -2) + 'r'; return [s + 'a', s + 'um', s + 'i', s + 'ae']; }
+    if (/is$/.test(lw)) { const s = w.slice(0, -2); return [s + 'e', s + 'es', s + 'ia']; }
+    if (/i$/.test(lw) && lw.length > 4) { const s = w.slice(0, -1); return [s + 'ae', s + 'a']; }
+    return [];
+  }
+  RA.adjForms = function (form) {
+    const words = form.split(/\s+/);
+    const each = words.map(adjWord);
+    const n = Math.max(0, ...each.map((x) => x.length));
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(words.map((w, j) => each[j][i] || w).join(' '));
+    return out;
+  };
+  const plurals = () => PL || (PL = Object.fromEntries(Object.entries(RA.PLURALS).map(([k, v]) => [RA.norm(k), v])));
+
+  // Drill items: exact match only (in grammar, one letter is the whole point).
+  RA.matchItem = function (item, raw) {
+    const key = RA.norm(raw);
+    return key && item.keys.includes(key) ? { a: item, typo: false } : null;
+  };
+
+  function lev(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      let rowMin = i;
+      for (let j = 1; j <= b.length; j++) {
+        const c = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        cur.push(c);
+        if (c < rowMin) rowMin = c;
+      }
+      if (rowMin > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  RA.lev = lev;
+
+  // Returns { a: answer, typo: bool } or null.
+  RA.match = function (p, raw, allowTypo = true) {
+    const key = RA.norm(raw);
+    if (!key) return null;
+    if (p.map.has(key)) return { a: p.map.get(key), typo: false };
+    if (p.lang === 'en') {
+      for (const k of [key.replace(/es$/, ''), key.replace(/s$/, '')]) {
+        if (k !== key && p.map.has(k)) return { a: p.map.get(k), typo: false };
+      }
+    }
+    if (allowTypo && !p.exact && key.length >= 5) {
+      const max = key.length >= 9 ? 2 : 1;
+      let best = null, bd = max + 1;
+      for (const k of p.keys) {
+        if (k.length < 4) continue;
+        const d = lev(key, k, max);
+        if (d < bd) { bd = d; best = p.map.get(k); }
+      }
+      if (best && bd <= max) return { a: best, typo: true };
+    }
+    return null;
+  };
+
+  RA.roman = function (n) {
+    if (n <= 0) return 'N';
+    const t = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+    let s = '';
+    for (const [v, r] of t) while (n >= v) { s += r; n -= v; }
+    return s;
+  };
+
+  // Build the playable registries. `patch(src)` may return an edited copy of a source prompt
+  // (js/core/review.js uses this to apply review edits before they are written into the data files).
+  RA.buildAll = function (patch = (src) => src) {
+    RA.prompts = RA.PROMPT_SRC.map((s) => RA.buildPrompt(patch(s)));
+    RA.schola = (RA.SCHOLA_UNITS || []).map((u) => ({ ...u, prompts: u.prompts.map((s) => RA.buildPrompt(patch(s))) }));
+    RA.scholaPrompts = RA.schola.flatMap((u) => u.prompts.map((p) => Object.assign(p, { unit: u.id })));
+    RA.promptById = Object.fromEntries([...RA.prompts, ...RA.scholaPrompts].map((p) => [p.id, p]));
+  };
+  RA.buildAll();
+})(window.RA = window.RA || {});
