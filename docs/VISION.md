@@ -57,6 +57,20 @@ What's still open from §8: tone, the Host's identity (currently the Sibyl), ans
 - **Stats** (deepest descent, rarest answer, words found) now count in every mode.
 - Multiplayer is shelved. The research is kept in `docs/MULTIPLAYER.md`.
 
+### Prototype 1.5 (2026-11-09): quality pass on every question
+turbodog111's decisions became the standard for every question:
+- plurals and female forms count;
+- English look-alikes are never top-tier;
+- Rara Avis stays rare;
+- each question is a pyramid.
+
+The pass then:
+- fixed misplacements from the automatic re-tiering (*Achaemenides* at common, Gaulish and Spanish cities at common, *tibia* at very rare, *visualize* at obscure);
+- kept derived words within a tier of the word they come from (*repatriation* vs *repatriate*);
+- added about 230 missing answers and spellings (*exercitus*, *a priori*, *Achilles*, *Ulysses*, *Julius Caesar*, *Septentriones*…).
+
+Overall shape: 25 / 26 / 22 / 15 / 8 / 3% across 2,644 answers. Festivals are the one deliberate exception, with a small common tier, because the whole category is obscure.
+
 ---
 
 ## 1. Executive decisions (turbodog111, 2026-11-07)

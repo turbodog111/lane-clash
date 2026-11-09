@@ -3,6 +3,15 @@
 // Checked by hand, including irregulars (bos > boves, os > ora/ossa, iter > itinera).
 (function (RA) {
   RA.PLURALS = {
+    membrum: 'membra', pellis: 'pelles', artus: 'artus', anima: 'animae', musa: 'musae', ara: 'arae', tuba: 'tubae', fera: 'ferae', ripa: 'ripae',
+    'pater familias': 'patres familias/patresfamilias', 'mater familias': 'matres familias/matresfamilias', sponsus: 'sponsi', vidua: 'viduae',
+    matrona: 'matronae', geminus: 'gemini', natus: 'nati', cognatus: 'cognati', affinis: 'affines', proles: 'proles',
+    ostium: 'ostia', scala: 'scalae', cisterna: 'cisternae', puteus: 'putei', pistrinum: 'pistrina', cenatio: 'cenationes',
+    faber: 'fabri', minister: 'ministri', carrus: 'carri', clipeus: 'clipei', baculum: 'bacula',
+    aestas: 'aestates', senex: 'senes', iuvenis: 'iuvenes', parens: 'parentes', nubes: 'nubes', turris: 'turres', tempestas: 'tempestates',
+    auctor: 'auctores', caedes: 'caedes', clades: 'clades', cerevisia: 'cerevisiae', cucurbita: 'cucurbitae', prunum: 'pruna', citrum: 'citra',
+    persicum: 'persica', exercitus: 'exercitus', sagittarius: 'sagittarii', classis: 'classes', funda: 'fundae', funditor: 'funditores', cuneus: 'cunei',
+    parsimonia: 'parsimoniae', obsequium: 'obsequia', abstinentia: 'abstinentiae', benignitas: 'benignitates',
     caper: 'capri', leaena: 'leaenae', vipera: 'viperae', pullus: 'pulli', vespa: 'vespae', draco: 'dracones', pardus: 'pardi', coluber: 'colubri',
     dama: 'damae', anguilla: 'anguillae', culex: 'culices', pulex: 'pulices', sorex: 'sorices', thynnus: 'thynni', caprea: 'capreae', falco: 'falcones',
     canis: 'canes', equus: 'equi', feles: 'feles', lupus: 'lupi', leo: 'leones', avis: 'aves', piscis: 'pisces',
@@ -141,5 +150,5 @@
     aequanimitas: 'aequanimitates', longanimitas: 'longanimitates'
   };
   // Noun answers that take no plural here: already plural, uncountable, or a phrase. tools/check.js flags any noun in neither list.
-  RA.NO_PLURAL = 'parentes liberi viscera tempora nates clunes fauces praecordia ilia castra arma auxilia triarii hastati principes velites praetoriani speculatores lilia cippi lixae calones insidiae divitiae tenebrae nuptiae glires sudes sanguis lac aurum argentum ferrum vulgus garum mulsum posca defrutum sapa liquamen muria hordeum triticum oryza butyrum piper acetum mustum farina lardum virus pelagus humus sulphur fel ebur ver iubar aes far mel sal fides spes hadria|mos maiorum|primus pilus';
+  RA.NO_PLURAL = 'parentes liberi viscera tempora nates clunes fauces praecordia ilia castra arma auxilia triarii hastati principes velites praetoriani speculatores lilia cippi lixae calones insidiae divitiae tenebrae nuptiae glires sudes sanguis lac aurum argentum ferrum vulgus garum mulsum posca defrutum sapa liquamen muria hordeum triticum oryza butyrum piper acetum mustum farina lardum virus pelagus humus sulphur fel ebur ver iubar aes far mel sal fides spes hadria fores moenia impedimenta phalerae|mos maiorum|primus pilus|magnitudo animi';
 })(window.RA = window.RA || {});
