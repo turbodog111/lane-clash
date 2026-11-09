@@ -154,10 +154,13 @@
       <li><b>Open questions</b> (“Name a use of the ablative”) have many right answers; rarer ones hit harder.</li>
       <li><b>Drills</b> (“1st declension · genitive plural”) have exactly one right answer, spelled exactly. Skipping a drill item shows you the answer.</li>
     </ul>
-    <p class="muted">Enemies are gentler here, worn words don’t apply, and Echo stays home. Pick the topics to study:</p>
+    <p class="muted">Enemies are gentler here, worn words don’t apply, and Echo stays home. A wrong drill answer gets a second try; miss it twice and you’re shown the answer, and it comes back a few items later. The game remembers what you’ve mastered and asks your weak items first.</p>
+    <p class="muted">Pick the topics to study:</p>
     <div id="unitList" class="unit-list"></div>
+    <label class="untimed"><input id="scholaUntimed" type="checkbox"> <span><b>Untimed practice</b> <span class="paren">(enemies never bite; no records kept)</span></span></label>
     <div class="actions">
       <button id="btnScholaGo" class="btn primary" type="button">Begin class descent</button>
+      <button id="btnScholaReview" class="btn" type="button">Review my mistakes</button>
       <button id="btnScholaAll" class="btn small" type="button">Select all</button>
     </div>
     <p id="scholaRecord" class="muted"></p>
@@ -220,7 +223,7 @@
       <p><b>Between floors, choose a gift of the gods</b>, such as double damage for chaining last letter to first letter, or for very short words. Gifts last for one descent only. Nothing carries over except what you learn.</p>
       <p><b>The descent never ends.</b> It only gets stranger. Words you lean on across many descents grow <i>worn</i> and hit one tier weaker, so keep learning new ones.</p>
       <p class="keys"><kbd>Enter</kbd> answer · <kbd>Tab</kbd> new question (costs time) · <kbd>?</kbd> leaf hint · <kbd>↑</kbd> glance at a hidden question · <kbd>Esc</kbd> pause · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> choose a gift</p>
-      <p><b>Schola (class mode)</b> uses only your class handouts. Open questions work as above. <i>Drills</i> ask for one exact answer (an ending, a form, a case); every right answer hits and the next item appears. <kbd>Tab</kbd> skips a drill item and shows you its answer.</p>
+      <p><b>Schola (class mode)</b> uses only your class handouts. Open questions work as above. <i>Drills</i> ask for one exact answer (an ending, a form, a case); every right answer hits and the next item appears. <kbd>Tab</kbd> skips a drill item and shows you its answer. A wrong answer gets a second try; miss twice and the answer is shown, and the item comes back later. The game tracks what you’ve mastered, puts your weak items first, and can run a review of just your mistakes, timed or untimed.</p>
       <p class="muted">Spelling: macrons and capitals don’t matter, j = i and v = u. In open questions, a one-letter slip on a long word still counts, at 80% damage. Drills need exact spelling, since one letter is the whole point of an ending.</p>
     </div>
   </section>

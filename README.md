@@ -49,6 +49,12 @@ Class mode uses **only class material**: currently the five handouts (Case Uses,
 
 In class mode, enemies are gentler, worn words don't apply (repetition is the point), Echo doesn't appear, and Charon accepts Insolitus (uncommon) answers.
 
+Class mode is built for studying:
+- **Second chances:** a wrong drill answer gets one more try. A second miss shows the answer, and the item comes back a few items later.
+- **Mastery:** the game remembers every drill item you've got right or missed. Items you've missed come first; mastered ones wait at the back. Each topic shows a mastery bar.
+- **Review my mistakes:** a run made only of the items you've missed.
+- **Untimed practice:** enemies never bite, and no records are kept.
+
 Class content lives in `js/data/schola.js`, one *unit* per topic, each listing the handout(s) it came from:
 
 ```js

@@ -137,7 +137,7 @@ function sim(knowRate, seed, pace = 2.2, miss = 0, mode = 'open') {
     const cur = run.current(part);
     if (cur) {
       const kr = Array.isArray(knowRate) ? knowRate[3] : knowRate;
-      if (Math.random() < miss + (cur.tier - 1) * (0.5 - kr) * 0.25) run.submit('nescio');
+      if (Array.isArray(knowRate) ? !knows(cur) || Math.random() < miss : Math.random() < miss + (cur.tier - 1) * (0.5 - kr) * 0.25) run.submit('nescio');
       else run.submit(cur.keys[0]);
       run.events.length = 0;
       continue;
@@ -172,10 +172,10 @@ for (const [rate, pace, miss, who] of [[0.05, 6, 0.25, 'beginner'], [0.2, 4.5, 0
   floors.sort((a, b) => a - b);
   console.log(`${who.padEnd(14)} (knows ${Math.round(rate * 100)}% rare, ${pace}s/answer) → median floor ${floors[20]}, best ${floors[39]}`);
 }
-for (const [rate, pace, miss, who] of [[0.2, 4.5, 0.15, 'class: student'], [0.5, 3.5, 0.05, 'class: teacher']]) {
+for (const [rate, pace, miss, who] of [[[0, 0.75, 0.55, 0.4, 0.25, 0.15, 0.1], 9, 0.1, 'class: human student'], [[0, 0.95, 0.85, 0.7, 0.55, 0.4, 0.3], 7, 0.05, 'class: human strong'], [0.2, 4.5, 0.15, 'class: student'], [0.5, 3.5, 0.05, 'class: teacher']]) {
   const floors = Array.from({ length: 40 }, (_, i) => sim(rate, i + 1, pace, miss, 'schola'));
   floors.sort((a, b) => a - b);
-  console.log(`${who.padEnd(14)} → median floor ${floors[20]}, best ${floors[39]}`);
+  console.log(`${who.padEnd(20)} → median floor ${floors[20]}, best ${floors[39]}`);
 }
 console.log(problems ? `${problems} problem(s)` : 'all checks passed');
 process.exit(problems ? 1 : 0);
