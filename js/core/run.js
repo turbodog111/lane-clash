@@ -1,7 +1,7 @@
 // The descent: one run of the game. Pure logic. The UI calls tick/submit/etc. and drains run.events.
 (function (RA) {
   // Tuning. tools/check.js simulates people at several skill levels against these numbers.
-  const BASE_HP = 48, HP_GROW = 0.15, BOSS_HP = 3.0;
+  const BASE_HP = 36, HP_GROW = 0.15, BOSS_HP = 3.0;
   const IV_START = 22, IV_STEP = 0.45, IV_MIN = 7;    // seconds between bites
   const DMG_START = 6, DMG_STEP = 1.2;                 // bite damage
   const FLOOR_HEAL = 15;
@@ -79,7 +79,7 @@
       const study = this.mode === 'schola' ? { hp: 0.6, iv: 1.25 } : { hp: 1, iv: 1 };
       const sat = Math.pow(1.2, this.boons.saturnus || 0);
       // The first guardian is a gentler introduction to bosses.
-      const bossHp = e.boss ? BOSS_HP * (n <= 5 ? 0.75 : 1) : 1;
+      const bossHp = e.boss ? BOSS_HP * (n <= 5 ? 0.6 : 1) : 1;
       const hp = BASE_HP * (1 + HP_GROW * (n - 1)) * Math.pow(1.04, n - 1) * e.hp * bossHp * (furyMut ? 0.75 : 1) * study.hp;
       const interval = Math.max(IV_MIN, IV_START - IV_STEP * (n - 1)) * e.speed * (furyMut ? 0.62 : 1) * sat * study.iv;
       const dmg = Math.round((DMG_START + DMG_STEP * (n - 1)) * Math.pow(1.02, n - 1) * (e.boss ? 1.25 : 1));

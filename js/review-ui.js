@@ -90,7 +90,7 @@
 
   function answerEditorHTML(p, a, ro) {
     const spellings = a.forms.length > 1 ? `<span class="muted">Accepted spellings: ${esc(a.forms.join(', '))}</span>` : '<span class="muted">One accepted spelling.</span>';
-    const pl = a.plurals ? ` <span class="muted">· plural also counts: ${esc(a.plurals.join(', '))}</span>` : '';
+    const pl = a.plurals ? ` <span class="muted">· also counts: ${esc(a.plurals.join(', '))}</span>` : '';
     if (ro) return `<div class="rev-editor">${spellings}${pl}</div>`;
     return `<div class="rev-editor" data-key="${a.keys[0]}">
       <div><b>${esc(a.text)}</b> ${spellings}${pl}</div>

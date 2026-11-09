@@ -20,7 +20,13 @@ Open `index.html` in a browser. No build step and no server needed; double-click
 
 ## How it plays
 
-- **Rarity tiers:** Vulgaris 10 · Insolitus 18 · Rarus 30 · Rarissimus 50 · Rara Avis 80 damage.
+- **Rarity tiers:** Vulgaris (common) 10 · Insolitus (uncommon) 18 · Rarus (rare) 30 · Rarissimus (very rare) 45 · Arcanus (obscure) 65 · Rara Avis (one in a million) 90 damage.
+  - Each question is shaped like a pyramid: roughly 28% / 26% / 20% / 14% / 8% / 4%.
+  - Rara Avis is hand-picked: at most 6 answers per question, and at most 1 for questions with fewer than 20 answers.
+- **Forms that also count:**
+  - noun plurals (*canes* for *canis*)
+  - female animals (*lupa* for *lupus*)
+  - feminine and neuter adjectives, including colours and numbers (*alba*, *prima*, *duae*)
 - **The enemy bites on a timer.** Wrong answers and repeats hurry it, so answering fast with common words competes with digging for a rare one.
 - **Enemies bring rules:**
   - Harpy: feeds on common words
@@ -98,10 +104,10 @@ Add an entry to `js/data/prompts.js`:
 
 ```js
 { id: 'flumina', lvl: 2, lang: 'la', cat: 'Orbis Romanus', q: 'Name a river, by its Latin name',
-  t: { 1: 'Tiberis, Nilus', 2: 'Rhenus, Danuvius/Danubius', 3: '…', 4: '…', 5: '…' } },
+  t: { 1: 'Tiberis, Nilus', 2: 'Rhenus, Danuvius/Danubius', 3: '…', 4: '…', 5: '…', 6: '…' } },
 ```
 
-Tiers run from 1 (common) to 5 (one in a million). Use `/` for alternate spellings; the first spelling is the one shown. Then run `node tools/check.js` to catch duplicates. (Or use the Tabularium screen, which is quicker for small fixes.)
+Tiers run from 1 (common) to 6 (one in a million; keep it to a handful). Use `/` for alternate spellings; the first spelling is the one shown. Then run `node tools/check.js` to catch duplicates. (Or use the Tabularium screen, which is quicker for small fixes.)
 
 ## History
 

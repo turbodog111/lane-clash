@@ -39,6 +39,18 @@ What's still open from §8: tone, the Host's identity (currently the Sibyl), ans
   A simulated student now usually gets past floor 5 (median floor 10).
 - **Tabularium (answer review):** turbodog111 reviews tiers, spellings and answers in the game itself, and every rejected guess is logged for review. Edits apply immediately as an overlay. Claude bakes them into the data with `tools/apply-review.js` and marks them applied.
 
+### Prototype 1.3 (2026-11-09): six tiers, pyramid rarity
+- **Answer review with turbodog111:**
+  - Six tiers, with **Arcanus (obscure)** added below Rara Avis.
+  - Every question is reshaped into a pyramid (about 28 / 26 / 20 / 14 / 8 / 4%).
+  - Rara Avis answers are hand-picked and capped: 6 per question at most, and 1 for small questions. That cut 307 Rara Avis answers to about 100.
+- **Rules agreed:**
+  - Plurals count (*canes* = *canis*).
+  - Female forms count as the male answer (*lupa* = *lupus*).
+  - Adjectives accept every gender (*alba* = *albus*).
+  - Answers you can guess from English (*hippopotamus*) are never top-tier.
+- **Rebalanced** for the flatter damage the pyramid gives: enemy base life is now 36, and the first guardian is weaker.
+
 ---
 
 ## 1. Executive decisions (turbodog111, 2026-11-07)

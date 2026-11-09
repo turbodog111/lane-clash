@@ -54,19 +54,41 @@
         for (const k of keys) if (!p.map.has(k)) p.map.set(k, a);
       }
     }
-    // Plurals (canes for canis) count as the singular. Added last, so a plural never takes over another answer's spelling.
-    if (src.pl && RA.PLURALS) {
-      for (const a of p.answers) {
-        const pl = plurals()[RA.norm(a.forms[0])];
-        if (!pl) continue;
-        a.plurals = splitForms(pl);
-        for (const k of a.plurals.map(RA.norm)) if (k && !p.map.has(k)) { p.map.set(k, a); a.keys.push(k); }
-      }
+    // Forms that count as the answer without being listed: noun plurals (canes for canis) and, for adjectives,
+    // the feminine and neuter (alba, album for albus). Added last, so they never take over another answer's spelling.
+    for (const a of p.answers) {
+      const extra = [];
+      if (src.pl && RA.PLURALS) { const pl = plurals()[RA.norm(a.forms[0])]; if (pl) extra.push(...splitForms(pl)); }
+      if (src.adj) for (const f of a.forms) extra.push(...RA.adjForms(f));
+      if (!extra.length) continue;
+      a.plurals = [...new Set(extra)].filter((x) => !a.forms.includes(x));
+      for (const k of a.plurals.map(RA.norm)) if (k && !p.map.has(k)) { p.map.set(k, a); a.keys.push(k); }
     }
     p.keys = [...p.map.keys()];
     return p;
   };
   let PL = null;
+  // Feminine, neuter and plural forms of an adjective given in the masculine (albus → alba, album, albi, albae).
+  // Multi-word answers change every word the same way (tertius decimus → tertia decima).
+  const KEEP_E = new Set(['liber', 'miser', 'asper', 'tener', 'lacer', 'prosper', 'liber']);
+  function adjWord(w) {
+    const lw = w.toLowerCase();
+    if (lw === 'duo') return ['duae'];
+    if (lw === 'tres') return ['tria'];
+    if (/us$/.test(lw)) { const s = w.slice(0, -2); return [s + 'a', s + 'um', s + 'i', s + 'ae']; }
+    if (/er$/.test(lw)) { const s = KEEP_E.has(lw) ? w : w.slice(0, -2) + 'r'; return [s + 'a', s + 'um', s + 'i', s + 'ae']; }
+    if (/is$/.test(lw)) { const s = w.slice(0, -2); return [s + 'e', s + 'es', s + 'ia']; }
+    if (/i$/.test(lw) && lw.length > 4) { const s = w.slice(0, -1); return [s + 'ae', s + 'a']; }
+    return [];
+  }
+  RA.adjForms = function (form) {
+    const words = form.split(/\s+/);
+    const each = words.map(adjWord);
+    const n = Math.max(0, ...each.map((x) => x.length));
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(words.map((w, j) => each[j][i] || w).join(' '));
+    return out;
+  };
   const plurals = () => PL || (PL = Object.fromEntries(Object.entries(RA.PLURALS).map(([k, v]) => [RA.norm(k), v])));
 
   // Drill items: exact match only (in grammar, one letter is the whole point).
